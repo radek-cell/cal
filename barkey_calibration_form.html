@@ -905,5 +905,6 @@ document.getElementById('sheetNo')?.addEventListener('input',()=>{ sanitizeSheet
 document.getElementById('sheetNo')?.addEventListener('blur', checkSheetNoFormat);
 document.getElementById('sheetNo')?.addEventListener('focus',function(){ if(this.selectionStart<2) this.setSelectionRange(this.value.length,this.value.length); });
 if(!date.value){ dateNative.value=isoToday(); date.value=displayDate(isoToday()); } refreshOffsetWarning(); update(); fitPageToScreen(); setTimeout(fitPageToScreen,300);
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(function(){}); }
 </script>
 </body></html>

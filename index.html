@@ -113,6 +113,34 @@ h1{font-size:clamp(30px,4.4vw,50px);line-height:1.1;margin:0 0 16px;font-weight:
   .trace{display:none}
 }
 
+/* ---- offline download box ---- */
+.offlinebox{
+  margin-top:28px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:16px 20px;box-shadow:0 1px 3px rgba(20,30,40,.06);
+}
+.offlinebox-title{font-size:14px;font-weight:650;color:var(--ink);display:flex;align-items:center;gap:8px}
+.offlinebox-title .statusdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted-dim);flex-shrink:0}
+.offlinebox.ready .offlinebox-title .statusdot{background:var(--green);box-shadow:0 0 0 3px rgba(63,200,121,.18)}
+.offlinebox.error .offlinebox-title .statusdot{background:#c0392b}
+.offlinebox-sub{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px;max-width:52ch}
+.dlbtn{
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+  font-family:var(--sans);font-size:13px;font-weight:650;color:#fff;
+  background:var(--cyan);border:none;border-radius:6px;padding:11px 18px;
+  cursor:pointer;transition:background .15s ease, opacity .15s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.dlbtn:hover{background:#0c7a70}
+.dlbtn:disabled{opacity:.65;cursor:default}
+.dlbtn svg{width:16px;height:16px;flex-shrink:0}
+.offlinebox.ready .dlbtn{background:var(--green)}
+.offlinebox.ready .dlbtn:hover{background:#187f43}
+@media (max-width:620px){
+  .offlinebox{padding:14px 16px}
+  .dlbtn{width:100%;justify-content:center}
+}
+
 /* ---- section label ---- */
 .section-label{
   display:flex;align-items:center;gap:14px;margin:8px 0 22px;
@@ -226,6 +254,17 @@ footer{
     <p class="eyebrow">Offline calibration toolkit</p>
     <h1>One ecosystem,<br>every calibration worksheet.</h1>
     <p class="lede">Choose the calibration form for your device. Each worksheet runs independently, fully offline, with PDF/Excel export.</p>
+
+    <div class="offlinebox" id="offlinebox">
+      <div class="offlinebox-text">
+        <div class="offlinebox-title" id="offlineTitle">Checking offline status…</div>
+        <div class="offlinebox-sub" id="offlineSub">This installs every worksheet and its libraries so the suite keeps working with no signal — ideal for iPad in the lab.</div>
+      </div>
+      <button class="dlbtn" id="dlBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+        <span id="dlBtnLabel">Download for offline use</span>
+      </button>
+    </div>
   </div>
 
   <div class="section-label">WS · 01–05 — select a worksheet</div>
@@ -387,6 +426,111 @@ function setupFullscreen(){
     document.addEventListener(evt, updateState);
   });
 }
+
+// ---------------------------------------------------------------------
+// Offline install — registers the service worker and lets the engineer
+// explicitly pre-cache every worksheet + its libraries (pdf.js, xlsx,
+// html2pdf, fonts…) so the whole suite works with zero signal.
+// Keep this URL list in sync with APP_SHELL / CDN_ASSETS in sw.js.
+// ---------------------------------------------------------------------
+const OFFLINE_PAGES = tools.filter(t=>t.status==='active').map(t=>t.href);
+const OFFLINE_CDN = [
+  'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.0/dist/html2canvas-pro.min.js',
+  'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap'
+];
+
+const box = document.getElementById('offlinebox');
+const title = document.getElementById('offlineTitle');
+const sub = document.getElementById('offlineSub');
+const btn = document.getElementById('dlBtn');
+const btnLabel = document.getElementById('dlBtnLabel');
+
+function setBoxState(state, msg){
+  box.classList.remove('ready','error');
+  if(state) box.classList.add(state);
+  title.innerHTML = `<span class="statusdot"></span>${msg}`;
+}
+
+async function registerSW(){
+  if(!('serviceWorker' in navigator)){
+    setBoxState('error', 'Offline mode not supported in this browser');
+    sub.textContent = 'On iPad, open this page in Safari (not an in-app browser) to enable offline use.';
+    btn.style.display = 'none';
+    return null;
+  }
+  try{
+    const reg = await navigator.serviceWorker.register('./sw.js');
+    await navigator.serviceWorker.ready;
+    return reg;
+  }catch(e){
+    setBoxState('error', 'Could not set up offline mode');
+    sub.textContent = 'Make sure this site is served over HTTPS — service workers require a secure connection.';
+    btn.style.display = 'none';
+    return null;
+  }
+}
+
+async function checkCacheStatus(){
+  if(!('caches' in window)) return false;
+  try{
+    const keys = await caches.keys();
+    const staticKey = keys.find(k=>k.startsWith('labcal-static-'));
+    if(!staticKey) return false;
+    const cache = await caches.open(staticKey);
+    const has = await Promise.all(['./index.html', ...OFFLINE_PAGES].map(u=>cache.match(u)));
+    return has.every(Boolean);
+  }catch(e){ return false; }
+}
+
+async function refreshStatus(){
+  const ok = await checkCacheStatus();
+  if(ok){
+    setBoxState('ready', 'Ready to work offline');
+    sub.textContent = 'Every worksheet is stored on this device. Re-download any time after editing a worksheet to refresh the offline copy.';
+    btnLabel.textContent = 'Refresh offline copy';
+  }else{
+    setBoxState(null, 'Not yet available offline');
+    sub.textContent = 'This installs every worksheet and its libraries so the suite keeps working with no signal — ideal for iPad in the lab.';
+    btnLabel.textContent = 'Download for offline use';
+  }
+  return ok;
+}
+
+async function downloadForOffline(){
+  btn.disabled = true;
+  const total = 1 + OFFLINE_PAGES.length + OFFLINE_CDN.length;
+  let done = 0;
+  const tick = ()=>{ done++; btnLabel.textContent = `Downloading… ${done}/${total}`; };
+
+  setBoxState(null, 'Downloading offline copy…');
+  sub.textContent = 'Keep this tab open and stay on Wi-Fi until this finishes.';
+
+  const urls = ['./index.html', ...OFFLINE_PAGES, ...OFFLINE_CDN];
+  for(const url of urls){
+    try{ await fetch(url, {cache:'reload'}); }catch(e){ /* picked up by SW runtime cache later if it fails now */ }
+    tick();
+  }
+
+  const ok = await refreshStatus();
+  btn.disabled = false;
+  if(!ok){
+    setBoxState('error', 'Some files failed to download');
+    sub.textContent = 'Check your connection and try again — partial downloads still help, but some worksheets may need a network connection until this succeeds.';
+  }
+}
+
+btn.addEventListener('click', downloadForOffline);
+
+(async ()=>{
+  await registerSW();
+  await refreshStatus();
+})();
 
 renderCards();
 renderDate();
