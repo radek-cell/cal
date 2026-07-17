@@ -1322,22 +1322,68 @@ function fieldDisplayText(el){
   return el.value;
 }
 function swapFieldsForText(root){
-  const swaps=[];
-  root.querySelectorAll('input, select').forEach(el=>{
-    if(el.tagName==='INPUT' && (el.type==='file' || el.id==='dateNative')) return;
+  const candidates=[...root.querySelectorAll('input, select')].filter(el=>
+    !(el.tagName==='INPUT' && (el.type==='file' || el.id==='dateNative'))
+  );
+  // Pass 1: read ALL layout info first, before touching the DOM. Reading
+  // and writing in the same loop (measure one element, replace it, measure
+  // the next...) forces the browser to recompute layout on every iteration,
+  // and each replacement was very slightly changing box heights — enough to
+  // cascade into 8-30px of extra height per row by the time later fields
+  // were measured. Batching all reads before any writes avoids that
+  // "layout thrashing" entirely.
+  const snapshots=candidates.map(el=>{
     const cs=getComputedStyle(el);
+    const rect=el.getBoundingClientRect();
+    const props={};
+    for(let i=0;i<cs.length;i++){ const p=cs[i]; props[p]=cs.getPropertyValue(p); }
+    return {el, props, width:rect.width, height:rect.height, text:fieldDisplayText(el)};
+  });
+  // Pass 2: now build and swap in all the divs.
+  const swaps=snapshots.map(({el,props,width,height,text})=>{
     const div=document.createElement('div');
-    div.textContent=fieldDisplayText(el);
-    div.style.cssText=`width:100%;height:100%;box-sizing:border-box;`+
-      `font-size:${cs.fontSize};font-weight:${cs.fontWeight};font-family:${cs.fontFamily};`+
-      `letter-spacing:${cs.letterSpacing};color:${cs.color};text-align:${cs.textAlign};`+
-      `background:${cs.backgroundColor};text-decoration:${cs.textDecoration};`+
-      `border:0;border-bottom:${cs.borderBottomWidth} ${cs.borderBottomStyle} ${cs.borderBottomColor};`+
-      `padding:${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft};`+
-      `display:flex;align-items:center;justify-content:${cs.textAlign==='left'?'flex-start':cs.textAlign==='right'?'flex-end':'center'};`+
-      `white-space:pre;overflow:hidden`;
+    div.textContent=text;
+    // Copy EVERY computed style property (not a hand-picked subset) so the
+    // box model — border, background, padding, line-height, everything —
+    // matches exactly. A hand-picked list previously missed things (e.g.
+    // dropped the rounded "pill" look on some fields).
+    for(const p in props){ try{ div.style.setProperty(p, props[p]); }catch(e){} }
+    // Width: use 100% only where the original genuinely filled its
+    // container (typical of `.field`/table inputs using width:100% in the
+    // stylesheet) — forcing 100% on elements that were tightly/intrinsically
+    // sized (e.g. the certificate number, or a <select> sized to its own
+    // text) would stretch them to fill a much wider parent than they
+    // actually occupied. A fixed pixel width, meanwhile, previously fought
+    // CSS Grid's own column sizing algorithm in narrower contexts (it makes
+    // the grid treat that width as a hard minimum, squeezing sibling
+    // columns — e.g. wrapping a field's label onto two lines). Detect which
+    // case we're in by comparing the element's width to its parent's.
+    const parentWidth=el.parentElement?el.parentElement.clientWidth:width;
+    const fillsContainer = parentWidth>0 && (width/parentWidth) > 0.9;
+    div.style.width = fillsContainer ? '100%' : width+'px';
+    div.style.height=height+'px';
+    div.style.boxSizing='border-box';
+    // <select>'s rounded "pill" appearance on iOS/macOS comes from native
+    // OS widget theming, not a CSS property — getComputedStyle reports 0
+    // even though it renders rounded, so it has to be re-added by hand.
+    if(el.tagName==='SELECT' && parseFloat(props['border-top-width'])>0){
+      div.style.borderRadius=(height/2)+'px';
+    }
+    // Vertical centering via line-height (matches the box's own height)
+    // instead of flex — flex forced a display change (block or inline-flex)
+    // that disrupted normal inline text flow in some spots (e.g. "No *:"
+    // followed by the certificate number on the same line) and added
+    // stray height. line-height works for single-line text in any display
+    // context without touching layout/flow at all. white-space:pre already
+    // guarantees the text can't wrap onto a second line.
+    div.style.lineHeight=height+'px';
+    div.style.whiteSpace='pre';
+    div.style.overflow='hidden';
+    div.style.appearance='none';
+    div.style.cursor='default';
+    div.style.outline='none';
     el.replaceWith(div);
-    swaps.push({div,el});
+    return {div,el};
   });
   return swaps;
 }
@@ -1360,26 +1406,23 @@ async function generatePDF(){
   fitInputText(document.getElementById('al_adj_made')); // final safety net — re-measure after printMode reflow, right before the snapshot
   const pageEl=document.getElementById('page');
   const pxPerMm=96/25.4;
-  const rect=pageEl.getBoundingClientRect();
-  const contentHeightMM=Math.ceil(rect.height/pxPerMm)+4;
-  const pageHeightMM=Math.max(contentHeightMM,297); // never shorter than standard A4, taller only if the content genuinely needs it
   const filename=pdfFileName();
-  const opt={
-    margin:0,
-    filename,
-    image:{type:'jpeg',quality:0.98},
-    html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
-    jsPDF:{unit:'mm',format:[210,pageHeightMM],orientation:'portrait'},
-    pagebreak:{mode:['avoid-all']}
-  };
+  let swaps=[];
   try{
-    const swaps=swapInputsForText(pageEl);
-    let blob;
-    try{
-      blob=await html2pdf().set(opt).from(document.getElementById('page')).toPdf().output('blob');
-    }finally{
-      restoreSwappedInputs(swaps);
-    }
+    swaps=swapFieldsForText(pageEl); // swap before measuring — guarantees the PDF page size always matches exactly what gets captured
+    const rect=pageEl.getBoundingClientRect();
+    const contentHeightMM=Math.ceil(rect.height/pxPerMm)+4;
+    const pageHeightMM=Math.max(contentHeightMM,297); // never shorter than standard A4, taller only if the content genuinely needs it
+    const opt={
+      margin:0,
+      filename,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:[210,pageHeightMM],orientation:'portrait'},
+      pagebreak:{mode:['avoid-all']}
+    };
+    const blob=await html2pdf().set(opt).from(document.getElementById('page')).toPdf().output('blob');
+    restoreSwappedFields(swaps); swaps=[];
     document.body.classList.remove('printMode');
     if(window.showSaveFilePicker){
       try{
@@ -1397,6 +1440,7 @@ async function generatePDF(){
   }catch(err){
     alert('PDF generation failed: '+(err && err.message ? err.message : err));
   }finally{
+    if(swaps.length) restoreSwappedFields(swaps);
     document.body.classList.remove('printMode');
     btn.disabled=false; btn.textContent=originalLabel;
     refreshOffsetWarning();
