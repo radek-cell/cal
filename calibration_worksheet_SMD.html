@@ -1321,36 +1321,45 @@ function downloadBlob(blob,filename){
 }
 // html2canvas doesn't render live browser text layout — it has to manually
 // reconstruct each element's text onto a canvas, and that reconstruction is
-// unreliable for <input> values specifically (this is the root cause behind
-// several PDF export bugs we've hit: clipped "Adjustment not needed", and
-// now decimal points silently disappearing from numbers like "-34.999").
-// Fix: right before the snapshot, swap every visible text <input> for a
-// plain <div> containing the same text and computed styling. html2canvas
-// renders ordinary text nodes accurately, so this sidesteps the bug
-// entirely instead of chasing each individual symptom. Swapped back
-// immediately after the snapshot — invisible to normal use of the form.
-function swapInputsForText(root){
+// unreliable for <input> AND <select> specifically (root cause behind
+// several PDF export bugs: clipped "Adjustment not needed", vanishing
+// decimal points, and the dotted underline cutting through select text).
+// Fix: right before the snapshot, swap every visible field for a plain
+// <div> with the same text and computed styling (including the dotted
+// border). html2canvas renders ordinary text/border accurately, sidestepping
+// the bug instead of chasing each symptom. Swapped back immediately after
+// the snapshot — invisible to normal use of the form.
+function fieldDisplayText(el){
+  if(el.tagName==='SELECT') return selectedText(el);
+  if(el.type==='date') return displayDate(el.value);
+  return el.value;
+}
+function swapFieldsForText(root){
   const swaps=[];
-  root.querySelectorAll('input').forEach(inp=>{
-    if(inp.type==='file' || inp.id==='dateNative') return;
-    const cs=getComputedStyle(inp);
+  root.querySelectorAll('input, select').forEach(el=>{
+    if(el.tagName==='INPUT' && (el.type==='file' || el.id==='dateNative')) return;
+    const cs=getComputedStyle(el);
     const div=document.createElement('div');
-    div.textContent = inp.type==='date' ? displayDate(inp.value) : inp.value;
+    div.textContent=fieldDisplayText(el);
     div.style.cssText=`width:100%;height:100%;box-sizing:border-box;`+
       `font-size:${cs.fontSize};font-weight:${cs.fontWeight};font-family:${cs.fontFamily};`+
       `letter-spacing:${cs.letterSpacing};color:${cs.color};text-align:${cs.textAlign};`+
       `background:${cs.backgroundColor};text-decoration:${cs.textDecoration};`+
+      `border:0;border-bottom:${cs.borderBottomWidth} ${cs.borderBottomStyle} ${cs.borderBottomColor};`+
       `padding:${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft};`+
       `display:flex;align-items:center;justify-content:${cs.textAlign==='left'?'flex-start':cs.textAlign==='right'?'flex-end':'center'};`+
       `white-space:pre;overflow:hidden`;
-    inp.replaceWith(div);
-    swaps.push({div,inp});
+    el.replaceWith(div);
+    swaps.push({div,el});
   });
   return swaps;
 }
-function restoreSwappedInputs(swaps){
-  swaps.forEach(({div,inp})=>{ if(div.parentNode) div.replaceWith(inp); });
+function restoreSwappedFields(swaps){
+  swaps.forEach(({div,el})=>{ if(div.parentNode) div.replaceWith(el); });
 }
+// Back-compat aliases (old names, in case any other code path still calls them)
+const swapInputsForText=swapFieldsForText;
+const restoreSwappedInputs=restoreSwappedFields;
 
 async function generatePDF(){
   if(!runPreGenerationChecks()) return;
