@@ -1097,16 +1097,16 @@ function calculateAll(){
       alStatusEl.className='statusbar ok adjustNote';
       alStatusEl.textContent='Adjustment not needed — Air, Load and Chart Recorder are all within ±0.300 °C, so As Left and AL Display cycle can be left crossed out.';
     }
-    const adj=document.getElementById('al_adj_made'); if(adj){ adj.value='Adjustment not needed'; adj.scrollLeft=0; }
+    const adj=document.getElementById('al_adj_made'); if(adj){ adj.value='Adjustment not needed'; adj.scrollLeft=0; fitInputText(adj); }
   } else if(!afComplete){
     if(alStatusEl){
       alStatusEl.className='statusbar';
       alStatusEl.textContent='As Left: complete As Found first (Air, Load and Chart Recorder) — As Left unlocks once As Found shows whether adjustment is needed.';
     }
-    const adj=document.getElementById('al_adj_made'); if(adj && adj.value==='Adjustment not needed') adj.value='';
+    const adj=document.getElementById('al_adj_made'); if(adj && adj.value==='Adjustment not needed'){ adj.value=''; adj.style.fontSize=''; }
   } else {
     status('alStatus',al,'As Left');
-    const adj=document.getElementById('al_adj_made'); if(adj && adj.value==='Adjustment not needed') adj.value='';
+    const adj=document.getElementById('al_adj_made'); if(adj && adj.value==='Adjustment not needed'){ adj.value=''; adj.style.fontSize=''; }
   }
   localStorage.setItem('calibration_autosave', JSON.stringify(Object.fromEntries(ids().map(id=>[id,document.getElementById(id).value]))));
   refreshPdfHint();
@@ -1315,6 +1315,7 @@ async function generatePDF(){
   // Let the browser finish reflowing under printMode before measuring, so
   // the PDF page height matches what's actually rendered.
   await new Promise(r=>setTimeout(r,30));
+  fitInputText(document.getElementById('al_adj_made')); // final safety net — re-measure after printMode reflow, right before the snapshot
   const pageEl=document.getElementById('page');
   const pxPerMm=96/25.4;
   const rect=pageEl.getBoundingClientRect();
@@ -1431,9 +1432,33 @@ function buildExcelWorkbook(){
   XLSX.utils.book_append_sheet(wb, ws, 'Calibration');
   return wb;
 }
+// Shrinks an input's font-size (via inline style) until its value's rendered
+// width — measured precisely with canvas.measureText, not guessed — fits
+// inside the field. This replaces guessing a fixed font-size: different
+// browsers/devices (notably iPadOS Safari vs desktop Chrome) render the same
+// font-size a few pixels wider or narrower, which was clipping "Adjustment
+// not needed" in exported PDFs even after earlier fixed-size adjustments.
+const _fitCanvas = document.createElement('canvas');
+function fitInputText(el, maxPx, minPx){
+  if(!el) return;
+  maxPx = maxPx || 11; minPx = minPx || 7;
+  const value = el.value || '';
+  if(!value){ el.style.fontSize = maxPx+'px'; return; }
+  const cs = getComputedStyle(el);
+  const avail = el.clientWidth - 8; // small buffer for caret/internal padding
+  const ctx = _fitCanvas.getContext('2d');
+  let size = maxPx;
+  while(size > minPx){
+    ctx.font = `${cs.fontWeight} ${size}px ${cs.fontFamily}`;
+    if(ctx.measureText(value).width <= avail) break;
+    size -= 0.5;
+  }
+  el.style.fontSize = size+'px';
+}
+
 function setValById(id, value){
   const el=document.getElementById(id);
-  if(el && value!==undefined && value!==null && String(value)!=='') { el.value=String(value); if(el.scrollLeft!==undefined) el.scrollLeft=0; }
+  if(el && value!==undefined && value!==null && String(value)!=='') { el.value=String(value); if(el.scrollLeft!==undefined) el.scrollLeft=0; if(id==='al_adj_made') fitInputText(el); }
 }
 function setSelectByText(id, text){
   const el=document.getElementById(id);
@@ -1578,6 +1603,7 @@ document.getElementById('dateNative')?.addEventListener('change',function(){
 document.getElementById('rtRef')?.addEventListener('change', refreshRoomThermStatus);
 document.getElementById('deviceType')?.addEventListener('change', ()=>checkSetpointRange(false));
 document.getElementById('initialSetpoint')?.addEventListener('input', ()=>checkSetpointRange(false));
+document.getElementById('al_adj_made')?.addEventListener('input', function(){ fitInputText(this); });
 document.getElementById('finalSetpoint')?.addEventListener('input', ()=>checkSetpointRange(false));
 function manufacturerValue(){
   const sel=document.getElementById('manufacturer');
