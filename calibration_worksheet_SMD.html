@@ -33,7 +33,7 @@
   .page{width:210mm;min-height:297mm;margin:14px auto;background:white;padding:12mm;box-shadow:0 4px 22px #0002;box-sizing:border-box}
   .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}.title{font-size:22px;font-weight:800;letter-spacing:1px}.title .subtitle{font-size:12px;font-weight:600;letter-spacing:.3px;color:#555;margin-top:2px}.brand{text-align:right}.brand .logo{font-size:30px;font-weight:900}.brand .no{font-size:16px;margin-top:4px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 25px;margin:14px 0}.field{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:end}.field label{font-size:13px}.field input,.field select{border:0;border-bottom:1px dotted #333;padding:3px 4px;font-size:13px;width:100%;box-sizing:border-box;background:transparent}
-  table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}td,th{border:1px solid var(--line);padding:4px;vertical-align:middle}th{background:#ddd;font-weight:700}.section{background:#cfcfcf;font-weight:700}.subhead{background:#e3e3e3;text-align:center}.label{font-weight:700}.muted{font-weight:400;color:#333}.small{font-size:11px}.input{width:100%;border:0;background:transparent;font-size:12px;box-sizing:border-box;text-align:center}.input:focus{outline:2px solid #9ec5fe;background:#eef6ff} select.probe{display:block;width:100%;min-width:96px;height:28px;border:1px solid #333!important;background:#fff!important;color:#111!important;font-size:10.5px;text-align:left;appearance:auto;-webkit-appearance:menulist;padding:2px}.probeHint{font-size:11px;color:#333;background:#eef6ff;border:1px solid #9ec5fe;padding:6px;margin:6px 0}.autoCorr{background:#fff3cd!important}.calc{background:#f8f8f8;font-weight:700}.bad{background:var(--bad)!important}.ok{background:var(--ok)!important}.warn{background:var(--warn)!important}.selectedHigh{background:var(--hi)!important;border-bottom:3px solid #2563eb!important;font-weight:900!important}.selectedLow{background:var(--lo)!important;border-bottom:3px solid #16a34a!important;font-weight:900!important}.note{font-size:11px;margin:7px 0 0}.sign{height:26px}.comments{height:64px}.statusbar{padding:8px;margin:8px 0;border:1px solid #999;background:#fafafa;font-size:13px}.statusbar.bad{border-color:#b00020}.statusbar.ok{border-color:#207a20}.notNeeded{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.035) 0,rgba(0,0,0,.035) 8px,transparent 8px,transparent 16px);opacity:.78}.notNeeded input,.notNeeded select,.notNeeded textarea{text-decoration:line-through;background:#f3f3f3!important}.notNeeded input:disabled,.notNeeded select:disabled,.notNeeded textarea:disabled{cursor:not-allowed}.adjustNote{background:#e7f7e7!important;border-color:#207a20!important;font-weight:700}#alCycleAirRow.notNeeded,#alCycleLoadRow.notNeeded{opacity:.65;background:repeating-linear-gradient(135deg,rgba(0,0,0,.025) 0,rgba(0,0,0,.025) 7px,transparent 7px,transparent 14px)}
+  table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}td,th{border:1px solid var(--line);padding:4px;vertical-align:middle}th{background:#ddd;font-weight:700}.section{background:#cfcfcf;font-weight:700}.subhead{background:#e3e3e3;text-align:center}.label{font-weight:700}.muted{font-weight:400;color:#333}.small{font-size:11px}.input{width:100%;border:0;background:transparent;font-size:12px;box-sizing:border-box;text-align:center}.input:focus{outline:2px solid #9ec5fe;background:#eef6ff} select.probe{display:block;width:100%;min-width:96px;height:28px;border:1px solid #333!important;background:#fff!important;color:#111!important;font-size:10.5px;text-align:left;appearance:auto;-webkit-appearance:menulist;padding:2px}.probeHint{font-size:11px;color:#333;background:#eef6ff;border:1px solid #9ec5fe;padding:6px;margin:6px 0}.autoCorr{background:#fff3cd!important}.calc{background:#f8f8f8;font-weight:700}.bad{background:var(--bad)!important}.ok{background:var(--ok)!important}.warn{background:var(--warn)!important}.selectedHigh{background:var(--hi)!important;border-bottom:3px solid #2563eb!important;font-weight:900!important}.selectedLow{background:var(--lo)!important;border-bottom:3px solid #16a34a!important;font-weight:900!important}.note{font-size:11px;margin:7px 0 0}.sign{height:26px}.comments{height:64px}.statusbar{padding:8px;margin:8px 0;border:1px solid #999;background:#fafafa;font-size:13px}.statusbar.bad{border-color:#b00020}.statusbar.ok{border-color:#207a20}.notNeeded{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.035) 0,rgba(0,0,0,.035) 8px,transparent 8px,transparent 16px);opacity:.78}.notNeeded input,.notNeeded select,.notNeeded textarea{text-decoration:line-through;background:#f3f3f3!important}.notNeeded input:disabled,.notNeeded select:disabled,.notNeeded textarea:disabled{cursor:not-allowed}.adjustNote{background:#e7f7e7!important;border-color:#207a20!important;font-weight:700}#alCycleAirRow.notNeeded,#alCycleLoadRow.notNeeded{opacity:.65;background:repeating-linear-gradient(135deg,rgba(0,0,0,.025) 0,rgba(0,0,0,.025) 7px,transparent 7px,transparent 14px)}input.na,select.na{text-decoration:line-through;background:#f3f3f3!important;color:#777;cursor:not-allowed}
   /* Real DOM stamp (not a ::after pseudo-element) — html2canvas / html2canvas-pro render
      absolutely-positioned pseudo-content on <table> elements unreliably across browsers,
      especially iPadOS Safari, which was cropping/misplacing the "ADJUSTMENT NOT NEEDED"
@@ -42,9 +42,9 @@
   /* Centering without CSS `transform` — html2canvas on iPadOS Safari also
      mis-renders position + transform combos on plain elements, not just
      pseudo-elements, so rotation/translate is avoided here entirely. */
-  .bigStamp{display:none;position:absolute;inset:0;margin:auto;width:fit-content;height:fit-content;z-index:5;pointer-events:none}
+  .bigStamp{display:none;position:absolute;inset:0;z-index:5;pointer-events:none}
   .stampHost.stampOn .bigStamp{display:block}
-  .bigStamp svg{display:block;width:280px;height:78px}
+  .bigStamp svg{display:block;width:100%;height:100%}
   .lrRow td{background:#eef3fa;padding:2px 4px}
   .lrBadge{display:inline-flex;align-items:center;justify-content:center;gap:5px;width:100%}
   .lrBadge .dot{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;color:#fff;font-size:11px;font-weight:900;font-family:Arial,Helvetica,sans-serif}
@@ -69,7 +69,7 @@
   .printMode .page{box-shadow:none;margin:0 auto;width:198mm;min-height:auto;padding:7mm}
   .printMode .note,.printMode #setpointRangeHint{display:none}
   @page{size:A4 portrait;margin:6mm}
-  @media print{html,body{background:white;width:210mm}.toolbar{display:none}.page{margin:0 auto;box-shadow:none;width:198mm;min-height:auto;padding:4mm;page-break-after:auto}.header{margin-bottom:4px}.title{font-size:17px}.title .subtitle{font-size:9px;margin-top:1px}.brand .logo{font-size:22px}.brand .no{font-size:12px}.grid2{gap:4px 14px;margin:6px 0}.field label,.field input,.field select{font-size:10px}table{font-size:8.8px;page-break-inside:avoid}td,th{padding:2px}.input{font-size:8.8px}.small,.note,.probeHint{font-size:7.5px}.statusbar{font-size:9px;padding:4px;margin:4px 0}.comments{height:42px}select.probe{font-size:7.5px;height:18px;min-width:70px;padding:0}.bigStamp svg{width:180px;height:50px}.page *{print-color-adjust:exact;-webkit-print-color-adjust:exact}.bad,.ok,.warn,.autoCorr,.calc{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+  @media print{html,body{background:white;width:210mm}.toolbar{display:none}.page{margin:0 auto;box-shadow:none;width:198mm;min-height:auto;padding:4mm;page-break-after:auto}.header{margin-bottom:4px}.title{font-size:17px}.title .subtitle{font-size:9px;margin-top:1px}.brand .logo{font-size:22px}.brand .no{font-size:12px}.grid2{gap:4px 14px;margin:6px 0}.field label,.field input,.field select{font-size:10px}table{font-size:8.8px;page-break-inside:avoid}td,th{padding:2px}.input{font-size:8.8px}.small,.note,.probeHint{font-size:7.5px}.statusbar{font-size:9px;padding:4px;margin:4px 0}.comments{height:42px}select.probe{font-size:7.5px;height:18px;min-width:70px;padding:0}.bigStamp svg{width:100%;height:100%}.page *{print-color-adjust:exact;-webkit-print-color-adjust:exact}.bad,.ok,.warn,.autoCorr,.calc{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style>
 </head>
 <body>
@@ -101,7 +101,7 @@
 </div>
 <div class="page" id="page">
   <div class="header">
-    <div class="title">Engineer Calibration Worksheet<div class="subtitle">Standard Medical Device <span class="req">*</span>: <select id="deviceType" style="font-size:11px;border:0;border-bottom:1px dotted #333;background:transparent;padding:1px 2px;font-weight:600;color:#555"><option value="">-- select --</option><option value="Plasma Freezer">Plasma Freezer</option><option value="Blood Bank">Blood Bank</option><option value="Platelet Incubator">Platelet Incubator</option></select></div></div>
+    <div class="title"><span id="titleText">Engineer Calibration Worksheet</span><div class="subtitle">Standard Medical Device <span class="req">*</span>: <select id="deviceType" style="font-size:11px;border:0;border-bottom:1px dotted #333;background:transparent;padding:1px 2px;font-weight:600;color:#555"><option value="">-- select --</option><option value="Plasma Freezer">Plasma Freezer</option><option value="Blood Bank">Blood Bank</option><option value="Platelet Incubator">Platelet Incubator</option></select></div></div>
     <div class="brand"><div class="logo">❄ LABCOLD</div><div class="no">No <span class="req">*</span>: <input id="certNo" value="S " maxlength="7" inputmode="numeric" placeholder="S 00000" style="width:150px;border:0;border-bottom:1px solid #333;font-size:20px;text-align:center;letter-spacing:2px"></div></div>
   </div>
 
@@ -182,10 +182,11 @@
     <tr><td class="label">Difference of Average<br><span class="small">Reference vs Display</span></td><td colspan="2"><input class="input calc" id="al_air_diff" readonly></td><td><input class="input calc" id="al_load_diff" readonly></td><td><input class="input calc" id="al_chart_diff" readonly></td></tr>
   </table>
   <div id="alBigStamp" class="bigStamp" aria-hidden="true">
-    <svg viewBox="0 0 280 78" xmlns="http://www.w3.org/2000/svg">
-      <g transform="rotate(-14 140 39)">
-        <rect x="8" y="14" width="264" height="50" fill="#ffffffd9" stroke="#444" stroke-width="3"/>
-        <text x="140" y="46" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="19" letter-spacing="0.6" fill="#444">ADJUSTMENT NOT NEEDED</text>
+    <svg viewBox="0 0 300 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- hand-drawn-style diagonal strike across the whole table, corner to corner -->
+      <path d="M 20 184 L 280 18" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round"/>
+      <g transform="translate(150 100) rotate(-34)">
+        <text x="0" y="14" text-anchor="middle" font-family="'Segoe Print','Bradley Hand','Comic Sans MS',cursive" font-weight="700" font-size="46" fill="#222">-N/A-</text>
       </g>
     </svg>
   </div>
@@ -257,6 +258,7 @@ function buildProbeListFromOffsets(raw){
   return Object.entries(raw.probes).map(([key,p])=>({
     id:key,
     label:`${p.port?p.port+' / ':''}${key}${p.sn?' / SN '+p.sn:''}`,
+    shortLabel:`${key}${p.port?', '+p.port:''}`,
     corrections:p.c||{}
   }));
 }
@@ -772,10 +774,18 @@ function nearestCorrection(probeId,setpoint){
 function fillProbeDropdowns(){
   document.querySelectorAll('select.probe').forEach(sel=>{
     const current=sel.value;
-    sel.innerHTML='<option value="">-- select probe --</option>'+PROBE_LIST.map(p=>`<option value="${p.id}">${p.label}</option>`).join('');
+    sel.innerHTML='<option value="">-- select probe --</option>'+PROBE_LIST.map(p=>`<option value="${p.id}" title="${p.label}">${p.shortLabel}</option>`).join('');
     if(current && PROBES[current]) sel.value=current;
   });
   syncLeftProbes();
+}
+// The select shows a short "1A, T1"-style label so it fits the narrow
+// column, but the certificate/export should still record the full
+// port/id/serial-number text for traceability — look that up here instead
+// of reading the (now shortened) option text directly.
+function probeFullLabel(sel){
+  if(!sel) return '';
+  return sel.value && PROBES[sel.value] ? PROBES[sel.value].label : selectedText(sel);
 }
 function syncLeftProbes(){
   ['air1','air2','load','chart'].forEach(col=>{
@@ -1112,6 +1122,7 @@ function calculateAll(){
   refreshPdfHint();
 }
 
+const NA_TEXT='-N/A-';
 function setAdjustmentMode(stamped, unlocked){
   const targets=['alTable','alCycleAirRow','alCycleLoadRow'];
   targets.forEach(id=>{
@@ -1121,7 +1132,29 @@ function setAdjustmentMode(stamped, unlocked){
     e.querySelectorAll('input,select,textarea').forEach(el=>{
       const alwaysDisabledProbe=el.classList.contains('probe'); // AL probe selects always stay disabled — they're auto-synced from As Found
       el.disabled = !unlocked || alwaysDisabledProbe;
+      if(alwaysDisabledProbe || el.classList.contains('timeSel')) return; // handled separately below
+      if(stamped && el.value.trim()===''){ el.value=NA_TEXT; }
+      else if(!stamped && el.value===NA_TEXT){ el.value=''; }
     });
+  });
+  // Time pickers can't hold free text — swap the blank option's label
+  // between "--" (still needs entering) and "N/A" (not applicable) instead.
+  ['al_cycle_start_h','al_cycle_start_m'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel) return;
+    const blank=sel.querySelector('option[value=""]');
+    if(blank) blank.textContent = stamped ? 'N/A' : '--';
+    if(stamped) sel.value='';
+  });
+  // Final offsets/set point live outside the AL table but are only required
+  // when an adjustment is actually needed — mark them N/A the same way.
+  ['finalOffsets','finalSetpoint'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.disabled=!!stamped;
+    el.classList.toggle('na', !!stamped);
+    if(stamped && el.value.trim()===''){ el.value=NA_TEXT; }
+    else if(!stamped && el.value===NA_TEXT){ el.value=''; }
   });
   const host=document.getElementById('alTableHost'); if(host) host.classList.toggle('stampOn', !!stamped);
   ['al_adj_made','al_cycle_start_h','al_cycle_start_m'].forEach(id=>{const e=document.getElementById(id); if(e) e.classList.toggle('ok', !!stamped);});
@@ -1165,6 +1198,7 @@ function initCert(){
   const dd=document.getElementById('date');
   if(dd && dn) dd.value=displayDate(dn.value);
   syncDates();
+  checkSecretCertCode();
 }
 function sanitizeCertNo(){
   const cn=document.getElementById('certNo'); if(!cn) return;
@@ -1175,12 +1209,22 @@ function checkCertNoFormat(){
   const cn=document.getElementById('certNo'); if(!cn) return true;
   const ok=/^S \d{5}$/.test(cn.value);
   cn.classList.toggle('invalid', !ok);
+  checkSecretCertCode();
   return ok;
+}
+// Easter egg: entering the certificate number "S 00000" retitles the sheet
+// as a Verification Worksheet instead of a Calibration Worksheet.
+function checkSecretCertCode(){
+  const cn=document.getElementById('certNo');
+  const titleEl=document.getElementById('titleText');
+  if(!cn || !titleEl) return;
+  titleEl.textContent = cn.value==='S 00000' ? 'Engineer Verification Worksheet' : 'Engineer Calibration Worksheet';
 }
 
 // --- Decimal-format validation and auto-advance (ported from Barkey worksheet) ---
 function decimalOK(el){
   if(!el.dataset.decimals) return true;
+  if(el.disabled){ el.classList.remove('invalid','valid'); return true; } // N/A fields aren't real numbers — skip format check
   const v=String(el.value||'').trim();
   if(v===''){ el.classList.remove('invalid','valid'); return true; }
   const d=Number(el.dataset.decimals);
@@ -1317,7 +1361,7 @@ function downloadBlob(blob,filename){
 // the bug instead of chasing each symptom. Swapped back immediately after
 // the snapshot — invisible to normal use of the form.
 function fieldDisplayText(el){
-  if(el.tagName==='SELECT') return selectedText(el);
+  if(el.tagName==='SELECT') return el.classList.contains('probe') ? probeFullLabel(el) : selectedText(el);
   if(el.type==='date') return displayDate(el.value);
   return el.value;
 }
@@ -1481,7 +1525,7 @@ function buildExcelWorkbook(){
     const P=prefix.toUpperCase();
     push(prefix==='af'?'--- As Found (AF) ---':'--- As Left (AL) ---','');
     [['air1','Air 1'],['air2','Air 2'],['load','Load'],['chart','Chart Recorder']].forEach(([col,colLabel])=>{
-      push(`${P} ${colLabel} Probe`, selectedText(document.getElementById(`${prefix}_${col}_probe`)));
+      push(`${P} ${colLabel} Probe`, probeFullLabel(document.getElementById(`${prefix}_${col}_probe`)));
       push(`${P} ${colLabel} Reference Max`, val(`${prefix}_${col}_max`));
       push(`${P} ${colLabel} Max Correction`, val(`${prefix}_${col}_max_corr`));
       push(`${P} ${colLabel} Max + Correction`, val(`${prefix}_${col}_max_calc`));
