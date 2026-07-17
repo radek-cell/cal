@@ -1510,6 +1510,32 @@ function fieldDisplayText(el){
   if(el.type==='date') return displayDate(el.value);
   return el.value;
 }
+// iPadOS/macOS Safari sometimes serializes getComputedStyle colors using the
+// modern CSS `color(...)` function (e.g. wide-gamut display-p3 colors)
+// instead of rgb()/hex. html2canvas's color parser doesn't understand that
+// syntax and throws "Attempting to parse an unsupported color function",
+// which was failing PDF generation entirely. Fix: parse the color()
+// function directly and rebuild it as a plain rgb()/rgba() string that
+// html2canvas can read. (A canvas fillStyle round-trip was tried first, but
+// browsers can hand wide-gamut colors straight back out as color() too, so
+// it doesn't reliably normalize them — this direct parse does.)
+const _colorPropCache=new Map();
+function normalizeColorValue(prop, value){
+  if(!value || value.indexOf('color(')===-1) return value; // fast path — only touch values that actually use the problem syntax
+  const cacheKey=value;
+  if(_colorPropCache.has(cacheKey)) return _colorPropCache.get(cacheKey);
+  let out=value;
+  const m=value.match(/color\(\s*[\w-]+\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)/i);
+  if(m){
+    const r=Math.round(Math.max(0,Math.min(1,parseFloat(m[1])))*255);
+    const g=Math.round(Math.max(0,Math.min(1,parseFloat(m[2])))*255);
+    const b=Math.round(Math.max(0,Math.min(1,parseFloat(m[3])))*255);
+    const a=m[4]!==undefined?parseFloat(m[4]):1;
+    out = a<1 ? `rgba(${r}, ${g}, ${b}, ${a})` : `rgb(${r}, ${g}, ${b})`;
+  }
+  _colorPropCache.set(cacheKey, out);
+  return out;
+}
 function swapFieldsForText(root){
   const candidates=[...root.querySelectorAll('input, select')].filter(el=>
     !(el.tagName==='INPUT' && (el.type==='file' || el.id==='dateNative'))
@@ -1524,7 +1550,7 @@ function swapFieldsForText(root){
     const cs=getComputedStyle(el);
     const rect=el.getBoundingClientRect();
     const props={};
-    for(let i=0;i<cs.length;i++){ const p=cs[i]; props[p]=cs.getPropertyValue(p); }
+    for(let i=0;i<cs.length;i++){ const p=cs[i]; props[p]=normalizeColorValue(p, cs.getPropertyValue(p)); }
     return {el, props, width:rect.width, height:rect.height, text:fieldDisplayText(el)};
   });
   // Pass 2: now build and swap in all the divs.
