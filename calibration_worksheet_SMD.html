@@ -39,8 +39,12 @@
      especially iPadOS Safari, which was cropping/misplacing the "ADJUSTMENT NOT NEEDED"
      stamp in exported PDFs. A real element positioned inside a plain relative div avoids that. */
   .stampHost{position:relative}
-  .bigStamp{display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-14deg);font-size:32px;font-weight:900;letter-spacing:.6px;color:#444;border:3px solid #444;padding:12px 20px;background:#ffffffd9;z-index:5;pointer-events:none;white-space:nowrap}
+  /* Centering without CSS `transform` — html2canvas on iPadOS Safari also
+     mis-renders position + transform combos on plain elements, not just
+     pseudo-elements, so rotation/translate is avoided here entirely. */
+  .bigStamp{display:none;position:absolute;inset:0;margin:auto;width:fit-content;height:fit-content;z-index:5;pointer-events:none}
   .stampHost.stampOn .bigStamp{display:block}
+  .bigStamp svg{display:block;width:280px;height:78px}
   .lrRow td{background:#eef3fa;padding:2px 4px}
   .lrBadge{display:inline-flex;align-items:center;justify-content:center;gap:5px;width:100%}
   .lrBadge .dot{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;color:#fff;font-size:11px;font-weight:900;font-family:Arial,Helvetica,sans-serif}
@@ -65,7 +69,7 @@
   .printMode .page{box-shadow:none;margin:0 auto;width:198mm;min-height:auto}
   .printMode .note,.printMode #setpointRangeHint{display:none}
   @page{size:A4 portrait;margin:6mm}
-  @media print{html,body{background:white;width:210mm}.toolbar{display:none}.page{margin:0 auto;box-shadow:none;width:198mm;min-height:auto;padding:4mm;page-break-after:auto}.header{margin-bottom:4px}.title{font-size:17px}.title .subtitle{font-size:9px;margin-top:1px}.brand .logo{font-size:22px}.brand .no{font-size:12px}.grid2{gap:4px 14px;margin:6px 0}.field label,.field input,.field select{font-size:10px}table{font-size:8.8px;page-break-inside:avoid}td,th{padding:2px}.input{font-size:8.8px}.small,.note,.probeHint{font-size:7.5px}.statusbar{font-size:9px;padding:4px;margin:4px 0}.comments{height:42px}select.probe{font-size:7.5px;height:18px;min-width:70px;padding:0}.bigStamp{font-size:20px;padding:6px 10px;border-width:2px}.page *{print-color-adjust:exact;-webkit-print-color-adjust:exact}.bad,.ok,.warn,.autoCorr,.calc{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+  @media print{html,body{background:white;width:210mm}.toolbar{display:none}.page{margin:0 auto;box-shadow:none;width:198mm;min-height:auto;padding:4mm;page-break-after:auto}.header{margin-bottom:4px}.title{font-size:17px}.title .subtitle{font-size:9px;margin-top:1px}.brand .logo{font-size:22px}.brand .no{font-size:12px}.grid2{gap:4px 14px;margin:6px 0}.field label,.field input,.field select{font-size:10px}table{font-size:8.8px;page-break-inside:avoid}td,th{padding:2px}.input{font-size:8.8px}.small,.note,.probeHint{font-size:7.5px}.statusbar{font-size:9px;padding:4px;margin:4px 0}.comments{height:42px}select.probe{font-size:7.5px;height:18px;min-width:70px;padding:0}.bigStamp svg{width:180px;height:50px}.page *{print-color-adjust:exact;-webkit-print-color-adjust:exact}.bad,.ok,.warn,.autoCorr,.calc{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style>
 </head>
 <body>
@@ -177,7 +181,14 @@
     <tr><td>Average ref: Min & Max<br><span class="small">(after correction)</span></td><td colspan="2"><input class="input calc" id="al_air_avg" readonly></td><td><input class="input calc" id="al_load_avg" readonly></td><td><input class="input calc" id="al_chart_avg" readonly></td></tr>
     <tr><td class="label">Difference of Average<br><span class="small">Reference vs Display</span></td><td colspan="2"><input class="input calc" id="al_air_diff" readonly></td><td><input class="input calc" id="al_load_diff" readonly></td><td><input class="input calc" id="al_chart_diff" readonly></td></tr>
   </table>
-  <div id="alBigStamp" class="bigStamp" aria-hidden="true">ADJUSTMENT NOT NEEDED</div>
+  <div id="alBigStamp" class="bigStamp" aria-hidden="true">
+    <svg viewBox="0 0 280 78" xmlns="http://www.w3.org/2000/svg">
+      <g transform="rotate(-14 140 39)">
+        <rect x="8" y="14" width="264" height="50" fill="#ffffffd9" stroke="#444" stroke-width="3"/>
+        <text x="140" y="46" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="19" letter-spacing="0.6" fill="#444">ADJUSTMENT NOT NEEDED</text>
+      </g>
+    </svg>
+  </div>
   </div>
 
   <table style="margin-top:8px;table-layout:fixed">
