@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="LabCal">
+<meta name="theme-color" content="#dfe6ee">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22LabCal%20Calibration%20Suite%22%2C%22short_name%22%3A%22LabCal%22%2C%22display%22%3A%22fullscreen%22%2C%22start_url%22%3A%22.%2Findex.html%22%2C%22background_color%22%3A%22%23dfe6ee%22%2C%22theme_color%22%3A%22%23dfe6ee%22%7D">
+<title>LabCal — Calibration Suite</title>
+<style>
+:root{
+  --bg:#dfe6ee;
+  --bg2:#eef3f7;
+  --panel:#ffffff;
+  --panel-hi:#eef8f6;
+  --border:#c9d4dd;
+  --border-soft:#d3dce4;
+  --ink:#12161c;
+  --muted:#57626d;
+  --muted-dim:#828d98;
+  --cyan:#0f9488;
+  --cyan-dim:#4fb3a8;
+  --amber:#a9690a;
+  --amber-dim:#e3c496;
+  --green:#1f9d55;
+  --mono:ui-monospace,"SF Mono","IBM Plex Mono",Consolas,"Roboto Mono",monospace;
+  --sans:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(circle at 15% 0%, var(--bg2) 0%, transparent 45%),
+    radial-gradient(circle at 100% 20%, #e6edf3 0%, transparent 40%),
+    var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  min-height:100vh;
+  min-height:100dvh;
+  -webkit-font-smoothing:antialiased;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* faint calibration grid backdrop */
+.gridlines{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(20,30,40,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,30,40,.05) 1px, transparent 1px);
+  background-size:34px 34px;
+  mask-image:linear-gradient(to bottom, black, transparent 85%);
+}
+
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 28px 80px}
+@media (max-width:620px){.wrap{padding:0 18px 56px}}
+
+/* ---- header ---- */
+header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:34px 0 22px;border-bottom:1px solid var(--border-soft);
+  flex-wrap:wrap;gap:16px;
+}
+.wordmark{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.wordmark .mark{font-family:var(--mono);font-weight:700;font-size:23px;letter-spacing:.5px;color:var(--ink)}
+.wordmark .tag{
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:1.4px;
+  color:#fff;background:var(--cyan);padding:3px 7px;border-radius:2px;
+  text-transform:uppercase;
+}
+.brandcol{display:flex;flex-direction:column;gap:10px}
+.labcold-logo{font-family:var(--sans);font-size:24px;font-weight:900;letter-spacing:1px;color:var(--ink)}
+.labcold-logo small{display:block;font-size:8.5px;letter-spacing:.4px;font-weight:700;background:#2a2f35;color:#fff;width:max-content;padding:1px 8px;margin-left:30px}
+.hstat{text-align:right;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7}
+.hstat b{color:var(--ink);font-weight:600}
+.hstat .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:5px;box-shadow:0 0 0 3px rgba(63,200,121,.18)}
+.hgroup{display:flex;align-items:center;gap:14px}
+.fsbtn{
+  display:flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:6px;
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  cursor:pointer;padding:0;flex-shrink:0;
+  transition:border-color .15s ease, color .15s ease, background .15s ease;
+}
+.fsbtn:hover{border-color:var(--cyan-dim);color:var(--cyan)}
+.fsbtn:active{background:var(--panel-hi)}
+.fsbtn svg{width:16px;height:16px}
+.fsbtn .icon-exit{display:none}
+body.is-fullscreen .fsbtn .icon-enter{display:none}
+body.is-fullscreen .fsbtn .icon-exit{display:block}
+@media (max-width:480px){
+  header{padding:22px 0 18px;gap:10px}
+  .wordmark .mark{font-size:19px}
+  .labcold-logo{font-size:19px}
+  .labcold-logo small{margin-left:24px}
+  .hstat{text-align:left}
+}
+
+/* ---- hero ---- */
+.hero{position:relative;padding:56px 0 40px;overflow:hidden}
+.trace{position:absolute;top:10px;right:-40px;width:560px;max-width:60%;opacity:.28;pointer-events:none}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;margin:0 0 14px}
+h1{font-size:clamp(30px,4.4vw,50px);line-height:1.1;margin:0 0 16px;font-weight:700;letter-spacing:-.5px;max-width:14ch}
+.lede{color:var(--muted);font-size:16px;line-height:1.6;max-width:52ch;margin:0}
+@media (max-width:620px){
+  .hero{padding:36px 0 28px}
+  .trace{opacity:.18;width:300px;top:-10px;right:-60px}
+  .lede{font-size:15px}
+}
+@media (max-width:380px){
+  .trace{display:none}
+}
+
+/* ---- section label ---- */
+.section-label{
+  display:flex;align-items:center;gap:14px;margin:8px 0 22px;
+  font-family:var(--mono);font-size:12px;letter-spacing:1.5px;color:var(--muted-dim);text-transform:uppercase;
+}
+.section-label::after{content:"";flex:1;height:1px;background:var(--border-soft)}
+
+/* ---- grid of tool cards ---- */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:920px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:620px){.grid{grid-template-columns:1fr;gap:12px}}
+
+.card{
+  position:relative;display:flex;flex-direction:column;
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:20px 20px 16px;min-height:230px;
+  text-decoration:none;color:inherit;
+  box-shadow:0 1px 3px rgba(20,30,40,.06);
+  transition:transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+@media (max-width:620px){
+  .card{min-height:0;padding:18px}
+}
+.card.active:hover{transform:translateY(-3px);border-color:var(--cyan-dim);background:var(--panel-hi);box-shadow:0 10px 22px rgba(20,30,40,.10)}
+.card.active:active{transform:translateY(0);background:var(--panel-hi)}
+.card.active:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.card.planned{border-style:dashed;opacity:.75;cursor:default;box-shadow:none}
+
+.card-top{display:flex;justify-content:space-between;align-items:flex-start}
+.code{font-family:var(--mono);font-size:11px;color:var(--muted-dim);letter-spacing:1px}
+.icon{width:30px;height:30px;color:var(--muted)}
+.card.active .icon{color:var(--cyan)}
+
+.stamp{
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:1px;
+  padding:3px 8px;border-radius:2px;transform:rotate(4deg);white-space:nowrap;
+}
+.stamp.ready{border:1.5px solid var(--green);color:var(--green)}
+.stamp.dev{border:1.5px dashed var(--amber);color:var(--amber)}
+
+.card h3{font-size:17px;margin:16px 0 6px;font-weight:650;letter-spacing:-.2px}
+.card p{font-size:13px;color:var(--muted);line-height:1.55;margin:0;flex:1}
+
+.card-foot{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:16px;padding-top:12px;border-top:1px solid var(--border-soft);
+  font-family:var(--mono);font-size:10.5px;color:var(--muted-dim);
+}
+.open{display:flex;align-items:center;gap:5px;color:var(--cyan);font-weight:600}
+.card.active:hover .open{gap:8px}
+.open svg{width:13px;height:13px;transition:transform .16s ease}
+
+/* add-new tile */
+.card.addnew{
+  align-items:center;justify-content:center;text-align:center;
+  border-style:dashed;color:var(--muted-dim);min-height:230px;
+}
+@media (max-width:620px){
+  .card.addnew{min-height:110px;padding:24px 18px}
+}
+.card.addnew .icon{width:26px;height:26px;margin-bottom:10px;color:var(--muted-dim)}
+.card.addnew span{font-family:var(--mono);font-size:11px;letter-spacing:.5px}
+
+footer{
+  margin-top:56px;padding-top:18px;border-top:1px solid var(--border-soft);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  font-family:var(--mono);font-size:10.5px;color:var(--muted-dim);
+}
+
+@media (prefers-reduced-motion:reduce){
+  .card{transition:none}
+}
+</style>
+</head>
+<body>
+
+<div class="gridlines"></div>
+
+<div class="wrap">
+
+  <header>
+    <div class="brandcol">
+      <div class="wordmark">
+        <span class="mark">LABCAL</span>
+        <span class="tag">Calibration Suite</span>
+      </div>
+      <div class="labcold-logo">❄ LABCOLD<small>medical &amp; scientific refrigeration</small></div>
+    </div>
+    <div class="hgroup">
+      <div class="hstat" id="hstat">
+        <div><span class="dot"></span><b id="toolCount">–</b> worksheets · <b id="activeCount">–</b> active</div>
+        <div id="todayDate">—</div>
+      </div>
+      <button class="fsbtn" id="fsToggle" type="button" aria-label="Toggle fullscreen" title="Toggle fullscreen">
+        <svg class="icon-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        <svg class="icon-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v3a2 2 0 0 1-2 2H4M15 3v3a2 2 0 0 0 2 2h3M9 21v-3a2 2 0 0 0-2-2H4M15 21v-3a2 2 0 0 1 2-2h3"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="hero">
+    <svg class="trace" viewBox="0 0 500 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 120 L40 118 L60 122 L80 60 L100 100 L130 40 L160 90 L190 30 L220 70 L250 20 L290 55 L320 15 L360 45 L400 10 L440 35 L500 8"
+        stroke="#0f9488" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+      <g stroke="#0f9488" stroke-width="1" opacity=".4">
+        <line x1="0" y1="140" x2="500" y2="140"/>
+        <line x1="0" y1="140" x2="0" y2="0"/>
+      </g>
+    </svg>
+    <p class="eyebrow">Offline calibration toolkit</p>
+    <h1>One ecosystem,<br>every calibration worksheet.</h1>
+    <p class="lede">Choose the calibration form for your device. Each worksheet runs independently, fully offline, with PDF/Excel export.</p>
+  </div>
+
+  <div class="section-label">WS · 01–05 — select a worksheet</div>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    <span>LabCal Calibration Suite · offline worksheet toolkit</span>
+    <span id="footYear">v1.0</span>
+  </footer>
+
+</div>
+
+<script>
+// ---------------------------------------------------------------------
+// Add new tools here — each entry renders one card. To wire up a new
+// worksheet, add an object with status:'active' and the correct href.
+// ---------------------------------------------------------------------
+const tools = [
+  {
+    code:'WS-01',
+    title:'Barkey Calibration Worksheet',
+    desc:'Standard Barkey calibration worksheet — full field validation, PDF/Excel export, A4 print.',
+    href:'barkey_calibration_form.html',
+    status:'active',
+    meta:'A4 · PDF/Excel',
+    icon:'snowflake'
+  },
+  {
+    code:'WS-02',
+    title:'Calibration Worksheet — Standard Medical Device',
+    desc:'Calibration worksheet for standard medical devices (fridges, freezers, platelet incubators).',
+    href:'calibration_worksheet_SMD.html',
+    status:'active',
+    meta:'A4 · PDF/Excel',
+    icon:'fridge'
+  },
+  {
+    code:'WS-03',
+    title:'Calibration Worksheet — IBB / Blood Bank',
+    desc:'Dedicated worksheet for blood bank refrigerators and IBB medical devices.',
+    href:'#',
+    status:'planned',
+    meta:'in development',
+    icon:'icicle'
+  },
+  {
+    code:'WS-04',
+    title:'Calibration Worksheet — Standard Non-Medical Device',
+    desc:'Calibration worksheet for non-medical refrigeration equipment — freezers, fridges and incubators, with device-specific tolerances.',
+    href:'calibration_worksheet_SNMD.html',
+    status:'active',
+    meta:'A4 · PDF/Excel',
+    icon:'crystal'
+  },
+  {
+    code:'WS-05',
+    title:'Calibration Worksheet — Standard 19/24 Range',
+    desc:'Calibration worksheet for Labcold’s standard 19 range and 24 range units, fixed ±0.5°C tolerance.',
+    href:'calibration_worksheet_19_24.html',
+    status:'active',
+    meta:'A4 · PDF/Excel',
+    icon:'thermo'
+  },
+];
+
+const icons = {
+  snowflake:'<path d="M12 2v20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M12 5.5l-2-1.5m2 1.5l2-1.5M12 18.5l-2 1.5m2-1.5l2 1.5M7.05 7.05l-2.3-.3m2.3.3l-.3-2.3M16.95 7.05l2.3-.3m-2.3.3l.3-2.3M7.05 16.95l-2.3.3m2.3-.3l-.3 2.3M16.95 16.95l2.3.3m-2.3-.3l.3 2.3"/>',
+  fridge:'<path d="M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M5 10h14"/><path d="M8 5.5v3"/><path d="M8 13.5v4"/>',
+  icicle:'<path d="M8 3h8l-1.5 6 1.5 2-1.5 2 1.5 6-2.5 3-2.5-3 1.5-6-1.5-2 1.5-2L8 3Z"/>',
+  crystal:'<path d="M12 2l7 4v8l-7 4-7-4V6l7-4Z"/><path d="M12 2v20M5 6l14 12M19 6 5 18"/>',
+  thermo:'<path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/><path d="M9 6.5h1.4M9 9.5h1.4"/><path d="M17 4.5v3M15.5 6h3"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
+};
+
+function iconSvg(name, extra=''){
+  return `<svg class="icon ${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icons[name]||''}</svg>`;
+}
+
+function renderCards(){
+  const grid = document.getElementById('grid');
+  let html = '';
+
+  tools.forEach(t=>{
+    const isActive = t.status === 'active';
+    html += `
+    <a class="card ${isActive?'active':'planned'}" ${isActive?`href="${t.href}"`:'href="javascript:void(0)" aria-disabled="true"'}>
+      <div class="card-top">
+        <span class="code">${t.code}</span>
+        ${iconSvg(t.icon)}
+      </div>
+      <h3>${t.title}</h3>
+      <p>${t.desc}</p>
+      <div class="card-top" style="margin-top:14px">
+        <span class="stamp ${isActive?'ready':'dev'}">${isActive?'ACTIVE':'IN DEVELOPMENT'}</span>
+      </div>
+      <div class="card-foot">
+        <span>${t.meta}</span>
+        ${isActive?`<span class="open">Open <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons.arrow}</svg></span>`:'<span>—</span>'}
+      </div>
+    </a>`;
+  });
+
+  html += `
+    <div class="card addnew">
+      ${iconSvg('plus')}
+      <span>More worksheets<br>coming soon</span>
+    </div>`;
+
+  grid.innerHTML = html;
+
+  document.getElementById('toolCount').textContent = tools.length;
+  document.getElementById('activeCount').textContent = tools.filter(t=>t.status==='active').length;
+}
+
+function renderDate(){
+  const d = new Date();
+  const opts = {day:'2-digit', month:'short', year:'numeric'};
+  document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
+  document.getElementById('footYear').textContent = 'v1.0 · ' + d.getFullYear();
+}
+
+// ---- Fullscreen toggle (Android/desktop browsers; on iOS, use
+// "Add to Home Screen" instead — Safari does not expose this API) ----
+function setupFullscreen(){
+  const btn = document.getElementById('fsToggle');
+  if(!btn) return;
+
+  const fsSupported = document.documentElement.requestFullscreen
+    || document.documentElement.webkitRequestFullscreen
+    || document.documentElement.msRequestFullscreen;
+
+  if(!fsSupported){
+    btn.style.display = 'none';
+    return;
+  }
+
+  function isFullscreen(){
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+  }
+
+  function updateState(){
+    document.body.classList.toggle('is-fullscreen', isFullscreen());
+  }
+
+  btn.addEventListener('click', ()=>{
+    try{
+      if(!isFullscreen()){
+        const el = document.documentElement;
+        (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen).call(el);
+      }else{
+        (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+      }
+    }catch(e){ /* fullscreen request rejected — ignore silently */ }
+  });
+
+  ['fullscreenchange','webkitfullscreenchange','msfullscreenchange'].forEach(evt=>{
+    document.addEventListener(evt, updateState);
+  });
+}
+
+renderCards();
+renderDate();
+setupFullscreen();
+</script>
+
+</body>
+</html>
