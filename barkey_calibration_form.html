@@ -7,15 +7,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 <style>
 :root{--line:#111;--bar:#1b1b1b;--ok:#e8f7e8;--bad:#ffe3e3;--hint:#777;--paper:#fff}
-*{box-sizing:border-box} body{margin:0;background:#dfe6ee;font-family:Arial,Helvetica,sans-serif;color:#111}.toolbar{max-width:210mm;margin:10px auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.btn{border:1px solid #111;background:#111;color:#fff;padding:8px 12px;border-radius:4px;font-weight:700;cursor:pointer}.btn.light{background:#f4f4f4;color:#111}.hintText{font-size:11px;color:#555}.hintText.warn{color:#b00000}.page{width:210mm;min-height:297mm;margin:0 auto 20px;background:var(--paper);padding:9mm 11mm;box-shadow:0 5px 24px #0003}.head{display:grid;grid-template-columns:1fr 1fr;align-items:start;margin-bottom:6px}.logo{font-size:30px;font-weight:900;letter-spacing:1px}.logo small{display:block;font-size:9px;letter-spacing:.4px;font-weight:700;background:#333;color:#fff;width:max-content;padding:1px 8px;margin-left:34px}.title{text-align:right}.title h1{font-size:18px;margin:1px 0 7px;letter-spacing:.7px}.no{font-size:24px;letter-spacing:3px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 22px;margin:6px 0}.meta>*{min-width:0}.field{display:grid;grid-template-columns:120px 1fr;align-items:end;gap:6px;font-size:12px;min-width:0}.field input,.field select{border:0;border-bottom:1px solid #222;height:21px;font-size:12px;padding:1px 4px;background:white;min-width:0}.field.wide{grid-column:1/-1;grid-template-columns:270px 1fr}input.invalid,select.invalid{background:#ffdede!important;border-bottom:2px solid #b00000!important;color:#900!important}input.valid{background:#e8f7e8!important}.timeSel{border:0;border-bottom:1px solid #222;height:21px;font-size:12px;background:white;padding:1px 2px}#refThermCalDue.ok{color:#0a7a0a;font-weight:700}#refThermCalDue.warn{color:#b00000;font-weight:700}#refTherm.certExpired{background:#ddd!important;color:#900!important;pointer-events:none}.hint{color:#777;font-size:10px;margin-left:4px;white-space:nowrap}.room{display:grid;grid-template-columns:1.1fr .9fr .9fr .9fr;border:1.3px solid var(--line);font-size:12px}.room>*{border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:22px;padding:3px 4px}.room>*:nth-child(4n){border-right:0}.room input{width:100%;border:0;height:18px;font-size:12px}.room label{display:flex;align-items:center;gap:6px}.room label input{flex:1;min-width:0}.bar{background:var(--bar);color:white;text-align:center;font-weight:700;padding:4px;font-size:12px}.section{border-left:1.3px solid var(--line);border-right:1.3px solid var(--line)}.row{display:grid;grid-template-columns:2.5fr 2fr 2.1fr 30px;min-height:28px;border-bottom:1px solid var(--line);font-size:11.5px}.row>div{border-right:1px solid var(--line);padding:3px 5px;display:flex;align-items:center;min-width:0}.row>div:last-child{border-right:0;justify-content:center;font-size:18px}.lbl{justify-content:flex-end;text-align:right}.spec{font-size:11px;white-space:normal;line-height:1.25}.bold{font-weight:700}.row input,.row select{width:100%;min-width:0;height:18px;border:0;border-bottom:1px solid #aaa;background:transparent;font-size:11.5px;padding:1px 3px;text-overflow:ellipsis}.row input::placeholder,.field input::placeholder,.room input::placeholder{color:#9a9a9a;opacity:.75}.calc{font-weight:700}.pass{background:var(--ok)}.fail{background:var(--bad)}.leftOff{background:#ddd;color:#333}.leftOff input,.leftOff select{pointer-events:none;color:#555}.leftOff .valueBox{display:none}.leftOff input:disabled,.leftOff select:disabled{cursor:not-allowed}.comments{border:1.3px solid var(--line);border-top:0;height:36mm;font-size:11px}.comments label{display:block;border-bottom:1px solid #222;padding:4px 6px}.comments textarea{width:100%;height:calc(100% - 22px);border:0;resize:none;font-size:12px;padding:6px}.sign{display:grid;grid-template-columns:1fr 1fr .55fr;border:1.3px solid var(--line);border-top:0;font-size:12px}.sign div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:23px;padding:4px 5px}.sign div:nth-child(3n){border-right:0}.sign input{border:0;border-bottom:1px solid #aaa;width:70%;font-size:12px}.foot{font-size:8px;margin-top:2mm}.status{font-size:10px;font-weight:700}.pdfBusy{opacity:.6;pointer-events:none}
+*{box-sizing:border-box} body{margin:0;background:#dfe6ee;font-family:Arial,Helvetica,sans-serif;color:#111}.toolbar{max-width:210mm;margin:10px auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.btn{border:1px solid #111;background:#111;color:#fff;padding:8px 12px;border-radius:4px;font-weight:700;cursor:pointer}.btn.light{background:#f4f4f4;color:#111}.hintText{font-size:11px;color:#555}.hintText.warn{color:#b00000}.page{width:210mm;min-height:297mm;margin:0 auto 20px;background:var(--paper);padding:9mm 11mm;box-shadow:0 5px 24px #0003}.head{display:grid;grid-template-columns:1fr 1fr;align-items:start;margin-bottom:6px}.logo{font-size:30px;font-weight:900;letter-spacing:1px}.logo small{display:block;font-size:9px;letter-spacing:.4px;font-weight:700;background:#333;color:#fff;width:max-content;padding:1px 8px;margin-left:34px}.title{text-align:right}.title h1{font-size:18px;margin:1px 0 7px;letter-spacing:.7px}.no{font-size:24px;letter-spacing:3px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 22px;margin:6px 0}.meta>*{min-width:0}.field{display:grid;grid-template-columns:120px 1fr;align-items:end;gap:6px;font-size:12px;min-width:0}.field input,.field select{border:0;border-bottom:1px solid #222;height:21px;font-size:12px;padding:1px 4px;background:white;min-width:0}.field.wide{grid-column:1/-1;grid-template-columns:270px 1fr}input.invalid,select.invalid{background:#ffdede!important;border-bottom:2px solid #b00000!important;color:#900!important}input.valid{background:#e8f7e8!important}.timeSel{border:0;border-bottom:1px solid #222;height:21px;font-size:12px;background:white;padding:1px 2px}#refThermCalDue.ok{color:#0a7a0a;font-weight:700}#refThermCalDue.warn{color:#b00000;font-weight:700}#refTherm.certExpired{background:#ddd!important;color:#900!important;pointer-events:none}#refTherm[readonly]{background:#f0f0f0;color:#555;cursor:not-allowed}.hint{color:#777;font-size:10px;margin-left:4px;white-space:nowrap}.room{display:grid;grid-template-columns:1.1fr .9fr .9fr .9fr;border:1.3px solid var(--line);font-size:12px}.room>*{border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:22px;padding:3px 4px}.room>*:nth-child(4n){border-right:0}.room input{width:100%;border:0;height:18px;font-size:12px}.room label{display:flex;align-items:center;gap:6px}.room label input{flex:1;min-width:0}.bar{background:var(--bar);color:white;text-align:center;font-weight:700;padding:4px;font-size:12px}.section{border-left:1.3px solid var(--line);border-right:1.3px solid var(--line)}.row{display:grid;grid-template-columns:2.5fr 2fr 2.1fr 30px;min-height:28px;border-bottom:1px solid var(--line);font-size:11.5px}.row>div{border-right:1px solid var(--line);padding:3px 5px;display:flex;align-items:center;min-width:0}.row>div:last-child{border-right:0;justify-content:center;font-size:18px}.lbl{justify-content:flex-end;text-align:right}.spec{font-size:11px;white-space:normal;line-height:1.25}.bold{font-weight:700}.row input,.row select{width:100%;min-width:0;height:18px;border:0;border-bottom:1px solid #aaa;background:transparent;font-size:11.5px;padding:1px 3px;text-overflow:ellipsis}.row input::placeholder,.field input::placeholder,.room input::placeholder{color:#9a9a9a;opacity:.75}.calc{font-weight:700}.pass{background:var(--ok)}.fail{background:var(--bad)}.leftOff{background:#ddd;color:#333}.leftOff input,.leftOff select{pointer-events:none;color:#555}.leftOff .valueBox{display:none}.leftOff input:disabled,.leftOff select:disabled{cursor:not-allowed}.comments{border:1.3px solid var(--line);border-top:0;height:36mm;font-size:11px}.comments label{display:block;border-bottom:1px solid #222;padding:4px 6px}.comments textarea{width:100%;height:calc(100% - 22px);border:0;resize:none;font-size:12px;padding:6px}.sign{display:grid;grid-template-columns:1fr 1fr .55fr;border:1.3px solid var(--line);border-top:0;font-size:12px}.sign div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:23px;padding:4px 5px}.sign div:nth-child(3n){border-right:0}.sign input{border:0;border-bottom:1px solid #aaa;width:70%;font-size:12px}.signature{font-family:'Dancing Script',cursive;font-size:22px;color:#1a3a6b;padding:2px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}.foot{font-size:8px;margin-top:2mm}.status{font-size:10px;font-weight:700}.pdfBusy{opacity:.6;pointer-events:none}
 #pageWrap{overflow:hidden;margin:0 auto}
 #pageWrap .page{transform-origin:top left;transition:none}
 .offsetWarning{max-width:210mm;margin:8px auto 0;background:#ffe3e3;border:1.3px solid #b00000;color:#7a0000;font-size:12px;font-weight:700;padding:8px 12px;border-radius:4px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .req{color:#b00000;font-weight:700}
-.printMode .offsetWarning{display:none}.printMode .toolbar{display:none}.printMode body{background:white}.printMode .page{box-shadow:none;margin:0 auto}.printMode .req{display:none}@page{size:A4;margin:0}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{background:white}.toolbar{display:none}.req{display:none}#pageWrap{overflow:visible!important;width:auto!important;height:auto!important}.page{transform:none!important;box-shadow:none;margin:0;width:210mm;height:297mm;min-height:0;padding:8mm 10mm;overflow:hidden}.comments{height:34mm}.row{min-height:24px}.bar{padding:3px}.meta{gap:3px 20px}.room>*{min-height:20px;padding:2px 4px}}
+.printMode .offsetWarning{display:none}.printMode .toolbar{display:none}.printMode body{background:white}.printMode .page{box-shadow:none;margin:0 auto;padding:7mm}.printMode .req{display:none}@page{size:A4;margin:0}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{background:white}.toolbar{display:none}.req{display:none}#pageWrap{overflow:visible!important;width:auto!important;height:auto!important}.page{transform:none!important;box-shadow:none;margin:0;width:210mm;height:297mm;min-height:0;padding:8mm 10mm;overflow:hidden}.comments{height:34mm}.row{min-height:24px}.bar{padding:3px}.meta{gap:3px 20px}.room>*{min-height:20px;padding:2px 4px}}
 </style>
 </head>
 <body>
@@ -33,12 +34,12 @@
 </div>
 <div id="pageWrap">
 <div class="page" id="page">
-  <div class="head"><div><div class="logo">❄ LABCOLD<small>medical &amp; scientific refrigeration</small></div></div><div class="title"><h1>BARKEY CALIBRATION WORKSHEET</h1><div class="no">No <span class="req">*</span>: <input id="sheetNo" value="B " maxlength="7" inputmode="numeric" placeholder="B 00000" style="width:195px;border:0;border-bottom:1px solid #333;font-size:24px;text-align:center;letter-spacing:3px"></div></div></div>
+  <div class="head"><div><div class="logo">❄ LABCOLD<small>medical &amp; scientific refrigeration</small></div></div><div class="title"><h1 id="titleText">BARKEY CALIBRATION WORKSHEET</h1><div class="no">No <span class="req">*</span>: <input id="sheetNo" value="B " maxlength="7" inputmode="numeric" placeholder="B 00000" style="width:195px;border:0;border-bottom:1px solid #333;font-size:24px;text-align:center;letter-spacing:3px"></div></div></div>
   <div class="meta">
     <div class="field"><label>Job Reference No <span class="req">*</span>:</label><input id="jobRef" placeholder="Job ref"></div><div class="field"><label>Date <span class="req">*</span>:</label><span style="position:relative;display:block;height:21px"><input id="date" type="text" readonly placeholder="d/Mon/yyyy" style="cursor:pointer;width:100%;position:absolute;left:0;top:0;height:100%;pointer-events:none"><input id="dateNative" type="date" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0;margin:0;z-index:2"></span></div>
     <div class="field"><label>Site <span class="req">*</span>:</label><input id="site" placeholder="Site"></div><div class="field"><label>Department <span class="req">*</span>:</label><input id="dept" placeholder="Department"></div>
     <div class="field"><label>Model <span class="req">*</span>:</label><input id="model" placeholder="Model"></div><div class="field"><label>Serial No <span class="req">*</span>:</label><input id="serial" placeholder="Serial number"></div>
-    <div class="field wide"><label>Digital Reference Thermometer serial number <span class="req">*</span>:</label><span style="display:flex;align-items:center;gap:10px"><input id="refTherm" placeholder="Digital reference" style="flex:1"><span class="hintText" id="refThermCalDue"></span></span></div>
+    <div class="field wide"><label>Digital Reference Thermometer serial number <span class="req">*</span>:</label><span style="display:flex;align-items:center;gap:10px"><input id="refTherm" placeholder="Load an offsets file" readonly title="Auto-filled from the loaded probe offsets file — cannot be edited manually" style="flex:1"><span class="hintText" id="refThermCalDue"></span></span></div>
   </div>
   <div class="room"><b>Room temperature:</b><label><b>Max <span class="req">*</span>:</b> <input id="rtMax" inputmode="decimal" data-decimals="1" placeholder="xx.x"></label><label><b>Min <span class="req">*</span>:</b> <input id="rtMin" inputmode="decimal" data-decimals="1" placeholder="xx.x"></label><label><b>Average:</b> <span id="rtAvg" class="bold">—</span><span id="rtRangeWarn" class="hintText warn" style="display:none;margin-left:6px;font-weight:700">Max must be ≥ Min</span></label><div style="grid-column:1/3">Room temperature thermometer reference <span class="req">*</span>:</div><select id="rtRef" style="grid-column:3/5"><option value="">Select thermometer…</option></select></div>
 
@@ -54,7 +55,7 @@
   </div>
 
   <div class="comments"><label>Comments <i>(calculations, deviations, customer requests)</i></label><textarea id="comments"></textarea></div>
-  <div class="sign"><div>Engineer’s Name: <input id="eng"></div><div>Signature:</div><div>Date: <input id="engDate"></div><div>Checked By Name</div><div>Signature:</div><div>Date:</div></div>
+  <div class="sign"><div>Engineer’s Name: <input id="eng"></div><div>Signature: <span id="engineerSignature" class="signature"></span></div><div>Date: <input id="engDate"></div><div>Checked By Name: <input id="checker"></div><div>Signature: <span id="checkerSignature" class="signature"></span></div><div>Date: <input id="checkDate" type="date"></div></div>
   <div class="foot">UKAS0010/09/15 Issue 1</div>
 </div>
 </div>
@@ -125,8 +126,16 @@ function normaliseOffsets(data){
 function setOffsetStatus(txt){const el=document.getElementById('offsetStatus'); if(el) el.textContent=txt||'';}
 function probeOptionsHtml(){
   return Object.keys(probes).length
-    ? Object.keys(probes).map(k=>`<option value="${k}">${k} – ${probes[k].sn} (${probes[k].port})</option>`).join('')
+    ? Object.keys(probes).map(k=>`<option value="${k}" title="${k} – ${probes[k].sn} (${probes[k].port})">${k} (${probes[k].port})</option>`).join('')
     : '<option value="">No offsets loaded</option>';
+}
+// The select shows a short "1A (T1)"-style label so it fits the narrow
+// column, but the certificate/export should still record the full
+// id/serial-number/port text for traceability.
+function probeFullLabel(sel){
+  if(!sel) return '';
+  const k=sel.value;
+  return k && probes[k] ? `${k} – ${probes[k].sn} (${probes[k].port})` : selectedText(sel);
 }
 function rebuildProbeDropdowns(){
   const f=document.getElementById('found_probe'), l=document.getElementById('left_probe');
@@ -203,7 +212,7 @@ function roundTo(num,decimals){
   return sign*Number(Math.round(Number(abs+'e'+decimals))+'e-'+decimals);
 }
 function f(v,d=3){return v==null||!Number.isFinite(v)?'—':roundTo(v,d).toFixed(d)} function passCell(ok){return ok==null?'':ok?'✓':'✗'}
-function decimalOK(el){if(!el.dataset.decimals)return true;const v=String(el.value||'').trim();if(v===''){el.classList.remove('invalid','valid');return true}const d=Number(el.dataset.decimals);const ok=new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v.replace(',','.'));el.classList.toggle('invalid',!ok);el.classList.toggle('valid',ok);return ok}
+function decimalOK(el){if(!el.dataset.decimals)return true;if(el.disabled){el.classList.remove('invalid','valid');return true}const v=String(el.value||'').trim();if(v===''){el.classList.remove('invalid','valid');return true}const d=Number(el.dataset.decimals);const ok=new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v.replace(',','.'));el.classList.toggle('invalid',!ok);el.classList.toggle('valid',ok);return ok}
 function validateDecimals(show=true){let bad=[];document.querySelectorAll('[data-decimals]').forEach(el=>{if(!decimalOK(el))bad.push(el)});if(bad.length&&show){alert('Please correct highlighted fields before generating PDF. Grey examples show the required format.');bad[0].focus()}return bad.length===0}
 function autoAdvance(el){if(!el.dataset.decimals)return;const d=Number(el.dataset.decimals);const v=String(el.value||'').replace(',','.');if(new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v)){let list=[...document.querySelectorAll('input,select,textarea')].filter(x=>!x.disabled&&x.offsetParent!==null);let i=list.indexOf(el);if(i>-1&&list[i+1])list[i+1].focus()}}
 function nearestCorr(probe,temp){if(temp==null||!probes[probe])return null;let k=keys.slice().sort((a,b)=>Math.abs(temp-a)-Math.abs(temp-b))[0];return {key:k,val:probes[probe].c[k]}}
@@ -229,6 +238,14 @@ function calc(prefix){let probe=document.getElementById(prefix+'_probe').value, 
  const anyFail=complete && checks.some(x=>x===false);
  return {complete,allPass,anyFail};}
 function isoToday(){return new Date().toISOString().slice(0,10)}
+function updateSignatures(){
+  const eng2=document.getElementById('eng')?.value||'';
+  const engSig=document.getElementById('engineerSignature');
+  if(engSig) engSig.textContent=eng2;
+  const chk=document.getElementById('checker')?.value||'';
+  const chkSig=document.getElementById('checkerSignature');
+  if(chkSig) chkSig.textContent=chk;
+}
 function sanitizeSheetNo(){
   const sn=document.getElementById('sheetNo'); if(!sn) return;
   let digits=sn.value.replace(/[^0-9]/g,'').slice(0,5);
@@ -238,7 +255,15 @@ function checkSheetNoFormat(){
   const sn=document.getElementById('sheetNo'); if(!sn) return true;
   const ok=/^B \d{5}$/.test(sn.value);
   sn.classList.toggle('invalid', !ok);
+  checkSecretSheetCode();
   return ok;
+}
+// Easter egg: entering "B 00000" retitles the sheet as a Verification Worksheet.
+function checkSecretSheetCode(){
+  const sn=document.getElementById('sheetNo');
+  const titleEl=document.getElementById('titleText');
+  if(!sn || !titleEl) return;
+  titleEl.textContent = sn.value==='B 00000' ? 'BARKEY VERIFICATION WORKSHEET' : 'BARKEY CALIBRATION WORKSHEET';
 }
 function fitPageToScreen(){
   const pageEl=document.getElementById('page');
@@ -268,9 +293,8 @@ function displayDate(v){const months=['Jan','Feb','Mar','Apr','May','Jun','Jul',
 function dateForFile(v){v=String(v||'').trim();let iso=v.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(iso)return v; const m=v.match(/^(\d{1,2})[\/\-\s]([A-Za-z]{3,})[\/\-\s](\d{4})$/);const months={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};if(m)return `${m[3]}-${months[m[2].slice(0,3).toLowerCase()]||m[2]}-${String(m[1]).padStart(2,'0')}`;return v}
 function update(){
   if(date.value)engDate.value=date.value;
+  updateSignatures();
   validateDecimals(false);
-  let rmax=n(rtMax.value),rmin=n(rtMin.value);
-  rtAvg.textContent=(rmax!=null&&rmin!=null)?roundTo((rmax+rmin)/2,1).toFixed(1):'—';
   checkRoomTempRange();
   const foundResult=calc('found');
   calc('left');
@@ -296,9 +320,13 @@ function checkRoomTempRange(){
     rtMax.classList.add('invalid'); rtMax.classList.remove('valid');
     rtMin.classList.add('invalid'); rtMin.classList.remove('valid');
     if(warn) warn.style.display='inline';
+    rtAvg.textContent='Max<Min!';
+    rtAvg.title='Room Temperature Max is lower than Min — correct the readings before an average can be calculated.';
   }else{
     decimalOK(rtMax); decimalOK(rtMin);
     if(warn) warn.style.display='none';
+    rtAvg.title='';
+    rtAvg.textContent=(rmax!=null&&rmin!=null)?roundTo((rmax+rmin)/2,1).toFixed(1):'—';
   }
   return !bad;
 }
@@ -344,6 +372,77 @@ function runPreGenerationChecks(){
   if(!validateDecimals(true)) return false;
   return true;
 }
+function fieldDisplayText(el){
+  if(el.tagName==='SELECT') return el.id.endsWith('_probe') ? probeFullLabel(el) : selectedText(el);
+  if(el.type==='date') return displayDate(el.value);
+  return el.value;
+}
+// iPadOS/macOS Safari sometimes serializes getComputedStyle colors using the
+// modern CSS `color(...)` function (e.g. wide-gamut display-p3 colors)
+// instead of rgb()/hex. html2canvas's color parser doesn't understand that
+// syntax and throws "Attempting to parse an unsupported color function",
+// failing PDF generation entirely. Parse the color() function directly and
+// rebuild it as a plain rgb()/rgba() string that html2canvas can read.
+const _colorPropCache=new Map();
+function normalizeColorValue(prop, value){
+  if(!value || value.indexOf('color(')===-1) return value;
+  const cacheKey=value;
+  if(_colorPropCache.has(cacheKey)) return _colorPropCache.get(cacheKey);
+  let out=value;
+  const m=value.match(/color\(\s*[\w-]+\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)/i);
+  if(m){
+    const r=Math.round(Math.max(0,Math.min(1,parseFloat(m[1])))*255);
+    const g=Math.round(Math.max(0,Math.min(1,parseFloat(m[2])))*255);
+    const b=Math.round(Math.max(0,Math.min(1,parseFloat(m[3])))*255);
+    const a=m[4]!==undefined?parseFloat(m[4]):1;
+    out = a<1 ? `rgba(${r}, ${g}, ${b}, ${a})` : `rgb(${r}, ${g}, ${b})`;
+  }
+  _colorPropCache.set(cacheKey, out);
+  return out;
+}
+// html2canvas doesn't render live browser text layout — it has to manually
+// reconstruct each element's text onto a canvas, and that reconstruction is
+// unreliable for <input> AND <select> specifically (root cause behind
+// clipped text, vanishing decimal points, and dotted underlines cutting
+// through select text). Swap every visible field for a plain <div> with the
+// same text and computed styling right before the snapshot, then swap back.
+function swapFieldsForText(root){
+  const candidates=[...root.querySelectorAll('input, select')].filter(el=>
+    !(el.tagName==='INPUT' && (el.type==='file' || el.id==='dateNative'))
+  );
+  const snapshots=candidates.map(el=>{
+    const cs=getComputedStyle(el);
+    const rect=el.getBoundingClientRect();
+    const props={};
+    for(let i=0;i<cs.length;i++){ const p=cs[i]; props[p]=normalizeColorValue(p, cs.getPropertyValue(p)); }
+    return {el, props, width:rect.width, height:rect.height, text:fieldDisplayText(el)};
+  });
+  const swaps=snapshots.map(({el,props,width,height,text})=>{
+    const div=document.createElement('div');
+    div.textContent=text;
+    for(const p in props){ try{ div.style.setProperty(p, props[p]); }catch(e){} }
+    const parentWidth=el.parentElement?el.parentElement.clientWidth:width;
+    const fillsContainer = parentWidth>0 && (width/parentWidth) > 0.9;
+    div.style.width = fillsContainer ? '100%' : width+'px';
+    div.style.height=height+'px';
+    div.style.boxSizing='border-box';
+    if(el.tagName==='SELECT' && parseFloat(props['border-top-width'])>0){
+      div.style.borderRadius=(height/2)+'px';
+    }
+    div.style.lineHeight=height+'px';
+    div.style.whiteSpace='pre';
+    div.style.overflow='hidden';
+    div.style.appearance='none';
+    div.style.cursor='default';
+    div.style.outline='none';
+    el.replaceWith(div);
+    return {div,el};
+  });
+  return swaps;
+}
+function restoreSwappedFields(swaps){
+  swaps.forEach(({div,el})=>{ if(div.parentNode) div.replaceWith(el); });
+}
 async function generatePDF(){
   if(!runPreGenerationChecks()) return;
 
@@ -362,21 +461,23 @@ async function generatePDF(){
   // the content instead of a fixed A4 that could split it across pages.
   await new Promise(r=>setTimeout(r,30));
   const pxPerMm=96/25.4;
-  const rect=pageEl.getBoundingClientRect();
-  const contentHeightMM=Math.ceil(rect.height/pxPerMm)+4;
-  const pageHeightMM=Math.max(contentHeightMM,297); // never shorter than standard A4, taller only if the content genuinely needs it
-
   const filename=pdfFileName();
-  const opt={
-    margin:0,
-    filename,
-    image:{type:'jpeg',quality:0.98},
-    html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
-    jsPDF:{unit:'mm',format:[210,pageHeightMM],orientation:'portrait'},
-    pagebreak:{mode:['avoid-all']}
-  };
+  let swaps=[];
   try{
+    swaps=swapFieldsForText(pageEl); // swap before measuring — guarantees the PDF page size always matches exactly what gets captured
+    const rect=pageEl.getBoundingClientRect();
+    const contentHeightMM=Math.ceil(rect.height/pxPerMm)+4;
+    const pageHeightMM=Math.max(contentHeightMM,297); // never shorter than standard A4, taller only if the content genuinely needs it
+    const opt={
+      margin:0,
+      filename,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:[210,pageHeightMM],orientation:'portrait'},
+      pagebreak:{mode:['avoid-all']}
+    };
     const blob=await html2pdf().set(opt).from(document.getElementById('page')).toPdf().output('blob');
+    restoreSwappedFields(swaps); swaps=[];
     document.body.classList.remove('printMode','pdfBusy');
 
     if(window.showSaveFilePicker){
@@ -399,6 +500,7 @@ async function generatePDF(){
   }catch(err){
     alert('PDF generation failed: '+(err && err.message ? err.message : err));
   }finally{
+    if(swaps.length) restoreSwappedFields(swaps);
     document.body.classList.remove('printMode','pdfBusy');
     pageEl.style.transform=prevTransform; wrapEl.style.width=prevWrapW; wrapEl.style.height=prevWrapH;
     fitPageToScreen();
@@ -475,6 +577,8 @@ async function importExcelFile(ev){
     if(swTime){ const [mn,sc]=parseTime(swTime); if(mn&&mn!=='--') swMin.value=mn; if(sc&&sc!=='--') swSec.value=sc; }
     setValById('comments', get('Comments'));
     setValById('eng', get("Engineer's Name"));
+    setValById('checker', get("Checker's Name"));
+    setValById('checkDate', get('Checker Date'));
     setValById('engDate', get('Engineer Date'));
     rebuildRoomThermDropdown();
     refreshRoomThermStatus();
@@ -839,7 +943,7 @@ function buildExcelWorkbook(){
   push('','');
   ['found','left'].forEach(prefix=>{
     push(prefix==='found'?'--- Temperature Check: As Found ---':'--- Temperature Check: As Left after adjustment ---','');
-    push('Probe Serial No', selectedText(document.getElementById(prefix+'_probe')));
+    push('Probe Serial No', probeFullLabel(document.getElementById(prefix+'_probe')));
     push('Reference temperature (°C)', document.getElementById(prefix+'_ref').value);
     push('Probe Correction value (°C)', document.getElementById(prefix+'_corr').textContent);
     push('Reference + correction (°C)', document.getElementById(prefix+'_refcorr').textContent);
@@ -859,6 +963,8 @@ function buildExcelWorkbook(){
   push('','');
   push("Engineer's Name", eng.value);
   push('Engineer Date', engDate.value);
+  push("Checker's Name", checker.value);
+  push('Checker Date', checkDate.value);
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:40},{wch:42}];
   const wb=XLSX.utils.book_new();
@@ -904,7 +1010,7 @@ document.getElementById('rtRef').addEventListener('change',refreshRoomThermStatu
 document.getElementById('sheetNo')?.addEventListener('input',()=>{ sanitizeSheetNo(); checkSheetNoFormat(); });
 document.getElementById('sheetNo')?.addEventListener('blur', checkSheetNoFormat);
 document.getElementById('sheetNo')?.addEventListener('focus',function(){ if(this.selectionStart<2) this.setSelectionRange(this.value.length,this.value.length); });
-if(!date.value){ dateNative.value=isoToday(); date.value=displayDate(isoToday()); } refreshOffsetWarning(); update(); fitPageToScreen(); setTimeout(fitPageToScreen,300);
+if(!date.value){ dateNative.value=isoToday(); date.value=displayDate(isoToday()); } refreshOffsetWarning(); update(); checkSecretSheetCode(); fitPageToScreen(); setTimeout(fitPageToScreen,300);
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(function(){}); }
 </script>
 </body></html>
