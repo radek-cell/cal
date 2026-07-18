@@ -202,7 +202,7 @@ function buildHourMinuteOptions(sel, max){
 function buildOffsetOptions(sel){
   if(!sel || sel.options.length) return;
   let html='<option value="">--</option>';
-  for(let i=-50;i<=50;i++){
+  for(let i=-100;i<=100;i++){
     const v=(i/10).toFixed(1);
     const label = i>0 ? '+'+v : v;
     html+=`<option value="${v}">${label}</option>`;
@@ -1084,16 +1084,6 @@ function calcDisplayCycle(){
   });
 }
 function syncDates(){const dn=document.getElementById('dateNative')?.value||''; const e=document.getElementById('engDate'); if(e && dn) e.value=displayDate(dn);}
-// Final offsets almost always match Initial offsets (nothing usually changes
-// between AF and AL) — default Cal 1/Cal 2 to whatever Initial has, but only
-// while Final is still untouched, so a manual override is never clobbered.
-function syncFinalOffsetsFromInitial(){
-  ['Cal1','Cal2'].forEach(suffix=>{
-    const init=document.getElementById('initialOffsets'+suffix);
-    const fin=document.getElementById('finalOffsets'+suffix);
-    if(init && fin && !fin.disabled && !fin.value && init.value){ fin.value=init.value; }
-  });
-}
 function updateSignatures(){
   const eng=document.getElementById('engineer')?.value||'';
   const engSig=document.getElementById('engineerSignature');
@@ -1197,7 +1187,6 @@ function calculateAll(){
   applyNoDisplayMode();
   updateVariationNote();
   syncDates();
-  syncFinalOffsetsFromInitial();
   syncLeftProbes();
   syncLoadFromAir('af');
   syncLoadFromAir('al');
@@ -1276,7 +1265,7 @@ function setAdjustmentMode(stamped, unlocked){
   // when an adjustment is actually needed — mark them N/A the same way.
   const finalSetpointEl=document.getElementById('finalSetpoint');
   if(finalSetpointEl){
-    finalSetpointEl.disabled=!!stamped;
+    finalSetpointEl.disabled=!unlocked;
     finalSetpointEl.classList.toggle('na', !!stamped);
     if(stamped && finalSetpointEl.value.trim()===''){ finalSetpointEl.value=NA_TEXT; }
     else if(!stamped && finalSetpointEl.value===NA_TEXT){ finalSetpointEl.value=''; }
@@ -1286,7 +1275,7 @@ function setAdjustmentMode(stamped, unlocked){
   ['finalOffsetsCal1','finalOffsetsCal2'].forEach(id=>{
     const sel=document.getElementById(id);
     if(!sel) return;
-    sel.disabled=!!stamped;
+    sel.disabled=!unlocked;
     sel.classList.toggle('na', !!stamped);
     const blank=sel.querySelector('option[value=""]');
     if(blank) blank.textContent = stamped ? 'N/A' : '--';
