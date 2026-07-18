@@ -33,18 +33,12 @@
   .page{width:210mm;min-height:297mm;margin:14px auto;background:white;padding:12mm;box-shadow:0 4px 22px #0002;box-sizing:border-box}
   .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}.title{font-size:22px;font-weight:800;letter-spacing:1px}.title .subtitle{font-size:12px;font-weight:600;letter-spacing:.3px;color:#555;margin-top:2px}.brand{text-align:right}.brand .logo{font-size:30px;font-weight:900}.brand .no{font-size:16px;margin-top:4px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 25px;margin:14px 0}.field{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:end}.field label{font-size:13px}.field input,.field select{border:0;border-bottom:1px dotted #333;padding:3px 4px;font-size:13px;width:100%;box-sizing:border-box;background:transparent}
-  table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}td,th{border:1px solid var(--line);padding:4px;vertical-align:middle}th{background:#ddd;font-weight:700}.section{background:#cfcfcf;font-weight:700}.subhead{background:#e3e3e3;text-align:center}.label{font-weight:700}.muted{font-weight:400;color:#333}.small{font-size:11px}.input{width:100%;border:0;background:transparent;font-size:12px;box-sizing:border-box;text-align:center}.input:focus{outline:2px solid #9ec5fe;background:#eef6ff} select.probe{display:block;width:100%;min-width:96px;height:28px;border:1px solid #333!important;background:#fff!important;color:#111!important;font-size:10.5px;text-align:left;appearance:auto;-webkit-appearance:menulist;padding:2px}.probeHint{font-size:11px;color:#333;background:#eef6ff;border:1px solid #9ec5fe;padding:6px;margin:6px 0}.autoCorr{background:#fff3cd!important}.calc{background:#f8f8f8;font-weight:700}.bad{background:var(--bad)!important}.ok{background:var(--ok)!important}.warn{background:var(--warn)!important}.selectedHigh{background:var(--hi)!important;border-bottom:3px solid #2563eb!important;font-weight:900!important}.selectedLow{background:var(--lo)!important;border-bottom:3px solid #16a34a!important;font-weight:900!important}.note{font-size:11px;margin:7px 0 0}.sign{height:26px}.comments{height:64px}.statusbar{padding:8px;margin:8px 0;border:1px solid #999;background:#fafafa;font-size:13px}.statusbar.bad{border-color:#b00020}.statusbar.ok{border-color:#207a20}.notNeeded{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.035) 0,rgba(0,0,0,.035) 8px,transparent 8px,transparent 16px);opacity:.78}.notNeeded input,.notNeeded select,.notNeeded textarea{text-decoration:line-through;background:#f3f3f3!important}.notNeeded input:disabled,.notNeeded select:disabled,.notNeeded textarea:disabled{cursor:not-allowed}.adjustNote{background:#e7f7e7!important;border-color:#207a20!important;font-weight:700}#alCycleAirRow.notNeeded,#alCycleLoadRow.notNeeded{opacity:.65;background:repeating-linear-gradient(135deg,rgba(0,0,0,.025) 0,rgba(0,0,0,.025) 7px,transparent 7px,transparent 14px)}input.na,select.na{text-decoration:line-through;background:#f3f3f3!important;color:#777;cursor:not-allowed}
+  table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}td,th{border:1px solid var(--line);padding:4px;vertical-align:middle}th{background:#ddd;font-weight:700}.section{background:#cfcfcf;font-weight:700}.subhead{background:#e3e3e3;text-align:center}.label{font-weight:700}.muted{font-weight:400;color:#333}.small{font-size:11px}.input{width:100%;border:0;background:transparent;font-size:12px;box-sizing:border-box;text-align:center}.input:focus{outline:2px solid #9ec5fe;background:#eef6ff}.input:disabled{background:#f0f0f0!important;color:#aaa;cursor:not-allowed} select.probe{display:block;width:100%;min-width:96px;height:28px;border:1px solid #333!important;background:#fff!important;color:#111!important;font-size:10.5px;text-align:left;appearance:auto;-webkit-appearance:menulist;padding:2px}.probeHint{font-size:11px;color:#333;background:#eef6ff;border:1px solid #9ec5fe;padding:6px;margin:6px 0}.autoCorr{background:#fff3cd!important}.calc{background:#f8f8f8;font-weight:700}.bad{background:var(--bad)!important}.ok{background:var(--ok)!important}.warn{background:var(--warn)!important}.selectedHigh{background:var(--hi)!important;border-bottom:3px solid #2563eb!important;font-weight:900!important}.selectedLow{background:var(--lo)!important;border-bottom:3px solid #16a34a!important;font-weight:900!important}.note{font-size:11px;margin:7px 0 0}.sign{height:26px}.comments{height:64px}.statusbar{padding:8px;margin:8px 0;border:1px solid #999;background:#fafafa;font-size:13px}.statusbar.bad{border-color:#b00020}.statusbar.ok{border-color:#207a20}.notNeeded{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.035) 0,rgba(0,0,0,.035) 8px,transparent 8px,transparent 16px)}.notNeeded input,.notNeeded select,.notNeeded textarea{text-decoration:line-through;background:#dcdcdc!important;color:#777!important}.notNeeded input:disabled,.notNeeded select:disabled,.notNeeded textarea:disabled{cursor:not-allowed}.adjustNote{background:#e7f7e7!important;border-color:#207a20!important;font-weight:700}#alCycleAirRow.notNeeded,#alCycleLoadRow.notNeeded{background:repeating-linear-gradient(135deg,rgba(0,0,0,.025) 0,rgba(0,0,0,.025) 7px,transparent 7px,transparent 14px)}input.na,select.na{text-decoration:line-through;background:#dcdcdc!important;color:#777;cursor:not-allowed}
   /* Real DOM stamp (not a ::after pseudo-element) — html2canvas / html2canvas-pro render
      absolutely-positioned pseudo-content on <table> elements unreliably across browsers,
      especially iPadOS Safari, which was cropping/misplacing the "ADJUSTMENT NOT NEEDED"
      stamp in exported PDFs. A real element positioned inside a plain relative div avoids that. */
   .stampHost{position:relative}
-  /* Centering without CSS `transform` — html2canvas on iPadOS Safari also
-     mis-renders position + transform combos on plain elements, not just
-     pseudo-elements, so rotation/translate is avoided here entirely. */
-  .bigStamp{display:none;position:absolute;inset:0;z-index:5;pointer-events:none}
-  .stampHost.stampOn .bigStamp{display:block}
-  .bigStamp svg{display:block;width:100%;height:100%}
   .lrRow td{background:#eef3fa;padding:2px 4px}
   .lrBadge{display:inline-flex;align-items:center;justify-content:center;gap:5px;width:100%}
   .lrBadge .dot{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;color:#fff;font-size:11px;font-weight:900;font-family:Arial,Helvetica,sans-serif}
@@ -69,7 +63,7 @@
   .printMode .page{box-shadow:none;margin:0 auto;width:198mm;min-height:auto;padding:7mm}
   .printMode .note,.printMode #setpointRangeHint{display:none}
   @page{size:A4 portrait;margin:6mm}
-  @media print{html,body{background:white;width:210mm}.toolbar{display:none}.page{margin:0 auto;box-shadow:none;width:198mm;min-height:auto;padding:4mm;page-break-after:auto}.header{margin-bottom:4px}.title{font-size:17px}.title .subtitle{font-size:9px;margin-top:1px}.brand .logo{font-size:22px}.brand .no{font-size:12px}.grid2{gap:4px 14px;margin:6px 0}.field label,.field input,.field select{font-size:10px}table{font-size:8.8px;page-break-inside:avoid}td,th{padding:2px}.input{font-size:8.8px}.small,.note,.probeHint{font-size:7.5px}.statusbar{font-size:9px;padding:4px;margin:4px 0}.comments{height:42px}select.probe{font-size:7.5px;height:18px;min-width:70px;padding:0}.bigStamp svg{width:100%;height:100%}.page *{print-color-adjust:exact;-webkit-print-color-adjust:exact}.bad,.ok,.warn,.autoCorr,.calc{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+  @media print{html,body{background:white;width:210mm}.toolbar{display:none}.page{margin:0 auto;box-shadow:none;width:198mm;min-height:auto;padding:4mm;page-break-after:auto}.header{margin-bottom:4px}.title{font-size:17px}.title .subtitle{font-size:9px;margin-top:1px}.brand .logo{font-size:22px}.brand .no{font-size:12px}.grid2{gap:4px 14px;margin:6px 0}.field label,.field input,.field select{font-size:10px}table{font-size:8.8px;page-break-inside:avoid}td,th{padding:2px}.input{font-size:8.8px}.small,.note,.probeHint{font-size:7.5px}.statusbar{font-size:9px;padding:4px;margin:4px 0}.comments{height:42px}select.probe{font-size:7.5px;height:18px;min-width:70px;padding:0}.page *{print-color-adjust:exact;-webkit-print-color-adjust:exact}.bad,.ok,.warn,.autoCorr,.calc{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style>
 </head>
 <body>
@@ -142,8 +136,8 @@
       <td class="label" style="width:11%">Min <span class="req">*</span>: <input class="input num" inputmode="decimal" id="rtMin" data-decimals="1" placeholder="xx.x"></td>
       <td class="label" style="width:31%">Average: <input class="input calc" id="rtAvg" readonly><span id="rtRangeWarn" class="hintText warn" style="display:none;margin-left:4px;font-weight:700;white-space:nowrap">Max must be ≥ Min</span></td>
     </tr>
-    <tr><td rowspan="2" class="label">Controller Settings</td><td colspan="2">Initial offsets <span class="req">*</span>: <input class="input" id="initialOffsets"></td><td colspan="3">Initial set point <span class="req">*</span>: <input class="input num" inputmode="decimal" id="initialSetpoint" placeholder="e.g. 5, -20, -34"> <span class="small" id="setpointRangeHint" style="color:#333"></span><br><span class="small" style="color:#333">Nearest offset point used: <b id="initialNearestPoint">—</b></span></td></tr>
-    <tr><td colspan="2">Final offsets <span class="req" title="Required when As Left needs completing">*</span>: <input class="input" id="finalOffsets"></td><td colspan="3">Final set point <span class="req" title="Required when As Left needs completing">*</span>: <input class="input num" inputmode="decimal" id="finalSetpoint"></td></tr>
+    <tr><td rowspan="2" class="label">Controller Settings</td><td colspan="2">Initial offsets <span class="req">*</span>: <span style="display:inline-flex;gap:8px;align-items:center;vertical-align:middle"><span class="small">Air:</span><select class="input offsetSel" id="initialOffsetsCal1" style="width:58px;display:inline-block"></select><span class="small">Load:</span><select class="input offsetSel" id="initialOffsetsCal2" style="width:58px;display:inline-block"></select></span></td><td colspan="3">Initial set point <span class="req">*</span>: <input class="input num" inputmode="decimal" id="initialSetpoint" placeholder="e.g. 5, -20, -34"> <span class="small" id="setpointRangeHint" style="color:#333"></span><br><span class="small" style="color:#333">Nearest offset point used: <b id="initialNearestPoint">—</b></span></td></tr>
+    <tr><td colspan="2">Final offsets <span class="req" title="Required when As Left needs completing">*</span>: <span style="display:inline-flex;gap:8px;align-items:center;vertical-align:middle"><span class="small">Air:</span><select class="input offsetSel" id="finalOffsetsCal1" style="width:58px;display:inline-block"></select><span class="small">Load:</span><select class="input offsetSel" id="finalOffsetsCal2" style="width:58px;display:inline-block"></select></span></td><td colspan="3">Final set point <span class="req" title="Required when As Left needs completing">*</span>: <input class="input num" inputmode="decimal" id="finalSetpoint"></td></tr>
   </table>
 
   <div class="probeHint"><b>Probe dropdown:</b> choose the probe/port in each column. The app will use the closest correction to the Initial Set Point for AF and to the Final Set Point for AL. The selected correction is copied into Max Correction and Min Correction automatically.<br><b>Air calculation markers:</b> blue underline = highest corrected maximum used; green underline = lowest corrected minimum used.</div>
@@ -181,15 +175,6 @@
     <tr><td>Average ref: Min & Max<br><span class="small">(after correction)</span></td><td colspan="2"><input class="input calc" id="al_air_avg" readonly></td><td><input class="input calc" id="al_load_avg" readonly></td><td><input class="input calc" id="al_chart_avg" readonly></td></tr>
     <tr><td class="label">Difference of Average<br><span class="small">Reference vs Display</span></td><td colspan="2"><input class="input calc" id="al_air_diff" readonly></td><td><input class="input calc" id="al_load_diff" readonly></td><td><input class="input calc" id="al_chart_diff" readonly></td></tr>
   </table>
-  <div id="alBigStamp" class="bigStamp" aria-hidden="true">
-    <svg viewBox="0 0 300 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- hand-drawn-style diagonal strike across the whole table, corner to corner -->
-      <path d="M 20 184 L 280 18" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round"/>
-      <g transform="translate(150 100) rotate(-34)">
-        <text x="0" y="14" text-anchor="middle" font-family="'Segoe Print','Bradley Hand','Comic Sans MS',cursive" font-weight="700" font-size="46" fill="#222">-N/A-</text>
-      </g>
-    </svg>
-  </div>
   </div>
 
   <table style="margin-top:8px;table-layout:fixed">
@@ -215,6 +200,32 @@ const ids=()=>Array.from(document.querySelectorAll('input,select,textarea')).map
 let PROBE_LIST=[], PROBES={}, DIGITAL_THERMOMETERS=[];
 let roomTherms=[];
 let lastOffsetRaw=null;
+function offsetsLoaded(){ return !!lastOffsetRaw; }
+// Reference Max/Min are manual readings, but entering them before the probe
+// offsets file is loaded means the corrections (and therefore Max/Min +
+// Correction) can never be right — lock the fields until offsets are in.
+// AF fields are managed directly here; AL fields are also in this list so
+// setAdjustmentMode (which already governs their disabled state based on
+// adjustment-mode) can factor the gate in without fighting this lock.
+const OFFSET_GATED_AF_IDS=['af_air1_max','af_air2_max','af_load_max','af_chart_max','af_air1_min','af_air2_min','af_load_min','af_chart_min'];
+const OFFSET_GATED_AL_IDS=['al_air1_max','al_air2_max','al_load_max','al_chart_max','al_air1_min','al_air2_min','al_load_min','al_chart_min'];
+const OFFSET_GATED_IDS=[...OFFSET_GATED_AF_IDS,...OFFSET_GATED_AL_IDS];
+const OFFSET_GATE_MSG='Load the probe offsets file first ("Load offsets" button) before entering readings.';
+function applyOffsetsGate(){
+  const loaded=offsetsLoaded();
+  OFFSET_GATED_AF_IDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.disabled=!loaded;
+    el.title = loaded ? '' : OFFSET_GATE_MSG;
+  });
+  // AL fields' final disabled state is decided by setAdjustmentMode (it also
+  // depends on adjustment-mode) — just keep their tooltip in sync here.
+  OFFSET_GATED_AL_IDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.title = loaded ? '' : OFFSET_GATE_MSG;
+  });
+}
 function isoToday(){return new Date().toISOString().slice(0,10)}
 function buildHourMinuteOptions(sel, max){
   if(!sel || sel.options.length) return;
@@ -224,6 +235,19 @@ function buildHourMinuteOptions(sel, max){
 }
 ['af_cycle_start_h','al_cycle_start_h','af_probes_in_h'].forEach(id=>buildHourMinuteOptions(document.getElementById(id),24));
 ['af_cycle_start_m','al_cycle_start_m','af_probes_in_m'].forEach(id=>buildHourMinuteOptions(document.getElementById(id),60));
+function buildOffsetOptions(sel){
+  if(!sel || sel.options.length) return;
+  // Plain ascending order — with a symmetric ±10 range, 0.0 naturally sits
+  // in the middle of the list. Nothing is pre-selected (starts genuinely blank).
+  let html='<option value="">--</option>';
+  for(let i=-100;i<=100;i++){
+    const v=(i/10).toFixed(1);
+    const label = i>0 ? '+'+v : v;
+    html+=`<option value="${v}">${label}</option>`;
+  }
+  sel.innerHTML=html;
+}
+['initialOffsetsCal1','initialOffsetsCal2','finalOffsetsCal1','finalOffsetsCal2'].forEach(id=>buildOffsetOptions(document.getElementById(id)));
 function currentYearMonth(){ const iso=document.getElementById('dateNative')?.value||isoToday(); return iso.slice(0,7); }
 function offsetsAreCurrent(){
   return !!(lastOffsetRaw && lastOffsetRaw.validUntil && Object.keys(PROBES).length && lastOffsetRaw.validUntil>=currentYearMonth());
@@ -337,6 +361,8 @@ async function loadOffsetsFile(ev){
       statusEl.style.color=offsetsExpired(raw)?'#ffb3b3':'#c9f7c9';
     }
     refreshOffsetWarning();
+    applyOffsetsGate();
+    calculateAll();
   }catch(e){
     alert('Cannot load this offsets file, it has no expiry date set, or it was exported from a different thermometer type (Fluke & Comark). Please export a current JSON file from the Dostmann Offset Manager (with a "valid until" date set).');
   }
@@ -878,7 +904,7 @@ function fmt(value, decimals=3){
   const rounded=roundTo(value, decimals);
   return rounded===null ? '' : rounded.toFixed(decimals);
 }
-function set(id,val,dp=3){const e=document.getElementById(id); if(!e) return; e.value=fmt(val,dp)}
+function set(id,val,dp=3){const e=document.getElementById(id); if(!e || e.disabled) return; e.value=fmt(val,dp)}
 function cls(id,type){const e=document.getElementById(id); if(!e) return; e.classList.remove('bad','ok','warn'); if(type)e.classList.add(type)}
 function add(a,b){return a===null||b===null?null:a+b}
 function avg2(a,b){return a===null||b===null?null:(a+b)/2}
@@ -1075,6 +1101,7 @@ function checkProbesInGap(){
   return !bad;
 }
 function calculateAll(){
+  applyOffsetsGate();
   syncDates();
   syncLeftProbes();
   applyDigitalThermometer();
@@ -1131,7 +1158,8 @@ function setAdjustmentMode(stamped, unlocked){
     e.classList.toggle('notNeeded', !!stamped);
     e.querySelectorAll('input,select,textarea').forEach(el=>{
       const alwaysDisabledProbe=el.classList.contains('probe'); // AL probe selects always stay disabled — they're auto-synced from As Found
-      el.disabled = !unlocked || alwaysDisabledProbe;
+      const offsetsGate = OFFSET_GATED_IDS.includes(el.id) && !offsetsLoaded();
+      el.disabled = !unlocked || alwaysDisabledProbe || offsetsGate;
       if(alwaysDisabledProbe || el.classList.contains('timeSel')) return; // handled separately below
       if(stamped && el.value.trim()===''){ el.value=NA_TEXT; }
       else if(!stamped && el.value===NA_TEXT){ el.value=''; }
@@ -1148,15 +1176,24 @@ function setAdjustmentMode(stamped, unlocked){
   });
   // Final offsets/set point live outside the AL table but are only required
   // when an adjustment is actually needed — mark them N/A the same way.
-  ['finalOffsets','finalSetpoint'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el) return;
-    el.disabled=!!stamped;
-    el.classList.toggle('na', !!stamped);
-    if(stamped && el.value.trim()===''){ el.value=NA_TEXT; }
-    else if(!stamped && el.value===NA_TEXT){ el.value=''; }
+  const finalSetpointEl=document.getElementById('finalSetpoint');
+  if(finalSetpointEl){
+    finalSetpointEl.disabled=!!stamped;
+    finalSetpointEl.classList.toggle('na', !!stamped);
+    if(stamped && finalSetpointEl.value.trim()===''){ finalSetpointEl.value=NA_TEXT; }
+    else if(!stamped && finalSetpointEl.value===NA_TEXT){ finalSetpointEl.value=''; }
+  }
+  // Final offsets Cal 1/Cal 2 are dropdowns (like the time pickers) — relabel
+  // the blank option to "N/A" instead of writing free text into them.
+  ['finalOffsetsCal1','finalOffsetsCal2'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel) return;
+    sel.disabled=!!stamped;
+    sel.classList.toggle('na', !!stamped);
+    const blank=sel.querySelector('option[value=""]');
+    if(blank) blank.textContent = stamped ? 'N/A' : '--';
+    if(stamped) sel.value='';
   });
-  const host=document.getElementById('alTableHost'); if(host) host.classList.toggle('stampOn', !!stamped);
   ['al_adj_made','al_cycle_start_h','al_cycle_start_m'].forEach(id=>{const e=document.getElementById(id); if(e) e.classList.toggle('ok', !!stamped);});
 }
 function status(id,items,label){const bad=items.some(x=>x.state==='bad'), any=items.some(x=>x.state); const e=document.getElementById(id); e.className='statusbar '+(bad?'bad':any?'ok':''); e.textContent=!any?`${label}: enter readings and press Calculate.`:bad?`${label}: adjustment required — one or more differences are greater than ±0.300 °C.`:`${label}: within tolerance ±0.300 °C.`}
@@ -1254,12 +1291,12 @@ function autoAdvance(el){
 }
 
 // --- Required-field validation before generating a certificate ---
-const requiredFieldIds=['certNo','jobRef','dateNative','site','department','manufacturer','deviceType','model','serial','load','calSystem','drtSerial','rtRef','rtMax','rtMin','initialOffsets','initialSetpoint','af_air1_probe','af_air2_probe','af_load_probe','af_chart_probe','af_cycle_air_max','af_cycle_air_min','af_cycle_load_max','af_cycle_load_min','af_air_display','af_load_display','af_chart_display','af_probes_in_h','af_probes_in_m','af_cycle_start_h','af_cycle_start_m','engineer'];
+const requiredFieldIds=['certNo','jobRef','dateNative','site','department','manufacturer','deviceType','model','serial','load','calSystem','drtSerial','rtRef','rtMax','rtMin','initialOffsetsCal1','initialOffsetsCal2','initialSetpoint','af_air1_probe','af_air2_probe','af_load_probe','af_chart_probe','af_cycle_air_max','af_cycle_air_min','af_cycle_load_max','af_cycle_load_min','af_air_display','af_load_display','af_chart_display','af_probes_in_h','af_probes_in_m','af_cycle_start_h','af_cycle_start_m','engineer'];
 function collectRequiredIds(){
   const ids=[...requiredFieldIds];
   const adjustmentNeeded = !document.getElementById('al_cycle_air_max')?.disabled;
   if(adjustmentNeeded){
-    ids.push('finalOffsets','finalSetpoint','al_cycle_air_max','al_cycle_air_min','al_cycle_load_max','al_cycle_load_min','al_air_display','al_load_display','al_chart_display');
+    ids.push('finalOffsetsCal1','finalOffsetsCal2','finalSetpoint','al_cycle_air_max','al_cycle_air_min','al_cycle_load_max','al_cycle_load_min','al_air_display','al_load_display','al_chart_display');
   }
   if(document.getElementById('manufacturer')?.value==='Other'){
     ids.push('manufacturerOther');
@@ -1365,6 +1402,32 @@ function fieldDisplayText(el){
   if(el.type==='date') return displayDate(el.value);
   return el.value;
 }
+// iPadOS/macOS Safari sometimes serializes getComputedStyle colors using the
+// modern CSS `color(...)` function (e.g. wide-gamut display-p3 colors)
+// instead of rgb()/hex. html2canvas's color parser doesn't understand that
+// syntax and throws "Attempting to parse an unsupported color function",
+// which was failing PDF generation entirely. Fix: parse the color()
+// function directly and rebuild it as a plain rgb()/rgba() string that
+// html2canvas can read. (A canvas fillStyle round-trip was tried first, but
+// browsers can hand wide-gamut colors straight back out as color() too, so
+// it doesn't reliably normalize them — this direct parse does.)
+const _colorPropCache=new Map();
+function normalizeColorValue(prop, value){
+  if(!value || value.indexOf('color(')===-1) return value; // fast path — only touch values that actually use the problem syntax
+  const cacheKey=value;
+  if(_colorPropCache.has(cacheKey)) return _colorPropCache.get(cacheKey);
+  let out=value;
+  const m=value.match(/color\(\s*[\w-]+\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)/i);
+  if(m){
+    const r=Math.round(Math.max(0,Math.min(1,parseFloat(m[1])))*255);
+    const g=Math.round(Math.max(0,Math.min(1,parseFloat(m[2])))*255);
+    const b=Math.round(Math.max(0,Math.min(1,parseFloat(m[3])))*255);
+    const a=m[4]!==undefined?parseFloat(m[4]):1;
+    out = a<1 ? `rgba(${r}, ${g}, ${b}, ${a})` : `rgb(${r}, ${g}, ${b})`;
+  }
+  _colorPropCache.set(cacheKey, out);
+  return out;
+}
 function swapFieldsForText(root){
   const candidates=[...root.querySelectorAll('input, select')].filter(el=>
     !(el.tagName==='INPUT' && (el.type==='file' || el.id==='dateNative'))
@@ -1380,7 +1443,7 @@ function swapFieldsForText(root){
     const cs=getComputedStyle(el);
     const rect=el.getBoundingClientRect();
     const props={};
-    for(let i=0;i<cs.length;i++){ const p=cs[i]; props[p]=cs.getPropertyValue(p); }
+    for(let i=0;i<cs.length;i++){ const p=cs[i]; props[p]=normalizeColorValue(p, cs.getPropertyValue(p)); }
     return {el, props, width:rect.width, height:rect.height, text:fieldDisplayText(el)};
   });
   // Pass 2: now build and swap in all the divs.
@@ -1516,9 +1579,11 @@ function buildExcelWorkbook(){
   push('Room Temperature Max', val('rtMax'));
   push('Room Temperature Min', val('rtMin'));
   push('Room Temperature Average', val('rtAvg'));
-  push('Initial offsets', val('initialOffsets'));
+  push('Initial offsets Cal 1', val('initialOffsetsCal1'));
+  push('Initial offsets Cal 2', val('initialOffsetsCal2'));
   push('Initial set point', val('initialSetpoint'));
-  push('Final offsets', val('finalOffsets'));
+  push('Final offsets Cal 1', val('finalOffsetsCal1'));
+  push('Final offsets Cal 2', val('finalOffsetsCal2'));
   push('Final set point', val('finalSetpoint'));
   push('','');
   ['af','al'].forEach(prefix=>{
@@ -1651,9 +1716,11 @@ function applyImportedFields(fieldMap){
     setSelectByText('rtRef', fieldMap['RT Thermometer Ref']);
     setValById('rtMax', fieldMap['Room Temperature Max']);
     setValById('rtMin', fieldMap['Room Temperature Min']);
-    setValById('initialOffsets', fieldMap['Initial offsets']);
+    setValById('initialOffsetsCal1', fieldMap['Initial offsets Cal 1']);
+    setValById('initialOffsetsCal2', fieldMap['Initial offsets Cal 2']);
     setValById('initialSetpoint', fieldMap['Initial set point']);
-    setValById('finalOffsets', fieldMap['Final offsets']);
+    setValById('finalOffsetsCal1', fieldMap['Final offsets Cal 1']);
+    setValById('finalOffsetsCal2', fieldMap['Final offsets Cal 2']);
     setValById('finalSetpoint', fieldMap['Final set point']);
 
     ['af','al'].forEach(prefix=>{
