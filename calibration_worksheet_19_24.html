@@ -1070,8 +1070,18 @@ function calcDisplayCycle(){
   const dp=getDisplayDecimals();
   ['af','al'].forEach(prefix=>{
     ['air','load'].forEach(type=>{
+      const avgEl=document.getElementById(`${prefix}_cycle_${type}_avg`);
+      if(avgEl && avgEl.disabled) return; // permanently N/A or not-yet-unlocked — leave its current text alone
       const max=n(`${prefix}_cycle_${type}_max`);
       const min=n(`${prefix}_cycle_${type}_min`);
+      const mismatch = max!==null && min!==null && max<min;
+      if(mismatch){
+        if(avgEl){ avgEl.value='Max<Min!'; avgEl.title='Display cycle Max is lower than Min for this row — correct the readings before an average can be calculated.'; }
+        const target=document.getElementById(`${prefix}_${type}_display`);
+        if(target && !target.disabled && target.classList.contains('autoCorr')){ target.value=''; }
+        return;
+      }
+      if(avgEl && avgEl.title.startsWith('Display cycle Max is lower')) avgEl.title='';
       const avg=avg2(max,min);
       set(`${prefix}_cycle_${type}_avg`,avg,dp);
       const target=document.getElementById(`${prefix}_${type}_display`);
