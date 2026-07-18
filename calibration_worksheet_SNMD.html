@@ -1087,14 +1087,18 @@ function checkRoomTempRange(){
   const rmax=n('rtMax'), rmin=n('rtMin');
   const bad = rmax!==null && rmin!==null && rmax<rmin;
   const rtMaxEl=document.getElementById('rtMax'), rtMinEl=document.getElementById('rtMin');
+  const rtAvgEl=document.getElementById('rtAvg');
   const warn=document.getElementById('rtRangeWarn');
   if(bad){
     rtMaxEl?.classList.add('invalid'); rtMaxEl?.classList.remove('valid');
     rtMinEl?.classList.add('invalid'); rtMinEl?.classList.remove('valid');
     if(warn) warn.style.display='inline';
+    if(rtAvgEl && !rtAvgEl.disabled){ rtAvgEl.value='Max<Min!'; rtAvgEl.title='Room Temperature Max is lower than Min — correct the readings before an average can be calculated.'; }
   } else {
     decimalOK(rtMaxEl); decimalOK(rtMinEl);
     if(warn) warn.style.display='none';
+    if(rtAvgEl && rtAvgEl.title.startsWith('Room Temperature Max is lower')) rtAvgEl.title='';
+    set('rtAvg', avg2(rmax,rmin), 1);
   }
   return !bad;
 }
@@ -1202,7 +1206,6 @@ function calculateAll(){
   calcDisplayCycle();
   applyAutoCorrections();
   updateSignatures();
-  const rt=avg2(n('rtMax'),n('rtMin')); set('rtAvg',rt,1);
   checkRoomTempRange();
   checkAllColumnRanges();
   checkAllAirProbeGroups();
