@@ -267,7 +267,7 @@ footer{
     </div>
   </div>
 
-  <div class="section-label">WS · 01–05 — select a worksheet</div>
+  <div class="section-label">WS · 01–06 — select a worksheet</div>
 
   <div class="grid" id="grid"></div>
 
@@ -329,6 +329,15 @@ const tools = [
     meta:'A4 · PDF/Excel',
     icon:'thermo'
   },
+  {
+    code:'WS-06',
+    title:'Monitoring Systems',
+    desc:'Calibration worksheets for monitoring systems — Cloud Temp, Fermomux, Monitor Max.',
+    href:'monitoring_systems.html',
+    status:'active',
+    meta:'3 systems',
+    icon:'cloud'
+  },
 ];
 
 const icons = {
@@ -337,6 +346,7 @@ const icons = {
   icicle:'<path d="M8 3h8l-1.5 6 1.5 2-1.5 2 1.5 6-2.5 3-2.5-3 1.5-6-1.5-2 1.5-2L8 3Z"/>',
   crystal:'<path d="M12 2l7 4v8l-7 4-7-4V6l7-4Z"/><path d="M12 2v20M5 6l14 12M19 6 5 18"/>',
   thermo:'<path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/><path d="M9 6.5h1.4M9 9.5h1.4"/><path d="M17 4.5v3M15.5 6h3"/>',
+  cloud:'<path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A4.5 4.5 0 0 0 6.5 19h11Z"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
 };
@@ -433,7 +443,7 @@ function setupFullscreen(){
 // html2pdf, fonts…) so the whole suite works with zero signal.
 // Keep this URL list in sync with APP_SHELL / CDN_ASSETS in sw.js.
 // ---------------------------------------------------------------------
-const OFFLINE_PAGES = tools.filter(t=>t.status==='active').map(t=>t.href);
+const OFFLINE_PAGES = tools.filter(t=>t.status==='active').map(t=>t.href).concat(['cloud_temp.html']);
 const OFFLINE_CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.min.js',

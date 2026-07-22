@@ -47,6 +47,12 @@
   input.valid{background:#eef9ee!important}
   .btn:disabled{opacity:.45;cursor:not-allowed}
   .offsetWarning{max-width:210mm;margin:8px auto 0;background:#ffe3e3;border:1.3px solid #b00000;color:#7a0000;font-size:12px;font-weight:700;padding:8px 12px;border-radius:4px}
+  .validityBadge{font-size:10px;font-weight:800;padding:2px 6px;border-radius:3px;white-space:normal;margin-top:3px;display:block;max-width:100%;box-sizing:border-box;line-height:1.3}
+  .validityBadge.ok{background:#e7f7e7;color:#0a7a0a;border:1px solid #a8d8a8}
+  .validityBadge.expired{background:#b00000;color:#fff;border:1px solid #7a0000;animation:pulseExpired 1.4s infinite}
+  .validityBadge.none{background:#f0f0f0;color:#888;border:1px solid #ddd}
+  @keyframes pulseExpired{0%,100%{opacity:1}50%{opacity:.55}}
+  .printMode .validityBadge.expired{animation:none}
   .req{color:#b00000;font-weight:700}
   .lockedRef{background:#f0f0f0!important;color:#999!important;cursor:not-allowed}
   .variationNote{display:none;font-size:11.5px;font-weight:700;color:#7a4b00;background:#fff3cd;border:1px solid #ffce54;border-radius:4px;padding:6px 10px;margin-top:2px}
@@ -118,10 +124,10 @@
   </div>
 
   <table>
-    <tr><td colspan="6">Digital Reference Thermometer Serial No <span class="req">*</span>: <select class="input" id="drtSerial" style="width:22%;text-align:left;border:1px solid #333;background:#fff"><option value="">-- select thermometer --</option></select><span style="float:right">Cal due date: <input class="input calc" id="drtDue" style="width:80px;display:inline-block;text-align:left" readonly> <span id="drtCalStatus" style="font-size:11px;font-weight:700;margin-left:6px"></span></span></td></tr>
+    <tr><td colspan="6" style="padding-bottom:18px">Digital Reference Thermometer Serial No <span class="req">*</span>: <select class="input" id="drtSerial" style="width:22%;text-align:left;border:1px solid #333;background:#fff"><option value="">-- select thermometer --</option></select><span style="float:right">Cal due date: <input class="input calc" id="drtDue" style="width:80px;display:inline-block;text-align:left" readonly> <span id="drtCalStatus" class="validityBadge" style="display:inline-block;float:right;margin-top:3px"></span></span></td></tr>
     <tr>
       <td class="label" style="width:13%">Room Temperature (RT)</td>
-      <td class="label" style="width:22%">RT Ref <span class="req">*</span>: <select class="input" id="rtRef" style="border:1px solid #333;background:#fff;text-align:left"><option value="">-- select thermometer --</option></select></td>
+      <td class="label" style="width:22%;padding-bottom:20px">RT Ref <span class="req">*</span>: <select class="input" id="rtRef" style="border:1px solid #333;background:#fff;text-align:left"><option value="">-- select thermometer --</option></select><span id="rtRefValidity" class="validityBadge"></span></td>
       <td class="label" style="width:12%">Cal due: <input class="input calc" id="rtDue" readonly></td>
       <td class="label" style="width:11%">Max <span class="req">*</span>: <input class="input num" inputmode="decimal" id="rtMax" data-decimals="1" placeholder="xx.x"></td>
       <td class="label" style="width:11%">Min <span class="req">*</span>: <input class="input num" inputmode="decimal" id="rtMin" data-decimals="1" placeholder="xx.x"></td>
@@ -297,12 +303,21 @@ function rebuildRoomThermDropdown(){
 }
 function refreshRoomThermStatus(){
   const sel=document.getElementById('rtRef'); const due=document.getElementById('rtDue');
+  const badge=document.getElementById('rtRefValidity');
   if(!sel) return;
   const t=roomTherms.find(x=>x.id===sel.value);
   if(due) due.value = t && t.validUntil ? monthYearDisplay(t.validUntil) : '';
   const expired = sel.value && t && t.validUntil && t.validUntil<currentYearMonth();
   sel.classList.toggle('invalid', !!expired);
   if(due) due.classList.toggle('invalid', !!expired);
+  if(badge){
+    if(!t || !t.validUntil){ badge.textContent=''; badge.className='validityBadge'; }
+    else{
+      const dueTxt=monthYearDisplay(t.validUntil);
+      badge.textContent = expired ? `⚠ EXPIRED ${dueTxt}` : `✓ Valid to ${dueTxt}`;
+      badge.className = 'validityBadge ' + (expired ? 'expired' : 'ok');
+    }
+  }
 }
 async function loadOffsetsFile(ev){
   const file=ev.target.files && ev.target.files[0]; if(!file) return;
@@ -753,13 +768,14 @@ function refreshDrtStatus(){
   const sel=document.getElementById('drtSerial');
   if(!el) return;
   if(!lastOffsetRaw || !lastOffsetRaw.validUntil || !sel?.value){
-    el.textContent='';
+    el.textContent=''; el.className='validityBadge';
     if(sel) sel.classList.remove('invalid');
     return;
   }
   const expired = lastOffsetRaw.validUntil < currentYearMonth();
-  el.textContent = (expired ? 'Cal. cert EXPIRED ' : 'Cal. cert valid until ') + monthYearDisplay(lastOffsetRaw.validUntil);
-  el.style.color = expired ? '#b00000' : '#0a7a0a';
+  const due=monthYearDisplay(lastOffsetRaw.validUntil);
+  el.textContent = expired ? `⚠ EXPIRED ${due} — cannot generate certificate` : `✓ Valid to ${due}`;
+  el.className = 'validityBadge ' + (expired ? 'expired' : 'ok');
   if(sel) sel.classList.toggle('invalid', !!expired);
 }
 
