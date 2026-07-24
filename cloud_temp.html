@@ -39,6 +39,7 @@
   .req{color:#b00000;font-weight:700}
   table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:11px}
   td,th{border:1px solid var(--line);padding:3px;vertical-align:middle}
+  tr.pointStart>td{border-top:2.5px solid #1a3a6b}
   th{background:#ddd;font-weight:700;font-size:10.5px}
   .input{width:100%;border:0;background:transparent;font-size:11px;box-sizing:border-box;text-align:center}
   .input:focus{outline:2px solid #9ec5fe;background:#eef6ff}
@@ -648,12 +649,31 @@ function setPointMode(idx, mode, vals){
   attachDescListeners(idx);
   autosave();
 }
+function insertPointRowPair(tbody, trAF, trAL, baseNo){
+  let insertAfter=null;
+  if(baseNo){
+    // find the LAST row in DOM order that belongs to the same device, so a new
+    // channel lands right next to its siblings instead of always at the bottom
+    for(const tr of tbody.children){
+      if(tr.dataset && tr.dataset.base===baseNo) insertAfter=tr;
+    }
+  }
+  if(insertAfter){
+    insertAfter.after(trAF, trAL); // continuing an existing device's group — no new border
+  } else {
+    trAF.classList.add('pointStart'); // first channel of a new device — mark the boundary
+    tbody.appendChild(trAF);
+    tbody.appendChild(trAL);
+  }
+}
 function addPoint(prefill){
   pointCount++;
   const idx=pointCount;
   const tbody=document.getElementById('pointsBody');
+  const baseNo=prefill && prefill.pointNo!=null ? pointBaseNo(prefill.pointNo) : '';
   const trAF=document.createElement('tr');
   trAF.id=`p${idx}_row_af`;
+  trAF.dataset.base=baseNo;
   trAF.innerHTML=`
     <td rowspan="2" class="ptCell"><button class="delBtn" onclick="removePoint(${idx})" title="Remove point">×</button><input class="input lockedRef" id="p${idx}_pointNo" placeholder="Point No" readonly tabindex="-1"></td>
     <td rowspan="2" class="descCell" id="p${idx}_descCell">
@@ -667,9 +687,9 @@ function addPoint(prefill){
   `;
   const trAL=document.createElement('tr');
   trAL.id=`p${idx}_row_al`;
+  trAL.dataset.base=baseNo;
   trAL.innerHTML=pointRowHtml(idx,'al');
-  tbody.appendChild(trAF);
-  tbody.appendChild(trAL);
+  insertPointRowPair(tbody, trAF, trAL, baseNo);
 
   attachRowListeners(idx);
   fillProbeDropdowns();
@@ -751,8 +771,14 @@ function quickAddDevice(){
 }
 function removePoint(idx){
   if(!confirm('Remove this point?')) return;
-  document.getElementById(`p${idx}_row_af`)?.remove();
-  document.getElementById(`p${idx}_row_al`)?.remove();
+  const rowAF=document.getElementById(`p${idx}_row_af`);
+  const rowAL=document.getElementById(`p${idx}_row_al`);
+  if(rowAF && rowAF.classList.contains('pointStart')){
+    const next=(rowAL||rowAF).nextElementSibling;
+    if(next) next.classList.add('pointStart');
+  }
+  rowAF?.remove();
+  rowAL?.remove();
   updatePointStats();
   autosave();
 }
@@ -1204,20 +1230,22 @@ async function generatePDF(){
   if(wrapEl){ wrapEl.style.width='auto'; wrapEl.style.height='auto'; wrapEl.style.margin=''; }
   await new Promise(r=>setTimeout(r,30));
   const pageEl=document.getElementById('page');
-  const pxPerMm=96/25.4;
   const filename=pdfFileName();
   let swaps=[];
   try{
     swaps=swapFieldsForText(pageEl);
     const rect=pageEl.getBoundingClientRect();
-    const contentHeightMM=Math.ceil(rect.height/pxPerMm)+4;
-    const pageHeightMM=Math.max(contentHeightMM,210);
+    // Cap the raster capture height so very long worksheets (lots of points) don't hit
+    // iOS Safari's canvas memory/size limits, which is what caused messy/failed PDFs.
+    const maxSafeCanvasPx=14000;
+    let scale=2;
+    if(rect.height*scale>maxSafeCanvasPx){ scale=Math.max(1, maxSafeCanvasPx/rect.height); }
     const opt={
       margin:0, filename,
       image:{type:'jpeg',quality:0.98},
-      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
-      jsPDF:{unit:'mm',format:[297,pageHeightMM],orientation:'landscape'},
-      pagebreak:{mode:['avoid-all']}
+      html2canvas:{scale,useCORS:true,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:[297,210],orientation:'landscape'},
+      pagebreak:{mode:['css','legacy'],avoid:'tr'}
     };
     const blob=await html2pdf().set(opt).from(pageEl).toPdf().output('blob');
     restoreSwappedFields(swaps); swaps=[];
