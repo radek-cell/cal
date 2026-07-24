@@ -141,9 +141,13 @@
   <button class="btn light" onclick="document.getElementById('jobsheetFile').click()">Load Jobsheet PDF</button>
   <input id="jobsheetFile" type="file" accept="application/pdf,.pdf" style="display:none" onchange="loadJobsheetPDF(event)">
   <button class="btn light" onclick="loadLocal()">Load saved</button>
+  <button class="btn light" onclick="saveBackupToFile()" title="Downloads a JSON file with the form, points and probe offsets — keep it somewhere safe (email to yourself, Drive, etc.)">💾 Save Backup</button>
+  <button class="btn light" onclick="document.getElementById('backupRestoreFile').click()" title="Restore a previously saved backup file">Restore Backup</button>
+  <input id="backupRestoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreBackupFromFile(event)">
   <button class="btn light" onclick="document.getElementById('excelImportFile').click()">Import Excel</button>
   <input id="excelImportFile" type="file" accept=".xlsx" style="display:none" onchange="importExcelFile(event)">
   <span class="hintText" id="offsetStatus">Offline HTML prototype · monitoring system calibration worksheet</span>
+  <span class="hintText" id="lastSavedStamp" style="margin-left:auto;color:#0a7a0a"></span>
 </div>
 <div class="offsetWarning" id="offsetWarning" style="display:none"></div>
 <div class="offsetWarning" id="toleranceWarning" style="display:none"></div>
@@ -187,7 +191,7 @@
   <div class="quickAdd">
     <div class="qaTitle">QUICK ADD DEVICE <span class="hintText" style="font-weight:400;text-transform:none">(add 1–4 channels for one device at once)</span></div>
     <div class="qaRow">
-      <div class="qaField" style="width:110px"><label>Point No</label><input id="qaPointNo" placeholder="e.g. 100"></div>
+      <div class="qaField" style="width:110px"><label>Point No</label><input id="qaPointNo" inputmode="numeric" placeholder="e.g. 100"></div>
       <div class="qaField qaChannels">
         <label>Channels</label>
         <span class="qaCheck"><input type="checkbox" id="qaCh1" class="qaChBox" value="1" checked><label for="qaCh1">CH1</label></span>
@@ -388,6 +392,24 @@ function checkToleranceBanner(){
   banner.textContent = anyOut ? '⚠ One or more points are still outside tolerance after adjustment (As Left difference exceeds ±0.5°C). Correct these — highlighted in red — before generating a certificate.' : '';
   updateGenerateButtonsAvailability();
 }
+function applyOffsetsData(raw, sourceLabel){
+  lastOffsetRaw=raw;
+  roomTherms=Array.isArray(raw.roomTherms)?raw.roomTherms:[];
+  if(raw.engineerName){ const engEl=document.getElementById('engineer'); if(engEl && !engEl.value){ engEl.value=raw.engineerName; updateSignatures(); } }
+  PROBE_LIST=buildProbeListFromOffsets(raw)||[];
+  PROBES=Object.fromEntries(PROBE_LIST.map(p=>[p.id,p]));
+  DIGITAL_THERMOMETERS=buildDigitalThermometersFromOffsets(raw)||[];
+  fillProbeDropdowns();
+  fillDigitalThermometers();
+  rebuildRoomThermDropdown();
+  calculateAll();
+  const statusEl=document.getElementById('offsetStatus');
+  if(statusEl){
+    statusEl.textContent=`Offsets ${sourceLabel}: ${Object.keys(PROBES).length} probes, valid until ${monthYearDisplay(raw.validUntil)}${raw.engineerName?', engineer '+raw.engineerName:''}.`;
+    statusEl.style.color=offsetsExpired(raw)?'#b00000':'#0a7a0a';
+  }
+  refreshOffsetWarning();
+}
 async function loadOffsetsFile(ev){
   const file=ev.target.files && ev.target.files[0]; if(!file) return;
   try{
@@ -396,22 +418,7 @@ async function loadOffsetsFile(ev){
     const probeList=buildProbeListFromOffsets(raw);
     if(!probeList) throw new Error('No probe data found');
     if(!raw.validUntil) throw new Error('Missing validUntil');
-    lastOffsetRaw=raw;
-    roomTherms=Array.isArray(raw.roomTherms)?raw.roomTherms:[];
-    if(raw.engineerName){ const engEl=document.getElementById('engineer'); if(engEl && !engEl.value){ engEl.value=raw.engineerName; updateSignatures(); } }
-    PROBE_LIST=probeList;
-    PROBES=Object.fromEntries(PROBE_LIST.map(p=>[p.id,p]));
-    DIGITAL_THERMOMETERS=buildDigitalThermometersFromOffsets(raw)||[];
-    fillProbeDropdowns();
-    fillDigitalThermometers();
-    rebuildRoomThermDropdown();
-    calculateAll();
-    const statusEl=document.getElementById('offsetStatus');
-    if(statusEl){
-      statusEl.textContent=`Offsets loaded from file: ${Object.keys(PROBES).length} probes, valid until ${monthYearDisplay(raw.validUntil)}${raw.engineerName?', engineer '+raw.engineerName:''}.`;
-      statusEl.style.color=offsetsExpired(raw)?'#b00000':'#0a7a0a';
-    }
-    refreshOffsetWarning();
+    applyOffsetsData(raw, 'loaded from file');
   }catch(e){
     alert('Cannot load this offsets file, it has no expiry date set, or it was exported from a different thermometer type (e.g. Dostmann). Please export a current JSON file from the Fluke & Comark Offset Manager (with a "valid until" date set).');
   }
@@ -619,7 +626,7 @@ function addPoint(prefill){
   const trAF=document.createElement('tr');
   trAF.id=`p${idx}_row_af`;
   trAF.innerHTML=`
-    <td rowspan="2" class="ptCell"><button class="delBtn" onclick="removePoint(${idx})" title="Remove point">×</button><input class="input" id="p${idx}_pointNo" placeholder="Point No"></td>
+    <td rowspan="2" class="ptCell"><button class="delBtn" onclick="removePoint(${idx})" title="Remove point">×</button><input class="input lockedRef" id="p${idx}_pointNo" placeholder="Point No" readonly tabindex="-1"></td>
     <td rowspan="2" class="descCell" id="p${idx}_descCell">
       <div class="modeToggle">
         <button type="button" class="modeBtn" data-mode="ambient" onclick="setPointMode(${idx},'ambient')">Ambient</button>
@@ -959,10 +966,14 @@ function serializeState(){
       al:{display:val(`p${i}_al_display`),ref:val(`p${i}_al_ref`),offset:val(`p${i}_al_offset`),probe:val(`p${i}_al_probe`)}
     });
   }
-  return {header,points};
+  return {header,points,offsetsRaw:lastOffsetRaw||null};
 }
 function autosave(){
-  try{ localStorage.setItem('monitoring_calibration_autosave', JSON.stringify(serializeState())); }catch(e){}
+  try{
+    localStorage.setItem('monitoring_calibration_autosave', JSON.stringify(serializeState()));
+    const stamp=document.getElementById('lastSavedStamp');
+    if(stamp) stamp.textContent='Autosaved '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }catch(e){}
 }
 function restoreState(state){
   Object.entries(state.header||{}).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
@@ -971,12 +982,45 @@ function restoreState(state){
   (state.points||[]).forEach(p=>addPoint(p));
   updateSignatures();
   syncFooterDates();
-  calculateAll();
+  if(state.offsetsRaw){
+    try{ applyOffsetsData(state.offsetsRaw, 'restored with saved form'); }catch(e){}
+  }else{
+    calculateAll();
+  }
 }
 function loadLocal(){
   const data=localStorage.getItem('monitoring_calibration_autosave');
   if(!data){ alert('No local save found.'); return; }
   try{ restoreState(JSON.parse(data)); }catch(e){ alert('Saved data is corrupted.'); }
+}
+function saveBackupToFile(){
+  const state=serializeState();
+  const job=(val('jobRef')||val('serial')||'monitoring').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'')||'monitoring';
+  const stamp=new Date().toISOString().replace(/[:T]/g,'-').slice(0,19);
+  const filename=`LabCal-Backup-${job}-${stamp}.json`;
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  const statusEl=document.getElementById('offsetStatus');
+  if(statusEl){ statusEl.textContent=`Backup file saved: ${filename}`; statusEl.style.color='#0a7a0a'; }
+}
+async function restoreBackupFromFile(ev){
+  const file=ev.target.files && ev.target.files[0]; if(!file) return;
+  try{
+    const state=JSON.parse(await file.text());
+    if(!state || !state.header) throw new Error('bad format');
+    if(!confirm('Restore this backup? This will replace everything currently on the form.')){ ev.target.value=''; return; }
+    restoreState(state);
+    autosave();
+    const statusEl=document.getElementById('offsetStatus');
+    if(statusEl){ statusEl.textContent=`Restored from backup file: ${file.name}`; statusEl.style.color='#0a7a0a'; }
+  }catch(e){
+    alert('This does not look like a valid LabCal backup file.');
+  }
+  ev.target.value='';
 }
 function startNewCalibration(){
   if(!confirm('Start a new calibration? This clears the entire form and cannot be undone.')) return;
