@@ -1245,7 +1245,7 @@ async function generatePDF(){
       image:{type:'jpeg',quality:0.98},
       html2canvas:{scale,useCORS:true,backgroundColor:'#ffffff'},
       jsPDF:{unit:'mm',format:[297,210],orientation:'landscape'},
-      pagebreak:{mode:['css','legacy'],avoid:'tr'}
+      pagebreak:{mode:['css','legacy'],avoid:['.ptCell','.descCell','tr']}
     };
     const blob=await html2pdf().set(opt).from(pageEl).toPdf().output('blob');
     restoreSwappedFields(swaps); swaps=[];
