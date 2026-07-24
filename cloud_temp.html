@@ -1215,6 +1215,152 @@ function swapFieldsForText(root){
   });
 }
 function restoreSwappedFields(swaps){ swaps.forEach(({div,el})=>{ if(div.parentNode) div.replaceWith(el); }); }
+
+// ---- Manual PDF pagination ----
+// Build each output page ourselves (repeated compact banner + a whole number of
+// channels + footer on the last page) and capture each individually. This makes
+// splitting a channel across a page structurally impossible, rather than relying
+// on the PDF library's own "avoid" heuristic, which didn't hold up reliably on
+// iPad Safari with this table layout.
+function buildContinuationBanner(pageNum){
+  const bar=document.createElement('div');
+  bar.style.cssText='font-size:11px;font-weight:700;color:#1a3a6b;margin-bottom:6px;padding-bottom:5px;border-bottom:1.5px solid #1a3a6b;display:flex;justify-content:space-between;gap:10px';
+  bar.innerHTML=`<span>${escapeHtml(val('site'))} — Job ${escapeHtml(val('jobRef'))} — Worksheet ${escapeHtml(val('worksheetNo'))} — System S/N ${escapeHtml(val('serial'))}</span><span>Monitoring System Calibration Worksheet (continued) — Page ${pageNum}</span>`;
+  return bar;
+}
+function buildPageFrame(width){
+  const frame=document.createElement('div');
+  frame.className='page';
+  frame.style.width=width+'px';
+  frame.style.minHeight='0';
+  frame.style.margin='0';
+  frame.style.boxShadow='none';
+  return frame;
+}
+async function capturePageFrame(frame, scale){
+  const worker=html2pdf().set({html2canvas:{scale,useCORS:true,backgroundColor:'#ffffff'}}).from(frame);
+  await worker.toCanvas();
+  const canvas=worker.prop.canvas;
+  const dataUrl=canvas.toDataURL('image/jpeg',0.98);
+  return {dataUrl, width:canvas.width, height:canvas.height};
+}
+async function buildPaginatedPdfBlob(pageEl, scale){
+  const stage=document.createElement('div');
+  stage.style.cssText='position:fixed;left:-10000px;top:0;background:#fff;';
+  document.body.appendChild(stage);
+  try{
+    const frameWidthPx=pageEl.getBoundingClientRect().width;
+    const maxFrameHeightPx=frameWidthPx*(210/297)*0.985; // keep every page within a true A4-landscape aspect ratio once stretched to fill the sheet
+
+    const headerClone=pageEl.querySelector('.header').cloneNode(true);
+    const gridClone=pageEl.querySelector('.grid2').cloneNode(true);
+    const theadClone=pageEl.querySelector('#pointsTable thead').cloneNode(true);
+    const footerClone=pageEl.querySelector('.footer').cloneNode(true);
+    const bodyRows=Array.from(pageEl.querySelectorAll('#pointsTable tbody')[0].children);
+
+    // Group rows into whole channels (AF+AL pair) — the atomic unit that must never split
+    const channels=[];
+    for(let i=0;i<bodyRows.length;i+=2){ channels.push([bodyRows[i], bodyRows[i+1]].filter(Boolean)); }
+
+    // Measure the "chrome" (everything on a page besides the table body rows)
+    function measureChrome(nodes){
+      const frame=buildPageFrame(frameWidthPx);
+      nodes.forEach(n=>frame.appendChild(n));
+      const tbl=document.createElement('table'); tbl.id='pointsTable';
+      tbl.appendChild(theadClone.cloneNode(true));
+      tbl.appendChild(document.createElement('tbody'));
+      frame.appendChild(tbl);
+      stage.appendChild(frame);
+      const h=frame.getBoundingClientRect().height;
+      stage.removeChild(frame);
+      return h;
+    }
+    const page1ChromeHeight=measureChrome([headerClone.cloneNode(true), gridClone.cloneNode(true)]);
+    const continuationChromeHeight=measureChrome([buildContinuationBanner(2)]);
+    const footerFrame=buildPageFrame(frameWidthPx);
+    footerFrame.appendChild(footerClone.cloneNode(true));
+    stage.appendChild(footerFrame);
+    const footerHeight=footerFrame.getBoundingClientRect().height;
+    stage.removeChild(footerFrame);
+
+    // Measure each channel's real height (both rows together) from the live, untouched table
+    const channelHeights=channels.map(rows=>rows.reduce((sum,r)=>sum+r.getBoundingClientRect().height,0));
+
+    // Chunk channels into pages, never splitting a channel, using the right budget per page position
+    const pages=[];
+    let current=[]; let currentHeight=0; let isFirst=true;
+    channels.forEach((ch,i)=>{
+      const budget=(isFirst?page1ChromeHeight:continuationChromeHeight);
+      const avail=maxFrameHeightPx-budget;
+      if(current.length>0 && currentHeight+channelHeights[i]>avail){
+        pages.push(current); current=[]; currentHeight=0; isFirst=false;
+      }
+      current.push(i); currentHeight+=channelHeights[i];
+    });
+    if(current.length) pages.push(current);
+    if(!pages.length) pages.push([]);
+
+    // Does the footer fit on the tail of the last content page, or does it need its own page?
+    const lastPageIsFirst=(pages.length===1);
+    const lastPageBudget=maxFrameHeightPx-(lastPageIsFirst?page1ChromeHeight:continuationChromeHeight);
+    const lastPageUsed=pages[pages.length-1].reduce((s,i)=>s+channelHeights[i],0);
+    const footerFitsOnLastPage=(lastPageUsed+footerHeight<=lastPageBudget);
+
+    // Render each page frame and capture it
+    const images=[];
+    for(let p=0;p<pages.length;p++){
+      const isPageFirst=(p===0);
+      const isLastContentPage=(p===pages.length-1);
+      const frame=buildPageFrame(frameWidthPx);
+      if(isPageFirst){ frame.appendChild(headerClone.cloneNode(true)); frame.appendChild(gridClone.cloneNode(true)); }
+      else { frame.appendChild(buildContinuationBanner(p+1)); }
+      const tbl=document.createElement('table'); tbl.id='pointsTable';
+      tbl.appendChild(theadClone.cloneNode(true));
+      const tb=document.createElement('tbody');
+      pages[p].forEach(i=>channels[i].forEach(r=>tb.appendChild(r.cloneNode(true))));
+      tbl.appendChild(tb);
+      frame.appendChild(tbl);
+      if(isLastContentPage && footerFitsOnLastPage) frame.appendChild(footerClone.cloneNode(true));
+      stage.appendChild(frame);
+      images.push(await capturePageFrame(frame, scale));
+      stage.removeChild(frame);
+    }
+    if(!footerFitsOnLastPage){
+      const frame=buildPageFrame(frameWidthPx);
+      frame.appendChild(buildContinuationBanner(pages.length+1));
+      frame.appendChild(footerClone.cloneNode(true));
+      stage.appendChild(frame);
+      images.push(await capturePageFrame(frame, scale));
+      stage.removeChild(frame);
+    }
+
+    // Assemble the final multi-page PDF from the captured page images
+    const jsPDFns=(window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : null;
+    let pdf;
+    if(jsPDFns){
+      pdf=new jsPDFns({unit:'mm',format:[297,210],orientation:'landscape'});
+      images.forEach((img,i)=>{
+        if(i>0) pdf.addPage();
+        const hMm=Math.min(210, 297*(img.height/img.width));
+        pdf.addImage(img.dataUrl,'JPEG',0,0,297,hMm);
+      });
+    } else {
+      // Fall back to html2pdf's own internal jsPDF instance if the standalone constructor isn't exposed globally
+      const firstWorker=html2pdf().set({jsPDF:{unit:'mm',format:[297,210],orientation:'landscape'},image:{type:'jpeg',quality:0.98}}).from(buildPageFrame(frameWidthPx));
+      await firstWorker.toPdf();
+      pdf=firstWorker.prop.pdf;
+      images.forEach((img,i)=>{
+        if(i>0) pdf.addPage();
+        const hMm=Math.min(210, 297*(img.height/img.width));
+        pdf.addImage(img.dataUrl,'JPEG',0,0,297,hMm);
+      });
+      if(pdf.internal.getNumberOfPages()>images.length){ pdf.deletePage(1); } // drop the blank placeholder page this fallback path created
+    }
+    return pdf.output('blob');
+  } finally {
+    stage.remove();
+  }
+}
 async function generatePDF(){
   if(!offsetsAreCurrent()){ alert('The digital reference thermometer / probe offsets are not currently valid (missing, not loaded, or expired). Load a current offsets file before generating a certificate.'); return; }
   if(!validateDecimals(true)) return;
@@ -1234,20 +1380,12 @@ async function generatePDF(){
   let swaps=[];
   try{
     swaps=swapFieldsForText(pageEl);
-    const rect=pageEl.getBoundingClientRect();
-    // Cap the raster capture height so very long worksheets (lots of points) don't hit
-    // iOS Safari's canvas memory/size limits, which is what caused messy/failed PDFs.
-    const maxSafeCanvasPx=14000;
-    let scale=2;
-    if(rect.height*scale>maxSafeCanvasPx){ scale=Math.max(1, maxSafeCanvasPx/rect.height); }
-    const opt={
-      margin:0, filename,
-      image:{type:'jpeg',quality:0.98},
-      html2canvas:{scale,useCORS:true,backgroundColor:'#ffffff'},
-      jsPDF:{unit:'mm',format:[297,210],orientation:'landscape'},
-      pagebreak:{mode:['css','legacy'],avoid:['.ptCell','.descCell','tr']}
-    };
-    const blob=await html2pdf().set(opt).from(pageEl).toPdf().output('blob');
+    // Cap the raster capture resolution so very long worksheets don't hit iOS Safari's
+    // canvas memory/size limits — each page is now captured separately and at most
+    // one A4-landscape sheet tall, so this budget only needs to cover a single page.
+    const maxSafeCanvasPx=3200;
+    const scale=Math.min(2, maxSafeCanvasPx/(pageEl.getBoundingClientRect().width*(210/297)));
+    const blob=await buildPaginatedPdfBlob(pageEl, Math.max(1, scale));
     restoreSwappedFields(swaps); swaps=[];
     document.body.classList.remove('printMode');
     if(window.showSaveFilePicker){
