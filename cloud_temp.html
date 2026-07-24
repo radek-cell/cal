@@ -976,17 +976,22 @@ function autosave(){
   }catch(e){}
 }
 function restoreState(state){
+  // Offsets must be applied FIRST: they build the option lists for the Ref UKAS
+  // dropdown and the per-point Ref Probe dropdowns. If header/points were restored
+  // before this, setting .value on those <select> elements would silently fail
+  // (no matching <option> yet) and they'd come back empty after a reload.
+  if(state.offsetsRaw){
+    try{ applyOffsetsData(state.offsetsRaw, 'restored with saved form'); }catch(e){}
+  }
   Object.entries(state.header||{}).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
   document.getElementById('pointsBody').innerHTML='';
   pointCount=0;
   (state.points||[]).forEach(p=>addPoint(p));
   updateSignatures();
   syncFooterDates();
-  if(state.offsetsRaw){
-    try{ applyOffsetsData(state.offsetsRaw, 'restored with saved form'); }catch(e){}
-  }else{
-    calculateAll();
-  }
+  refreshRefUkasValidity();
+  refreshOffsetWarning();
+  calculateAll();
 }
 function loadLocal(){
   const data=localStorage.getItem('monitoring_calibration_autosave');
