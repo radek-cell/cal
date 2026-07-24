@@ -49,10 +49,13 @@
   .descCell{padding:3px 4px;vertical-align:top}
   .descRow{display:flex;gap:3px;margin-bottom:3px}
   .descRow:last-child{margin-bottom:0}
-  .descSel{font-size:9px;border:1px solid #999;border-radius:2px;padding:2px;background:#fff;color:#111;flex:0 0 42%;min-width:0}
-  .descInput{font-size:9px;border:1px solid #999;border-radius:2px;padding:2px 3px;flex:1;min-width:0}
+  .descSel{font-size:13px;border:1px solid #999;border-radius:3px;padding:4px 3px;background:#fff;color:#111;flex:0 0 42%;min-width:0}
+  .descInput{font-size:13px;border:1px solid #999;border-radius:3px;padding:4px 5px;flex:1;min-width:0}
   .descInput.full{display:block;width:100%;margin-bottom:3px;box-sizing:border-box}
   .descInput.full:last-child{margin-bottom:0}
+  .printMode .descSel,.printMode .descInput{font-size:9px;padding:2px 3px}
+  .ptCell .input{font-size:14px;font-weight:700}
+  .printMode .ptCell .input{font-size:11px;font-weight:400}
   .modeToggle{display:flex;gap:3px;margin-bottom:4px}
   .modeBtn{flex:1;font-size:8px;font-weight:800;letter-spacing:.3px;padding:2px 3px;border:1px solid #b9c7db;background:#f4f7fb;border-radius:3px;cursor:pointer;color:#5a6b85;text-transform:uppercase}
   .modeBtn.active{background:#1a3a6b;color:#fff;border-color:#1a3a6b}
@@ -90,6 +93,7 @@
   .jobsheetRow:last-child{border-bottom:0}
   .quickAdd{background:#eef3fb;border:1px solid #c9d7ea;border-radius:6px;padding:10px 14px;margin:10px 0}
   .qaTitle{font-size:12px;font-weight:800;letter-spacing:.4px;color:#1a3a6b;margin-bottom:8px}
+  .pointStats{font-size:11px;font-weight:700;letter-spacing:0;text-transform:none;color:#1a3a6b;background:#dbe6f7;border:1px solid #b6cbe8;border-radius:12px;padding:3px 10px}
   .qaRow{display:flex;gap:16px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap}
   .qaRow:last-child{margin-bottom:0}
   .qaField{display:flex;flex-direction:column;gap:3px}
@@ -125,6 +129,10 @@
     td,th{padding:2px}
     .title{font-size:15px}
     .brand .logo{font-size:19px}
+    .descSel,.descInput{font-size:9px;padding:2px 3px}
+    .ptCell .input{font-size:11px;font-weight:400}
+    #pageScaleWrap{width:auto!important;height:auto!important}
+    .page{transform:none!important}
     .page *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
     .autoCorr,.calc{print-color-adjust:exact;-webkit-print-color-adjust:exact}
   }
@@ -158,6 +166,7 @@
     <div class="modalList" id="jobsheetModalList"></div>
   </div>
 </div>
+<div id="pageScaleWrap">
 <div class="page" id="page">
   <div class="header">
     <div class="title">MONITORING SYSTEM CALIBRATION WORKSHEET</div>
@@ -189,7 +198,10 @@
   </div>
 
   <div class="quickAdd">
-    <div class="qaTitle">QUICK ADD DEVICE <span class="hintText" style="font-weight:400;text-transform:none">(add 1–4 channels for one device at once)</span></div>
+    <div class="qaTitle" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+      <span>QUICK ADD DEVICE <span class="hintText" style="font-weight:400;text-transform:none">(add 1–4 channels for one device at once)</span></span>
+      <span id="pointStats" class="pointStats">No devices added yet</span>
+    </div>
     <div class="qaRow">
       <div class="qaField" style="width:110px"><label>Point No</label><input id="qaPointNo" inputmode="numeric" placeholder="e.g. 100"></div>
       <div class="qaField qaChannels">
@@ -230,6 +242,7 @@
     <div class="field"><label>Signature:</label><span id="checkSignature" class="signature"></span></div>
     <div class="field"><label>Date:</label><input id="checkDate" readonly></div>
   </div>
+</div>
 </div>
 <script>
 let PROBE_LIST=[], PROBES={}, DIGITAL_THERMOMETERS=[], roomTherms=[];
@@ -580,6 +593,22 @@ function descBodyHtml(idx, mode, vals){
     <input class="descInput full" id="p${idx}_location" placeholder="Location" value="${escapeAttr(vals.location)}">
   `;
 }
+function updatePointStats(){
+  const el=document.getElementById('pointStats');
+  if(!el) return;
+  const bases=new Set();
+  let channelCount=0;
+  for(let i=1;i<=pointCount;i++){
+    const pEl=document.getElementById(`p${i}_pointNo`);
+    if(!pEl) continue;
+    channelCount++;
+    const base=pointBaseNo(pEl.value).trim();
+    bases.add(base || `__row${i}`); // no point no yet — still counts as its own device for now
+  }
+  if(!channelCount){ el.textContent='No devices added yet'; return; }
+  const deviceCount=bases.size;
+  el.textContent=`${deviceCount} device${deviceCount===1?'':'s'} · ${channelCount} channel${channelCount===1?'':'s'}`;
+}
 function pointBaseNo(pointNoStr){
   const m=String(pointNoStr||'').match(/^(.*?)\s*\/\s*CH\d+$/i);
   return (m ? m[1] : pointNoStr||'').trim();
@@ -672,6 +701,7 @@ function addPoint(prefill){
     });
   }
   calculatePoint(idx);
+  updatePointStats();
 }
 function padPointNo(raw){
   const trimmed=String(raw||'').trim();
@@ -723,6 +753,7 @@ function removePoint(idx){
   if(!confirm('Remove this point?')) return;
   document.getElementById(`p${idx}_row_af`)?.remove();
   document.getElementById(`p${idx}_row_al`)?.remove();
+  updatePointStats();
   autosave();
 }
 function attachRowListeners(idx){
@@ -968,35 +999,74 @@ function serializeState(){
   }
   return {header,points,offsetsRaw:lastOffsetRaw||null};
 }
+const AUTOSAVE_KEY='monitoring_calibration_autosave';
+const AUTOSAVE_BACKUP_KEY='monitoring_calibration_autosave_backup';
+let isRestoring=false;
 function autosave(){
+  if(isRestoring) return; // never write a partial/incomplete state while a restore is still in progress
   try{
-    localStorage.setItem('monitoring_calibration_autosave', JSON.stringify(serializeState()));
+    const json=JSON.stringify(serializeState());
+    // keep one generation back as a fallback, in case the next write is ever interrupted or corrupted
+    const prev=localStorage.getItem(AUTOSAVE_KEY);
+    if(prev){
+      try{ JSON.parse(prev); localStorage.setItem(AUTOSAVE_BACKUP_KEY, prev); }catch(e){ /* don't propagate an already-bad copy */ }
+    }
+    localStorage.setItem(AUTOSAVE_KEY, json);
     const stamp=document.getElementById('lastSavedStamp');
-    if(stamp) stamp.textContent='Autosaved '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  }catch(e){}
+    if(stamp){ stamp.textContent='Autosaved '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); stamp.style.color='#0a7a0a'; }
+  }catch(e){
+    const stamp=document.getElementById('lastSavedStamp');
+    if(stamp){ stamp.textContent='⚠ Autosave failed — use 💾 Save Backup now'; stamp.style.color='#b00000'; }
+  }
 }
 function restoreState(state){
-  // Offsets must be applied FIRST: they build the option lists for the Ref UKAS
-  // dropdown and the per-point Ref Probe dropdowns. If header/points were restored
-  // before this, setting .value on those <select> elements would silently fail
-  // (no matching <option> yet) and they'd come back empty after a reload.
-  if(state.offsetsRaw){
-    try{ applyOffsetsData(state.offsetsRaw, 'restored with saved form'); }catch(e){}
+  isRestoring=true;
+  try{
+    // Offsets must be applied FIRST: they build the option lists for the Ref UKAS
+    // dropdown and the per-point Ref Probe dropdowns. If header/points were restored
+    // before this, setting .value on those <select> elements would silently fail
+    // (no matching <option> yet) and they'd come back empty after a reload.
+    if(state.offsetsRaw){
+      try{ applyOffsetsData(state.offsetsRaw, 'restored with saved form'); }catch(e){}
+    }
+    Object.entries(state.header||{}).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
+    document.getElementById('pointsBody').innerHTML='';
+    pointCount=0;
+    (state.points||[]).forEach(p=>addPoint(p));
+    updateSignatures();
+    syncFooterDates();
+    refreshRefUkasValidity();
+    refreshOffsetWarning();
+    calculateAll();
+    updatePointStats();
+  } finally {
+    isRestoring=false;
   }
-  Object.entries(state.header||{}).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
-  document.getElementById('pointsBody').innerHTML='';
-  pointCount=0;
-  (state.points||[]).forEach(p=>addPoint(p));
-  updateSignatures();
-  syncFooterDates();
-  refreshRefUkasValidity();
-  refreshOffsetWarning();
-  calculateAll();
+  autosave(); // write one clean, complete save now the restore has actually finished
+}
+function loadAutosavedState(){
+  // Try the primary autosave; if it's missing or corrupted, fall back to the
+  // one-generation-back copy rather than silently starting from a blank form.
+  const primary=localStorage.getItem(AUTOSAVE_KEY);
+  if(primary){
+    try{ return {state:JSON.parse(primary), recovered:false}; }catch(e){}
+  }
+  const backup=localStorage.getItem(AUTOSAVE_BACKUP_KEY);
+  if(backup){
+    try{ return {state:JSON.parse(backup), recovered:true}; }catch(e){}
+  }
+  return null;
 }
 function loadLocal(){
-  const data=localStorage.getItem('monitoring_calibration_autosave');
-  if(!data){ alert('No local save found.'); return; }
-  try{ restoreState(JSON.parse(data)); }catch(e){ alert('Saved data is corrupted.'); }
+  const result=loadAutosavedState();
+  if(!result){ alert('No local save found.'); return; }
+  try{
+    restoreState(result.state);
+    if(result.recovered){
+      const statusEl=document.getElementById('offsetStatus');
+      if(statusEl){ statusEl.textContent='⚠ Last autosave was unreadable — recovered from the previous autosave instead. Please check the form carefully.'; statusEl.style.color='#b00000'; }
+    }
+  }catch(e){ alert('Saved data is corrupted.'); }
 }
 function saveBackupToFile(){
   const state=serializeState();
@@ -1032,7 +1102,8 @@ function startNewCalibration(){
   HEADER_IDS.forEach(id=>{ const el=document.getElementById(id); if(el){ el.value=''; el.classList.remove('invalid','valid'); } });
   document.getElementById('pointsBody').innerHTML='';
   pointCount=0;
-  localStorage.removeItem('monitoring_calibration_autosave');
+  localStorage.removeItem(AUTOSAVE_KEY);
+  localStorage.removeItem(AUTOSAVE_BACKUP_KEY);
   const dn=document.getElementById('dateNative'); if(dn) dn.value=isoToday();
   const dd=document.getElementById('date'); if(dd && dn) dd.value=displayDate(dn.value);
   document.getElementById('sheetNo').value='1'; document.getElementById('sheetOf').value='1';
@@ -1040,9 +1111,12 @@ function startNewCalibration(){
   updateSignatures();
   const statusEl=document.getElementById('offsetStatus');
   if(statusEl){ statusEl.textContent='Offline HTML prototype · monitoring system calibration worksheet'; statusEl.style.color=''; }
+  const stamp=document.getElementById('lastSavedStamp');
+  if(stamp){ stamp.textContent=''; }
   fillDigitalThermometers();
   refreshOffsetWarning();
   calculateAll();
+  updatePointStats();
 }
 
 // ---- PDF export ----
@@ -1124,6 +1198,10 @@ async function generatePDF(){
   const originalLabel=btn.textContent;
   btn.disabled=true; btn.textContent='Generating PDF…';
   document.body.classList.add('printMode');
+  const wrapEl=document.getElementById('pageScaleWrap');
+  const pageElForScale=document.getElementById('page');
+  if(pageElForScale) pageElForScale.style.transform='none';
+  if(wrapEl){ wrapEl.style.width='auto'; wrapEl.style.height='auto'; wrapEl.style.margin=''; }
   await new Promise(r=>setTimeout(r,30));
   const pageEl=document.getElementById('page');
   const pxPerMm=96/25.4;
@@ -1157,6 +1235,7 @@ async function generatePDF(){
     document.body.classList.remove('printMode');
     btn.disabled=false; btn.textContent=originalLabel;
     refreshOffsetWarning();
+    fitPageToViewport();
   }
 }
 function downloadBlob(blob,filename){
@@ -1310,6 +1389,41 @@ async function generateExcel(){
   }
 }
 
+// ---- Fit-to-screen scaling (so the wide certificate fits portrait/narrow screens without manual zoom) ----
+function fitPageToViewport(){
+  const page=document.getElementById('page');
+  const wrap=document.getElementById('pageScaleWrap');
+  if(!page||!wrap) return;
+  page.style.transform='none';
+  wrap.style.width='auto';
+  wrap.style.height='auto';
+  const naturalWidth=page.offsetWidth;
+  const naturalHeight=page.offsetHeight;
+  const available=wrap.parentElement ? wrap.parentElement.clientWidth : window.innerWidth;
+  const scale=Math.min(1, (available-4)/naturalWidth);
+  if(scale<0.999){
+    page.style.transformOrigin='top left';
+    page.style.transform=`scale(${scale})`;
+    wrap.style.width=(naturalWidth*scale)+'px';
+    wrap.style.height=(naturalHeight*scale)+'px';
+    wrap.style.margin='10px auto';
+  } else {
+    page.style.transform='none';
+    wrap.style.width='auto';
+    wrap.style.height='auto';
+    wrap.style.margin='';
+  }
+}
+let fitPageTimer=null;
+function scheduleFitPage(){
+  clearTimeout(fitPageTimer);
+  fitPageTimer=setTimeout(fitPageToViewport,120);
+}
+window.addEventListener('resize', scheduleFitPage);
+window.addEventListener('orientationchange', ()=>setTimeout(fitPageToViewport,350));
+window.addEventListener('beforeprint', fitPageToViewport); // CSS forces transform:none for print, this just keeps wrap tidy
+window.addEventListener('afterprint', scheduleFitPage);
+
 // ---- Init ----
 wireHeader();
 document.addEventListener('input',e=>{ if(e.target.classList && e.target.classList.contains('reqMissing') && (e.target.value||'').trim()) e.target.classList.remove('reqMissing'); });
@@ -1321,12 +1435,20 @@ document.getElementById('dateNative')?.addEventListener('focus',function(){ if(t
   const dn=document.getElementById('dateNative');
   if(dn && !dn.value){ dn.value=isoToday(); document.getElementById('date').value=displayDate(dn.value); }
   syncFooterDates();
-  const saved=localStorage.getItem('monitoring_calibration_autosave');
-  if(saved){
-    try{ restoreState(JSON.parse(saved)); return; }catch(e){}
+  const result=loadAutosavedState();
+  if(result){
+    try{
+      restoreState(result.state);
+      if(result.recovered){
+        const statusEl=document.getElementById('offsetStatus');
+        if(statusEl){ statusEl.textContent='⚠ Last autosave was unreadable — recovered from the previous autosave instead. Please check the form carefully.'; statusEl.style.color='#b00000'; }
+      }
+      return;
+    }catch(e){}
   }
   calculateAll();
 })();
+fitPageToViewport();
 </script>
 </body>
 </html>
