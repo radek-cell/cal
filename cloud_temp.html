@@ -1231,9 +1231,14 @@ function restoreSwappedFields(swaps){ swaps.forEach(({div,el})=>{ if(div.parentN
 function buildContinuationBanner(pageNum, totalPages, headerInfo){
   const bar=document.createElement('div');
   bar.style.cssText='font-size:11px;font-weight:700;color:#1a3a6b;margin-bottom:6px;padding-bottom:5px;border-bottom:1.5px solid #1a3a6b;display:flex;justify-content:space-between;align-items:baseline;gap:10px';
+  const parts=[];
+  if(headerInfo.site) parts.push(headerInfo.site);
+  if(headerInfo.jobRef) parts.push('Job '+headerInfo.jobRef);
+  if(headerInfo.worksheetNo) parts.push('WS '+headerInfo.worksheetNo);
+  if(headerInfo.serial) parts.push('S/N '+headerInfo.serial);
   const left=document.createElement('span');
   left.style.cssText='overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
-  left.textContent=`${headerInfo.site} — Job ${headerInfo.jobRef} — WS ${headerInfo.worksheetNo} — S/N ${headerInfo.serial}`;
+  left.textContent=parts.join(' — ') || 'Monitoring System Calibration Worksheet';
   const right=document.createElement('span');
   right.style.cssText='flex:0 0 auto;white-space:nowrap';
   right.textContent=`Page ${pageNum} of ${totalPages}`;
@@ -1250,7 +1255,15 @@ function buildPageFrame(width){
   return frame;
 }
 async function capturePageFrame(frame, scale){
-  const worker=html2pdf().set({html2canvas:{scale,useCORS:true,backgroundColor:'#ffffff'}}).from(frame);
+  // IMPORTANT: html2pdf sizes its internal capture container from the jsPDF page size
+  // (container width = pageSize.inner.width) and hides overflow. Without these jsPDF
+  // options it defaults to A4 *portrait* (210mm) and silently clips this 287mm-wide
+  // landscape worksheet to ~73%, cutting off the right-hand columns.
+  const worker=html2pdf().set({
+    margin:0,
+    jsPDF:{unit:'mm',format:[297,210],orientation:'landscape'},
+    html2canvas:{scale,useCORS:true,backgroundColor:'#ffffff'}
+  }).from(frame);
   await worker.toCanvas();
   const canvas=worker.prop.canvas;
   const dataUrl=canvas.toDataURL('image/jpeg',0.98);
