@@ -185,7 +185,7 @@
     <div class="field" style="grid-template-columns:auto 50px auto 50px"><label>Sheet</label><input id="sheetNo" style="text-align:center" value="1"><label>of</label><input id="sheetOf" style="text-align:center" value="1"></div>
 
     <div class="field"><label>Department <span class="req">*</span>:</label><input id="department"></div>
-    <div class="field"><label>System Model <span class="req">*</span>:</label><input id="model"></div>
+    <div class="field"><label>System Model <span class="req">*</span>:</label><input id="model" value="Cloud Temp"></div>
     <div class="field" style="grid-column:span 2"><label>System Serial No <span class="req">*</span>:</label><input id="serial"></div>
 
     <div class="field full" style="grid-template-columns:auto 1fr auto"><label>Digital Reference Thermometer Serial No <span class="req">*</span>:</label><input id="drtSerial" readonly placeholder="Loaded automatically from offsets file"><span id="drtValidity" class="validityBadge"></span></div>
@@ -204,7 +204,7 @@
       <span id="pointStats" class="pointStats">No devices added yet</span>
     </div>
     <div class="qaRow">
-      <div class="qaField" style="width:110px"><label>Point No</label><input id="qaPointNo" inputmode="numeric" placeholder="e.g. 100"></div>
+      <div class="qaField" style="width:110px"><label>Point No</label><input id="qaPointNo" inputmode="numeric" maxlength="3" placeholder="e.g. 100"></div>
       <div class="qaField qaChannels">
         <label>Channels</label>
         <span class="qaCheck"><input type="checkbox" id="qaCh1" class="qaChBox" value="1" checked><label for="qaCh1">CH1</label></span>
@@ -220,8 +220,8 @@
   <table id="pointsTable">
     <thead>
       <tr>
-        <th style="width:7%">Point No</th>
-        <th style="width:27%">Point Description <span class="hintText">(incl. monitoring system probe ref)</span></th>
+        <th style="width:11%">Point No</th>
+        <th style="width:23%">Point Description <span class="hintText">(incl. monitoring system probe ref)</span></th>
         <th style="width:6%">Monitor Display (°C)</th>
         <th style="width:6%">Reference Temp (°C)</th>
         <th style="width:7%">Probe Correction (°C)</th>
@@ -503,6 +503,9 @@ async function parseJobsheetPDF(file){
   if(result.devices.length) result.model=result.devices[0].model;
   return result;
 }
+function baseSystemSerial(raw){
+  return String(raw||'').split('-')[0].trim();
+}
 let jobsheetDevices=[];
 async function loadJobsheetPDF(ev){
   const file=ev.target.files && ev.target.files[0]; if(!file) return;
@@ -523,7 +526,7 @@ async function loadJobsheetPDF(ev){
       if(statusEl){ statusEl.textContent='Jobsheet loaded — header fields filled, but no Model/Serial device rows were found in the PDF.'; statusEl.style.color='#cc7a00'; }
     } else if(jobsheetDevices.length===1){
       const d=jobsheetDevices[0];
-      const serialEl=document.getElementById('serial'); if(serialEl && !serialEl.value) serialEl.value=d.serial;
+      const serialEl=document.getElementById('serial'); if(serialEl && !serialEl.value) serialEl.value=baseSystemSerial(d.serial);
       const qaEl=document.getElementById('qaPointNo'); if(qaEl) qaEl.value=d.pointNo;
       if(statusEl){ statusEl.textContent=`Jobsheet loaded: 1 device found (${d.serial}) — Point No pre-filled in Quick Add, pick channels and Add.`; statusEl.style.color='#0a7a0a'; }
     } else {
@@ -552,7 +555,7 @@ function closeJobsheetModal(){ const modal=document.getElementById('jobsheetModa
 function applyJobsheetDevice(i){
   const d=jobsheetDevices[i]; if(!d) return;
   const qaEl=document.getElementById('qaPointNo'); if(qaEl) qaEl.value=d.pointNo;
-  const serialEl=document.getElementById('serial'); if(serialEl && !serialEl.value) serialEl.value=d.serial;
+  const serialEl=document.getElementById('serial'); if(serialEl && !serialEl.value) serialEl.value=baseSystemSerial(d.serial);
   closeJobsheetModal();
   if(qaEl) qaEl.focus();
 }
@@ -1133,6 +1136,7 @@ function startNewCalibration(){
   const dn=document.getElementById('dateNative'); if(dn) dn.value=isoToday();
   const dd=document.getElementById('date'); if(dd && dn) dd.value=displayDate(dn.value);
   document.getElementById('sheetNo').value='1'; document.getElementById('sheetOf').value='1';
+  const modelEl=document.getElementById('model'); if(modelEl) modelEl.value='Cloud Temp';
   syncFooterDates();
   updateSignatures();
   const statusEl=document.getElementById('offsetStatus');
@@ -1216,151 +1220,6 @@ function swapFieldsForText(root){
 }
 function restoreSwappedFields(swaps){ swaps.forEach(({div,el})=>{ if(div.parentNode) div.replaceWith(el); }); }
 
-// ---- Manual PDF pagination ----
-// Build each output page ourselves (repeated compact banner + a whole number of
-// channels + footer on the last page) and capture each individually. This makes
-// splitting a channel across a page structurally impossible, rather than relying
-// on the PDF library's own "avoid" heuristic, which didn't hold up reliably on
-// iPad Safari with this table layout.
-function buildContinuationBanner(pageNum){
-  const bar=document.createElement('div');
-  bar.style.cssText='font-size:11px;font-weight:700;color:#1a3a6b;margin-bottom:6px;padding-bottom:5px;border-bottom:1.5px solid #1a3a6b;display:flex;justify-content:space-between;gap:10px';
-  bar.innerHTML=`<span>${escapeHtml(val('site'))} — Job ${escapeHtml(val('jobRef'))} — Worksheet ${escapeHtml(val('worksheetNo'))} — System S/N ${escapeHtml(val('serial'))}</span><span>Monitoring System Calibration Worksheet (continued) — Page ${pageNum}</span>`;
-  return bar;
-}
-function buildPageFrame(width){
-  const frame=document.createElement('div');
-  frame.className='page';
-  frame.style.width=width+'px';
-  frame.style.minHeight='0';
-  frame.style.margin='0';
-  frame.style.boxShadow='none';
-  return frame;
-}
-async function capturePageFrame(frame, scale){
-  const worker=html2pdf().set({html2canvas:{scale,useCORS:true,backgroundColor:'#ffffff'}}).from(frame);
-  await worker.toCanvas();
-  const canvas=worker.prop.canvas;
-  const dataUrl=canvas.toDataURL('image/jpeg',0.98);
-  return {dataUrl, width:canvas.width, height:canvas.height};
-}
-async function buildPaginatedPdfBlob(pageEl, scale){
-  const stage=document.createElement('div');
-  stage.style.cssText='position:fixed;left:-10000px;top:0;background:#fff;';
-  document.body.appendChild(stage);
-  try{
-    const frameWidthPx=pageEl.getBoundingClientRect().width;
-    const maxFrameHeightPx=frameWidthPx*(210/297)*0.985; // keep every page within a true A4-landscape aspect ratio once stretched to fill the sheet
-
-    const headerClone=pageEl.querySelector('.header').cloneNode(true);
-    const gridClone=pageEl.querySelector('.grid2').cloneNode(true);
-    const theadClone=pageEl.querySelector('#pointsTable thead').cloneNode(true);
-    const footerClone=pageEl.querySelector('.footer').cloneNode(true);
-    const bodyRows=Array.from(pageEl.querySelectorAll('#pointsTable tbody')[0].children);
-
-    // Group rows into whole channels (AF+AL pair) — the atomic unit that must never split
-    const channels=[];
-    for(let i=0;i<bodyRows.length;i+=2){ channels.push([bodyRows[i], bodyRows[i+1]].filter(Boolean)); }
-
-    // Measure the "chrome" (everything on a page besides the table body rows)
-    function measureChrome(nodes){
-      const frame=buildPageFrame(frameWidthPx);
-      nodes.forEach(n=>frame.appendChild(n));
-      const tbl=document.createElement('table'); tbl.id='pointsTable';
-      tbl.appendChild(theadClone.cloneNode(true));
-      tbl.appendChild(document.createElement('tbody'));
-      frame.appendChild(tbl);
-      stage.appendChild(frame);
-      const h=frame.getBoundingClientRect().height;
-      stage.removeChild(frame);
-      return h;
-    }
-    const page1ChromeHeight=measureChrome([headerClone.cloneNode(true), gridClone.cloneNode(true)]);
-    const continuationChromeHeight=measureChrome([buildContinuationBanner(2)]);
-    const footerFrame=buildPageFrame(frameWidthPx);
-    footerFrame.appendChild(footerClone.cloneNode(true));
-    stage.appendChild(footerFrame);
-    const footerHeight=footerFrame.getBoundingClientRect().height;
-    stage.removeChild(footerFrame);
-
-    // Measure each channel's real height (both rows together) from the live, untouched table
-    const channelHeights=channels.map(rows=>rows.reduce((sum,r)=>sum+r.getBoundingClientRect().height,0));
-
-    // Chunk channels into pages, never splitting a channel, using the right budget per page position
-    const pages=[];
-    let current=[]; let currentHeight=0; let isFirst=true;
-    channels.forEach((ch,i)=>{
-      const budget=(isFirst?page1ChromeHeight:continuationChromeHeight);
-      const avail=maxFrameHeightPx-budget;
-      if(current.length>0 && currentHeight+channelHeights[i]>avail){
-        pages.push(current); current=[]; currentHeight=0; isFirst=false;
-      }
-      current.push(i); currentHeight+=channelHeights[i];
-    });
-    if(current.length) pages.push(current);
-    if(!pages.length) pages.push([]);
-
-    // Does the footer fit on the tail of the last content page, or does it need its own page?
-    const lastPageIsFirst=(pages.length===1);
-    const lastPageBudget=maxFrameHeightPx-(lastPageIsFirst?page1ChromeHeight:continuationChromeHeight);
-    const lastPageUsed=pages[pages.length-1].reduce((s,i)=>s+channelHeights[i],0);
-    const footerFitsOnLastPage=(lastPageUsed+footerHeight<=lastPageBudget);
-
-    // Render each page frame and capture it
-    const images=[];
-    for(let p=0;p<pages.length;p++){
-      const isPageFirst=(p===0);
-      const isLastContentPage=(p===pages.length-1);
-      const frame=buildPageFrame(frameWidthPx);
-      if(isPageFirst){ frame.appendChild(headerClone.cloneNode(true)); frame.appendChild(gridClone.cloneNode(true)); }
-      else { frame.appendChild(buildContinuationBanner(p+1)); }
-      const tbl=document.createElement('table'); tbl.id='pointsTable';
-      tbl.appendChild(theadClone.cloneNode(true));
-      const tb=document.createElement('tbody');
-      pages[p].forEach(i=>channels[i].forEach(r=>tb.appendChild(r.cloneNode(true))));
-      tbl.appendChild(tb);
-      frame.appendChild(tbl);
-      if(isLastContentPage && footerFitsOnLastPage) frame.appendChild(footerClone.cloneNode(true));
-      stage.appendChild(frame);
-      images.push(await capturePageFrame(frame, scale));
-      stage.removeChild(frame);
-    }
-    if(!footerFitsOnLastPage){
-      const frame=buildPageFrame(frameWidthPx);
-      frame.appendChild(buildContinuationBanner(pages.length+1));
-      frame.appendChild(footerClone.cloneNode(true));
-      stage.appendChild(frame);
-      images.push(await capturePageFrame(frame, scale));
-      stage.removeChild(frame);
-    }
-
-    // Assemble the final multi-page PDF from the captured page images
-    const jsPDFns=(window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : null;
-    let pdf;
-    if(jsPDFns){
-      pdf=new jsPDFns({unit:'mm',format:[297,210],orientation:'landscape'});
-      images.forEach((img,i)=>{
-        if(i>0) pdf.addPage();
-        const hMm=Math.min(210, 297*(img.height/img.width));
-        pdf.addImage(img.dataUrl,'JPEG',0,0,297,hMm);
-      });
-    } else {
-      // Fall back to html2pdf's own internal jsPDF instance if the standalone constructor isn't exposed globally
-      const firstWorker=html2pdf().set({jsPDF:{unit:'mm',format:[297,210],orientation:'landscape'},image:{type:'jpeg',quality:0.98}}).from(buildPageFrame(frameWidthPx));
-      await firstWorker.toPdf();
-      pdf=firstWorker.prop.pdf;
-      images.forEach((img,i)=>{
-        if(i>0) pdf.addPage();
-        const hMm=Math.min(210, 297*(img.height/img.width));
-        pdf.addImage(img.dataUrl,'JPEG',0,0,297,hMm);
-      });
-      if(pdf.internal.getNumberOfPages()>images.length){ pdf.deletePage(1); } // drop the blank placeholder page this fallback path created
-    }
-    return pdf.output('blob');
-  } finally {
-    stage.remove();
-  }
-}
 async function generatePDF(){
   if(!offsetsAreCurrent()){ alert('The digital reference thermometer / probe offsets are not currently valid (missing, not loaded, or expired). Load a current offsets file before generating a certificate.'); return; }
   if(!validateDecimals(true)) return;
@@ -1376,16 +1235,28 @@ async function generatePDF(){
   if(wrapEl){ wrapEl.style.width='auto'; wrapEl.style.height='auto'; wrapEl.style.margin=''; }
   await new Promise(r=>setTimeout(r,30));
   const pageEl=document.getElementById('page');
+  const pxPerMm=96/25.4;
   const filename=pdfFileName();
   let swaps=[];
   try{
     swaps=swapFieldsForText(pageEl);
-    // Cap the raster capture resolution so very long worksheets don't hit iOS Safari's
-    // canvas memory/size limits — each page is now captured separately and at most
-    // one A4-landscape sheet tall, so this budget only needs to cover a single page.
-    const maxSafeCanvasPx=3200;
-    const scale=Math.min(2, maxSafeCanvasPx/(pageEl.getBoundingClientRect().width*(210/297)));
-    const blob=await buildPaginatedPdfBlob(pageEl, Math.max(1, scale));
+    const rect=pageEl.getBoundingClientRect();
+    // One single page sized to fit everything — no page breaks anywhere, so nothing can ever be cut mid-point.
+    const contentHeightMM=Math.ceil(rect.height/pxPerMm)+4;
+    const pageHeightMM=Math.max(contentHeightMM,210);
+    // Cap the raster capture resolution so very long worksheets (lots of points) don't hit
+    // iOS Safari's canvas memory/size limits, which is what caused messy/failed PDFs before.
+    const maxSafeCanvasPx=14000;
+    let scale=2;
+    if(rect.height*scale>maxSafeCanvasPx){ scale=Math.max(1, maxSafeCanvasPx/rect.height); }
+    const opt={
+      margin:0, filename,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale,useCORS:true,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:[297,pageHeightMM],orientation:'landscape'},
+      pagebreak:{mode:['avoid-all']}
+    };
+    const blob=await html2pdf().set(opt).from(pageEl).toPdf().output('blob');
     restoreSwappedFields(swaps); swaps=[];
     document.body.classList.remove('printMode');
     if(window.showSaveFilePicker){
@@ -1594,6 +1465,7 @@ window.addEventListener('afterprint', scheduleFitPage);
 wireHeader();
 document.addEventListener('input',e=>{ if(e.target.classList && e.target.classList.contains('reqMissing') && (e.target.value||'').trim()) e.target.classList.remove('reqMissing'); });
 document.addEventListener('change',e=>{ if(e.target.classList && e.target.classList.contains('reqMissing') && (e.target.value||'').trim()) e.target.classList.remove('reqMissing'); });
+document.getElementById('qaPointNo')?.addEventListener('input',function(){ this.value=this.value.replace(/\D/g,'').slice(0,3); });
 document.getElementById('qaPointNo')?.addEventListener('blur',function(){ this.value=padPointNo(this.value); });
 document.getElementById('dateNative')?.addEventListener('click',function(){ if(this.showPicker){ try{ this.showPicker(); }catch(e){} } });
 document.getElementById('dateNative')?.addEventListener('focus',function(){ if(this.showPicker){ try{ this.showPicker(); }catch(e){} } });
