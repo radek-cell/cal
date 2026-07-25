@@ -1228,10 +1228,16 @@ function restoreSwappedFields(swaps){ swaps.forEach(({div,el})=>{ if(div.parentN
 // page) and capture each individually at a safe, bounded size. This also makes splitting a
 // channel across a page structurally impossible, since we decide the placement in code rather
 // than relying on any library heuristic.
-function buildContinuationBanner(pageNum){
+function buildContinuationBanner(pageNum, totalPages, headerInfo){
   const bar=document.createElement('div');
-  bar.style.cssText='font-size:11px;font-weight:700;color:#1a3a6b;margin-bottom:6px;padding-bottom:5px;border-bottom:1.5px solid #1a3a6b;display:flex;justify-content:space-between;gap:10px';
-  bar.innerHTML=`<span>${escapeHtml(val('site'))} — Job ${escapeHtml(val('jobRef'))} — Worksheet ${escapeHtml(val('worksheetNo'))} — System S/N ${escapeHtml(val('serial'))}</span><span>Monitoring System Calibration Worksheet (continued) — Page ${pageNum}</span>`;
+  bar.style.cssText='font-size:11px;font-weight:700;color:#1a3a6b;margin-bottom:6px;padding-bottom:5px;border-bottom:1.5px solid #1a3a6b;display:flex;justify-content:space-between;align-items:baseline;gap:10px';
+  const left=document.createElement('span');
+  left.style.cssText='overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
+  left.textContent=`${headerInfo.site} — Job ${headerInfo.jobRef} — WS ${headerInfo.worksheetNo} — S/N ${headerInfo.serial}`;
+  const right=document.createElement('span');
+  right.style.cssText='flex:0 0 auto;white-space:nowrap';
+  right.textContent=`Page ${pageNum} of ${totalPages}`;
+  bar.appendChild(left); bar.appendChild(right);
   return bar;
 }
 function buildPageFrame(width){
@@ -1250,7 +1256,7 @@ async function capturePageFrame(frame, scale){
   const dataUrl=canvas.toDataURL('image/jpeg',0.98);
   return {dataUrl, width:canvas.width, height:canvas.height};
 }
-async function buildPaginatedPdfBlob(pageEl, scale){
+async function buildPaginatedPdfBlob(pageEl, scale, headerInfo){
   const stage=document.createElement('div');
   stage.style.cssText='position:fixed;left:-10000px;top:0;background:#fff;';
   document.body.appendChild(stage);
@@ -1282,7 +1288,7 @@ async function buildPaginatedPdfBlob(pageEl, scale){
       return h;
     }
     const page1ChromeHeight=measureChrome([headerClone.cloneNode(true), gridClone.cloneNode(true)]);
-    const continuationChromeHeight=measureChrome([buildContinuationBanner(2)]);
+    const continuationChromeHeight=measureChrome([buildContinuationBanner(2,2,headerInfo)]);
     const footerFrame=buildPageFrame(frameWidthPx);
     footerFrame.appendChild(footerClone.cloneNode(true));
     stage.appendChild(footerFrame);
@@ -1311,6 +1317,7 @@ async function buildPaginatedPdfBlob(pageEl, scale){
     const lastPageBudget=maxFrameHeightPx-(lastPageIsFirst?page1ChromeHeight:continuationChromeHeight);
     const lastPageUsed=pages[pages.length-1].reduce((s,i)=>s+channelHeights[i],0);
     const footerFitsOnLastPage=(lastPageUsed+footerHeight<=lastPageBudget);
+    const totalPages=pages.length+(footerFitsOnLastPage?0:1);
 
     // Render each page frame and capture it
     const images=[];
@@ -1319,7 +1326,7 @@ async function buildPaginatedPdfBlob(pageEl, scale){
       const isLastContentPage=(p===pages.length-1);
       const frame=buildPageFrame(frameWidthPx);
       if(isPageFirst){ frame.appendChild(headerClone.cloneNode(true)); frame.appendChild(gridClone.cloneNode(true)); }
-      else { frame.appendChild(buildContinuationBanner(p+1)); }
+      else { frame.appendChild(buildContinuationBanner(p+1, totalPages, headerInfo)); }
       const tbl=document.createElement('table'); tbl.id='pointsTable';
       tbl.appendChild(theadClone.cloneNode(true));
       const tb=document.createElement('tbody');
@@ -1333,7 +1340,7 @@ async function buildPaginatedPdfBlob(pageEl, scale){
     }
     if(!footerFitsOnLastPage){
       const frame=buildPageFrame(frameWidthPx);
-      frame.appendChild(buildContinuationBanner(pages.length+1));
+      frame.appendChild(buildContinuationBanner(pages.length+1, totalPages, headerInfo));
       frame.appendChild(footerClone.cloneNode(true));
       stage.appendChild(frame);
       images.push(await capturePageFrame(frame, scale));
@@ -1383,6 +1390,9 @@ async function generatePDF(){
   await new Promise(r=>setTimeout(r,30));
   const pageEl=document.getElementById('page');
   const filename=pdfFileName();
+  // Capture these now — swapFieldsForText below replaces the input elements (and their IDs)
+  // with plain display divs, so val(id) would return nothing if read any later than this.
+  const headerInfo={site:val('site'), jobRef:val('jobRef'), worksheetNo:val('worksheetNo'), serial:val('serial')};
   let swaps=[];
   try{
     swaps=swapFieldsForText(pageEl);
@@ -1391,7 +1401,7 @@ async function generatePDF(){
     // safely away from the size/memory limit that was corrupting the old single giant page.
     const maxSafeCanvasPx=3200;
     const scale=Math.min(2, maxSafeCanvasPx/(pageEl.getBoundingClientRect().width*(210/297)));
-    const blob=await buildPaginatedPdfBlob(pageEl, Math.max(1, scale));
+    const blob=await buildPaginatedPdfBlob(pageEl, Math.max(1, scale), headerInfo);
     restoreSwappedFields(swaps); swaps=[];
     document.body.classList.remove('printMode');
     if(window.showSaveFilePicker){
