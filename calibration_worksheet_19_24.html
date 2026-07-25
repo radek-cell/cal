@@ -28,8 +28,6 @@
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 25px;margin:14px 0}.field{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:end}.field label{font-size:13px}.field input,.field select{border:0;border-bottom:1px dotted #333;padding:3px 4px;font-size:13px;width:100%;box-sizing:border-box;background:transparent}
   table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}td,th{border:1px solid var(--line);padding:4px;vertical-align:middle}th{background:#ddd;font-weight:700}.section{background:#cfcfcf;font-weight:700}.subhead{background:#e3e3e3;text-align:center}.label{font-weight:700}.muted{font-weight:400;color:#333}.small{font-size:11px}.input{width:100%;border:0;background:transparent;font-size:12px;box-sizing:border-box;text-align:center}.input:focus{outline:2px solid #9ec5fe;background:#eef6ff} select.probe{display:block;width:100%;min-width:96px;height:28px;border:1px solid #333!important;background:#fff!important;color:#111!important;font-size:10.5px;text-align:left;appearance:auto;-webkit-appearance:menulist;padding:2px}.probeHint{font-size:11px;color:#333;background:#eef6ff;border:1px solid #9ec5fe;padding:6px;margin:6px 0}.autoCorr{background:#fff3cd!important}.calc{background:#f8f8f8;font-weight:700}.bad{background:var(--bad)!important}.ok{background:var(--ok)!important}.warn{background:var(--warn)!important}.selectedHigh{background:var(--hi)!important;border-bottom:3px solid #2563eb!important;font-weight:900!important}.selectedLow{background:var(--lo)!important;border-bottom:3px solid #16a34a!important;font-weight:900!important}.note{font-size:11px;margin:7px 0 0}.sign{height:26px}.comments{height:64px}.statusbar{padding:8px;margin:8px 0;border:1px solid #999;background:#fafafa;font-size:13px}.statusbar.bad{border-color:#b00020}.statusbar.ok{border-color:#207a20}.notNeeded{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.035) 0,rgba(0,0,0,.035) 8px,transparent 8px,transparent 16px)}.notNeeded input,.notNeeded select,.notNeeded textarea{text-decoration:line-through;background:#dcdcdc!important;color:#777!important}.notNeeded input:disabled,.notNeeded select:disabled,.notNeeded textarea:disabled{cursor:not-allowed}.adjustNote{background:#e7f7e7!important;border-color:#207a20!important;font-weight:700}#alCycleAirRow.notNeeded,#alCycleLoadRow.notNeeded{background:repeating-linear-gradient(135deg,rgba(0,0,0,.025) 0,rgba(0,0,0,.025) 7px,transparent 7px,transparent 14px)}input.na,select.na{text-decoration:line-through;background:#dcdcdc!important;color:#777;cursor:not-allowed}
   .stampHost{position:relative}
-  .notApplicableCol{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.03) 0,rgba(0,0,0,.03) 7px,transparent 7px,transparent 14px)!important}
-  .notApplicableCol input,.notApplicableCol select{text-decoration:line-through;background:#dcdcdc!important;color:#777!important;cursor:not-allowed}
   .naBadge{display:inline-block;font-size:8.5px;font-weight:900;letter-spacing:.3px;color:#900;border:1.3px solid #900;border-radius:2px;padding:1px 4px;margin-left:5px;background:#ffffffcc;white-space:nowrap;vertical-align:middle}
   .lrRow td{background:#eef3fa;padding:2px 4px}
   .lrBadge{display:inline-flex;align-items:center;justify-content:center;gap:5px;width:100%}
@@ -39,10 +37,6 @@
   .lrBadge .txt{font-size:10px;font-weight:700;color:#333;letter-spacing:.2px}
   .toleranceHint{display:inline-block;font-size:11px;font-weight:700;color:#207a20;background:#e7f7e7;border:1px solid #9fd89f;border-radius:3px;padding:1px 6px;margin-left:4px;vertical-align:middle;white-space:nowrap}
   .toleranceHint.empty{display:none}
-  .toleranceLegend{margin-top:2px;font-size:10px;font-weight:400;color:#777;display:flex;gap:6px;flex-wrap:wrap}
-  .toleranceLegend .tlSep{color:#ccc}
-  .toleranceLegend .tlItem{white-space:nowrap}
-  .toleranceLegend .tlItem.active{color:#207a20;font-weight:700}
   input.invalid,select.invalid{background:#ffdede!important;border-bottom:2px solid #b00020!important;color:#900!important}
   input.valid{background:#eef9ee!important}
   .btn:disabled{opacity:.45;cursor:not-allowed}
@@ -55,18 +49,15 @@
   .printMode .validityBadge.expired{animation:none}
   .req{color:#b00000;font-weight:700}
   .lockedRef{background:#f0f0f0!important;color:#999!important;cursor:not-allowed}
-  .variationNote{display:none;font-size:11.5px;font-weight:700;color:#7a4b00;background:#fff3cd;border:1px solid #ffce54;border-radius:4px;padding:6px 10px;margin-top:2px}
-  .variationNote.show{display:block}
-  .variationNote.noDisplay{color:#333;background:#eef1f5;border-color:#9aa7b8}
   .signature{font-family:'Dancing Script',cursive;font-size:22px;color:#1a3a6b;padding:2px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
   select.timeSel{text-align:center;padding:1px}
   #al_adj_made{text-align:left;padding-left:3px;font-size:11px;text-overflow:ellipsis}
   .printMode .toolbar,.printMode .offsetWarning{display:none}
   .printMode html,.printMode body{background:white}
   .printMode .page{box-shadow:none;margin:0 auto;width:198mm;min-height:auto;padding:7mm}
-  .printMode .note,.printMode #setpointRangeHint,.printMode .toleranceLegend,.printMode .toleranceHint{display:none}
+  .printMode .note,.printMode #setpointRangeHint,.printMode .toleranceHint{display:none}
   @page{size:A4 portrait;margin:6mm}
-  @media print{html,body{background:white;width:210mm}.toolbar{display:none}.page{margin:0 auto;box-shadow:none;width:198mm;min-height:auto;padding:4mm;page-break-after:auto}.header{margin-bottom:4px}.title{font-size:17px}.title .subtitle{font-size:9px;margin-top:1px}.brand .logo{font-size:22px}.brand .no{font-size:12px}.grid2{gap:4px 14px;margin:6px 0}.field label,.field input,.field select{font-size:10px}table{font-size:8.8px;page-break-inside:avoid}td,th{padding:2px}.input{font-size:8.8px}.small,.note,.probeHint{font-size:7.5px}.toleranceLegend,.toleranceHint{display:none}.statusbar{font-size:9px;padding:4px;margin:4px 0}.comments{height:42px}select.probe{font-size:7.5px;height:18px;min-width:70px;padding:0}.lrRow td{padding:1px 2px}.lrBadge{gap:3px}.lrBadge .dot{width:13px;height:13px;font-size:8px}.lrBadge .txt{font-size:7px}.notNeeded{}.page *{print-color-adjust:exact;-webkit-print-color-adjust:exact}.bad,.ok,.warn,.autoCorr,.calc{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+  @media print{html,body{background:white;width:210mm}.toolbar{display:none}.page{margin:0 auto;box-shadow:none;width:198mm;min-height:auto;padding:4mm;page-break-after:auto}.header{margin-bottom:4px}.title{font-size:17px}.title .subtitle{font-size:9px;margin-top:1px}.brand .logo{font-size:22px}.brand .no{font-size:12px}.grid2{gap:4px 14px;margin:6px 0}.field label,.field input,.field select{font-size:10px}table{font-size:8.8px;page-break-inside:avoid}td,th{padding:2px}.input{font-size:8.8px}.small,.note,.probeHint{font-size:7.5px}.toleranceHint{display:none}.statusbar{font-size:9px;padding:4px;margin:4px 0}.comments{height:42px}select.probe{font-size:7.5px;height:18px;min-width:70px;padding:0}.lrRow td{padding:1px 2px}.lrBadge{gap:3px}.lrBadge .dot{width:13px;height:13px;font-size:8px}.lrBadge .txt{font-size:7px}.notNeeded{}.page *{print-color-adjust:exact;-webkit-print-color-adjust:exact}.bad,.ok,.warn,.autoCorr,.calc{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style>
 </head>
 <body>
@@ -120,7 +111,6 @@
       </span>
     </div>
     <div class="field"><label>Load <span class="req">*</span>:</label><select id="load"><option value="">-- select --</option><option>Empty</option><option>1/4</option><option>1/2</option><option>3/4</option><option>Full</option></select></div>
-    <input type="hidden" id="calSystem" value="Standard">
   </div>
 
   <table>
@@ -859,73 +849,12 @@ const DEVICE_TOLERANCES={
   'Standard':0.5
 };
 const DEFAULT_TOL=0.5;
-function isNoDecimalMode(){
-  return document.getElementById('calSystem')?.value==='No decimal point on the display';
-}
-function isNoDisplayMode(){
-  return document.getElementById('calSystem')?.value==='No display fitted';
-}
 function getTolerance(){
   const deviceType=document.getElementById('deviceType')?.value;
-  if(isNoDecimalMode() && deviceType==='Standard') return 1.0;
   return DEVICE_TOLERANCES[deviceType] ?? DEFAULT_TOL;
 }
 function toleranceText(){
   return '±'+getTolerance().toFixed(1)+' °C';
-}
-function updateVariationNote(){
-  const value=document.getElementById('calSystem')?.value;
-  const el=document.getElementById('variationNote');
-  if(!el) return;
-  let text='';
-  if(value==='No decimal point on the display'){
-    text='⚠ No decimal point on the display — Display cycle and Display readings recorded as whole degrees; tolerance widened to ±1.0 °C.';
-  } else if(value==='No display fitted'){
-    text='⚠ No display fitted on the unit — Display cycle fields are not applicable; calibration completed on Reference readings only.';
-  }
-  el.textContent=text;
-  el.classList.toggle('show', !!text);
-  el.classList.toggle('noDisplay', value==='No display fitted');
-}
-const VARIATION_COMMENT_NOTES={
-  'No decimal point on the display':'Note: no decimal point on the display — readings and adjustment recorded to the nearest whole degree (tolerance ±1.0 °C).',
-  'No display fitted':'Note: calibration performed — no display fitted on the unit.'
-};
-let lastVariationCommentNote='';
-function syncVariationComment(){
-  const el=document.getElementById('comments');
-  if(!el) return;
-  const newNote=VARIATION_COMMENT_NOTES[document.getElementById('calSystem')?.value]||'';
-  let lines=(el.value||'').split('\n');
-  if(lastVariationCommentNote){
-    lines=lines.filter(l=>l.trim()!==lastVariationCommentNote);
-  }
-  let text=lines.join('\n').trim();
-  if(newNote){
-    text = text ? (newNote+'\n'+text) : newNote;
-  }
-  el.value=text;
-  lastVariationCommentNote=newNote;
-}
-const NO_DISPLAY_AF_IDS=['af_cycle_air_max','af_cycle_air_min','af_air_display'];
-const NO_DISPLAY_AL_IDS=['al_cycle_air_max','al_cycle_air_min','al_air_display'];
-function applyNoDisplayMode(){
-  const active=isNoDisplayMode();
-  [...NO_DISPLAY_AF_IDS,...NO_DISPLAY_AL_IDS].forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el) return;
-    const td=el.closest('td');
-    if(td) td.classList.toggle('notApplicableCol', active);
-  });
-  NO_DISPLAY_AF_IDS.forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el) return;
-    el.disabled=active;
-    if(active) el.value='';
-  });
-  if(active){
-    NO_DISPLAY_AL_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  }
 }
 function updateToleranceHint(){
   const deviceType=document.getElementById('deviceType')?.value;
@@ -939,14 +868,6 @@ function updateToleranceHint(){
       hint.classList.add('empty');
     }
   }
-  const noDecimal=isNoDecimalMode();
-  document.querySelectorAll('#toleranceLegend .tlItem').forEach(el=>{
-    const dev=el.dataset.device;
-    let tol=DEVICE_TOLERANCES[dev];
-    if(noDecimal && (dev==='Fridge'||dev==='Incubator')) tol=1.0;
-    el.textContent=dev+' ±'+tol.toFixed(1)+' °C';
-    el.classList.toggle('active', dev===deviceType);
-  });
 }
 function checkSetpointRange(show){
   const deviceType=document.getElementById('deviceType')?.value;
@@ -1011,28 +932,6 @@ function roundedDiff(avg, display, avgDp=3, displayDp=1){
   const displayRounded = roundTo(display, displayDp);
   return avgRounded - displayRounded;
 }
-function calcNormal(prefix, col){
-  const rawMax=n(`${prefix}_${col}_max`), rawMin=n(`${prefix}_${col}_min`);
-  const mismatch = rawMax!==null && rawMin!==null && rawMax<rawMin;
-  const max=add(n(`${prefix}_${col}_max`),n(`${prefix}_${col}_max_corr`));
-  const min=add(n(`${prefix}_${col}_min`),n(`${prefix}_${col}_min_corr`));
-  set(`${prefix}_${col}_max_calc`,max,1); set(`${prefix}_${col}_min_calc`,min,1);
-  const maxCalcEl=document.getElementById(`${prefix}_${col}_max_calc`);
-  const minCalcEl=document.getElementById(`${prefix}_${col}_min_calc`);
-  maxCalcEl?.classList.toggle('selectedHigh', max!==null && !mismatch);
-  minCalcEl?.classList.toggle('selectedLow', min!==null && !mismatch);
-  const avg=avg2(max,min); set(`${prefix}_${col}_avg`,avg,1);
-  const display=n(`${prefix}_${col}_display`);
-  if(mismatch){
-    const diffEl=document.getElementById(`${prefix}_${col}_diff`);
-    if(diffEl){ diffEl.value='Max<Min!'; diffEl.title='Reference Max is lower than Reference Min for this column.'; }
-    cls(`${prefix}_${col}_diff`,'bad');
-    return {diff:null, state:'bad'};
-  }
-  const diff=roundedDiff(avg, display, 1, 1);
-  set(`${prefix}_${col}_diff`,diff,1);
-  const state=diff===null?null:(Math.abs(diff)>getTolerance()?'bad':'ok'); cls(`${prefix}_${col}_diff`,state); return {diff,state};
-}
 function calcTwoProbeColumn(prefix,colBase){
   clearAirMarkers(prefix,colBase);
   const c1=`${colBase}1`, c2=`${colBase}2`;
@@ -1054,12 +953,6 @@ function calcTwoProbeColumn(prefix,colBase){
   maxItems.filter(x=>x.v===high).forEach(x=>document.getElementById(x.id)?.classList.add('selectedHigh'));
   minItems.filter(x=>x.v===low).forEach(x=>document.getElementById(x.id)?.classList.add('selectedLow'));
   const avg=avg2(high,low); set(`${prefix}_${colBase}_avg`,avg,1);
-  if(isNoDisplayMode()){
-    const diffEl=document.getElementById(`${prefix}_${colBase}_diff`);
-    if(diffEl){ diffEl.value = avg!==null ? 'N/A' : ''; diffEl.title='No display fitted on the unit — no Display comparison available.'; }
-    cls(`${prefix}_${colBase}_diff`, avg!==null ? 'ok' : '');
-    return {diff:null, state: avg!==null ? 'ok' : null};
-  }
   const display=n(`${prefix}_${colBase}_display`);
   const diff=roundedDiff(avg, display, 1, 1);
   set(`${prefix}_${colBase}_diff`,diff,1);
@@ -1068,20 +961,8 @@ function calcTwoProbeColumn(prefix,colBase){
 function calcAir(prefix){ return calcTwoProbeColumn(prefix,'air'); }
 function calcLoad(prefix){ return calcTwoProbeColumn(prefix,'load'); }
 
-const DISPLAY_CYCLE_IDS=['af_cycle_air_max','af_cycle_air_min','af_cycle_load_max','af_cycle_load_min','al_cycle_air_max','al_cycle_air_min','al_cycle_load_max','al_cycle_load_min','af_air_display','al_air_display','af_load_display','al_load_display'];
-function getDisplayDecimals(){
-  return isNoDecimalMode() ? 0 : 1;
-}
-function refreshDisplayDecimalsUI(){
-  const dp=getDisplayDecimals();
-  const placeholder=dp===0 ? 'xx' : 'xx.x';
-  DISPLAY_CYCLE_IDS.forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.placeholder=placeholder;
-  });
-}
 function calcDisplayCycle(){
-  const dp=getDisplayDecimals();
+  const dp=1;
   ['af','al'].forEach(prefix=>{
     ['air','load'].forEach(type=>{
       const avgEl=document.getElementById(`${prefix}_cycle_${type}_avg`);
@@ -1211,9 +1092,6 @@ function checkProbesInGap(){
 }
 function calculateAll(){
   updateToleranceHint();
-  refreshDisplayDecimalsUI();
-  applyNoDisplayMode();
-  updateVariationNote();
   syncDates();
   syncLeftProbes();
   syncLoadFromAir('af');
@@ -1244,9 +1122,7 @@ function calculateAll(){
   if(afAllThreeWithinTolerance){
     if(alStatusEl){
       alStatusEl.className='statusbar ok adjustNote';
-      alStatusEl.textContent = isNoDisplayMode()
-        ? `Adjustment not needed — no display fitted on the unit, so As Left and AL Display cycle can be left crossed out.`
-        : `Adjustment not needed — Air and Load are within ${toleranceText()}, so As Left and AL Display cycle can be left crossed out.`;
+      alStatusEl.textContent = `Adjustment not needed — Air and Load are within ${toleranceText()}, so As Left and AL Display cycle can be left crossed out.`;
     }
     const adj=document.getElementById('al_adj_made'); if(adj){ adj.value='Adjustment not needed'; adj.scrollLeft=0; fitInputText(adj); }
   } else if(!afComplete){
@@ -1272,9 +1148,8 @@ function setAdjustmentMode(stamped, unlocked){
     e.classList.toggle('notNeeded', !!stamped);
     e.querySelectorAll('input,select,textarea').forEach(el=>{
       const alwaysDisabledProbe=el.classList.contains('probe'); // AL probe selects always stay disabled — they're auto-synced from As Found
-      const permanentlyNotApplicable=!!el.closest('.notApplicableCol'); // any remaining N/A cells stay disabled regardless of adjustment mode
-      el.disabled = !unlocked || alwaysDisabledProbe || permanentlyNotApplicable;
-      if(alwaysDisabledProbe || permanentlyNotApplicable || el.classList.contains('timeSel')) return; // handled elsewhere (probes sync, no-display mode, time pickers below)
+      el.disabled = !unlocked || alwaysDisabledProbe;
+      if(alwaysDisabledProbe || el.classList.contains('timeSel')) return; // handled elsewhere (probes sync, time pickers below)
       if(stamped && el.value.trim()===''){ el.value=NA_TEXT; }
       else if(!stamped && el.value===NA_TEXT){ el.value=''; }
     });
@@ -1313,11 +1188,7 @@ function setAdjustmentMode(stamped, unlocked){
 function status(id,items,label){
   const bad=items.some(x=>x.state==='bad'), any=items.some(x=>x.state);
   const e=document.getElementById(id); e.className='statusbar '+(bad?'bad':any?'ok':'');
-  if(isNoDisplayMode() && any && !bad){
-    e.textContent=`${label}: readings recorded — no display fitted on the unit, no comparison required.`;
-  } else {
-    e.textContent=!any?`${label}: enter readings and press Calculate.`:bad?`${label}: adjustment required — one or more differences are greater than ${toleranceText()}.`:`${label}: within tolerance ${toleranceText()}.`;
-  }
+  e.textContent=!any?`${label}: enter readings and press Calculate.`:bad?`${label}: adjustment required — one or more differences are greater than ${toleranceText()}.`:`${label}: within tolerance ${toleranceText()}.`;
 }
 function preparePdf(){ calculateAll(); setTimeout(()=>window.print(), 120); }
 window.addEventListener('beforeprint', calculateAll);
@@ -1340,7 +1211,6 @@ function startNewCalibration(){
   const dn=document.getElementById('dateNative'); if(dn) dn.value=isoToday();
   const dd=document.getElementById('date'); if(dd && dn) dd.value=displayDate(dn.value);
   jobsheetParsed=null;
-  lastVariationCommentNote='';
   const statusEl=document.getElementById('offsetStatus');
   if(statusEl){ statusEl.textContent='Offline HTML prototype · tolerance ±0.5 °C'; statusEl.style.color=''; }
   fillProbeDropdowns();
@@ -1389,7 +1259,7 @@ function decimalOK(el){
   if(el.disabled){ el.classList.remove('invalid','valid'); return true; } // N/A fields aren't real numbers — skip format check
   const v=String(el.value||'').trim();
   if(v===''){ el.classList.remove('invalid','valid'); return true; }
-  const d = DISPLAY_CYCLE_IDS.includes(el.id) ? getDisplayDecimals() : Number(el.dataset.decimals);
+  const d = Number(el.dataset.decimals);
   const ok = d===0
     ? /^-?\d+$/.test(v.replace(',','.'))
     : new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v.replace(',','.'));
@@ -1408,7 +1278,7 @@ function validateDecimals(show=true){
 }
 function autoAdvance(el){
   if(!el.dataset.decimals) return;
-  const d = DISPLAY_CYCLE_IDS.includes(el.id) ? getDisplayDecimals() : Number(el.dataset.decimals);
+  const d = Number(el.dataset.decimals);
   const v=String(el.value||'').replace(',','.');
   const ok = d===0 ? /^-?\d+$/.test(v) : new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v);
   if(ok){
@@ -1422,17 +1292,10 @@ function autoAdvance(el){
 const requiredFieldIds=['certNo','jobRef','dateNative','site','department','manufacturer','deviceType','model','serial','load','drtSerial','rtRef','rtMax','rtMin','initialOffsetsCal1','initialOffsetsCal2','initialSetpoint','af_air1_probe','af_air2_probe','af_air1_max','af_air2_max','af_air1_min','af_air2_min','af_cycle_air_max','af_cycle_air_min','af_air_display','af_load1_probe','af_load2_probe','af_cycle_load_max','af_cycle_load_min','af_load_display','af_probes_in_h','af_probes_in_m','af_cycle_start_h','af_cycle_start_m','engineer'];
 function collectRequiredIds(){
   const ids=[...requiredFieldIds];
-  const noDisplay=isNoDisplayMode();
-  if(noDisplay){
-    ['af_cycle_air_max','af_cycle_air_min','af_air_display','af_cycle_load_max','af_cycle_load_min','af_load_display'].forEach(id=>{
-      const i=ids.indexOf(id); if(i>-1) ids.splice(i,1);
-    });
-  }
   const adjustmentNeeded = !document.getElementById('al_cycle_start_h')?.disabled;
   if(adjustmentNeeded){
     const alExtra=['finalOffsetsCal1','finalOffsetsCal2','finalSetpoint','al_air1_max','al_air2_max','al_air1_min','al_air2_min','al_cycle_air_max','al_cycle_air_min','al_air_display','al_load1_max','al_load2_max','al_load1_min','al_load2_min','al_cycle_load_max','al_cycle_load_min','al_load_display','al_cycle_start_h','al_cycle_start_m'];
-    const noDisplayExclude=['al_cycle_air_max','al_cycle_air_min','al_air_display','al_cycle_load_max','al_cycle_load_min','al_load_display'];
-    ids.push(...(noDisplay ? alExtra.filter(id=>!noDisplayExclude.includes(id)) : alExtra));
+    ids.push(...alExtra);
   }
   if(document.getElementById('manufacturer')?.value==='Other'){
     ids.push('manufacturerOther');
@@ -1505,10 +1368,12 @@ function runPreGenerationChecks(){
 // --- PDF generation (html2pdf) ---
 function cleanFilePart(v){return String(v||'').trim().replace(/[^a-z0-9\-_.]+/gi,'_').replace(/^_+|_+$/g,'')||'NA'}
 function pdfFileName(){
+  const certDigits=(document.getElementById('certNo')?.value||'').replace(/[^0-9]/g,'').padStart(5,'0').slice(-5);
+  const certPart='S'+certDigits;
   const serial=document.getElementById('serial')?.value||'Serial';
   const dateVal=document.getElementById('date')?.value||displayDate(isoToday());
   const jobRef=document.getElementById('jobRef')?.value||'JobRef';
-  return `Calibration Worksheet_${cleanFilePart(serial)}_${cleanFilePart(dateForFile(dateVal))}_${cleanFilePart(jobRef)}.pdf`;
+  return `${certPart}_${cleanFilePart(dateForFile(dateVal))}_${cleanFilePart(serial)}_${cleanFilePart(jobRef)}.pdf`;
 }
 function excelFileName(){ return pdfFileName().replace(/\.pdf$/,'.xlsx'); }
 function refreshPdfHint(){ const el=document.getElementById('pdfNameHint'); if(el) el.textContent='PDF name: '+pdfFileName(); }
@@ -1692,7 +1557,6 @@ function buildExcelWorkbook(){
   push('Manufacturer', manufacturerValue());
   push('Standard 19 range/24 range', val('deviceType'));
   push('Load', val('load'));
-  push('Non-Standard Variations', val('calSystem'));
   push('','');
   push('Digital Reference Thermometer S/N', val('drtSerial'));
   push('Digital Reference Thermometer Cal Due', val('drtDue'));
@@ -1829,7 +1693,6 @@ function applyImportedFields(fieldMap){
     setManufacturerFromImport(fieldMap['Manufacturer']);
     setValById('deviceType', fieldMap['Standard 19 range/24 range'] ?? fieldMap['Standard Non-Medical Device'] ?? fieldMap['Standard Medical Device'] ?? 'Standard');
     setValById('load', fieldMap['Load']);
-    setValById('calSystem', fieldMap['Non-Standard Variations'] ?? fieldMap['Calibration System']);
     setValById('drtSerial', fieldMap['Digital Reference Thermometer S/N']);
     setSelectByText('rtRef', fieldMap['RT Thermometer Ref']);
     setValById('rtMax', fieldMap['Room Temperature Max']);
@@ -1922,7 +1785,6 @@ document.getElementById('dateNative')?.addEventListener('change',function(){
 });
 document.getElementById('rtRef')?.addEventListener('change', refreshRoomThermStatus);
 document.getElementById('deviceType')?.addEventListener('change', ()=>{ checkSetpointRange(false); updateToleranceHint(); calculateAll(); });
-document.getElementById('calSystem')?.addEventListener('change', ()=>{ refreshDisplayDecimalsUI(); updateToleranceHint(); updateVariationNote(); syncVariationComment(); calculateAll(); });
 document.getElementById('initialSetpoint')?.addEventListener('input', ()=>checkSetpointRange(false));
 document.getElementById('al_adj_made')?.addEventListener('input', function(){ fitInputText(this); });
 document.getElementById('finalSetpoint')?.addEventListener('input', ()=>checkSetpointRange(false));
