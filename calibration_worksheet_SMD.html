@@ -1402,10 +1402,12 @@ function runPreGenerationChecks(){
 // --- PDF generation (html2pdf) ---
 function cleanFilePart(v){return String(v||'').trim().replace(/[^a-z0-9\-_.]+/gi,'_').replace(/^_+|_+$/g,'')||'NA'}
 function pdfFileName(){
+  const certDigits=(document.getElementById('certNo')?.value||'').replace(/[^0-9]/g,'').padStart(5,'0').slice(-5);
+  const certPart='S'+certDigits;
   const serial=document.getElementById('serial')?.value||'Serial';
   const dateVal=document.getElementById('date')?.value||displayDate(isoToday());
   const jobRef=document.getElementById('jobRef')?.value||'JobRef';
-  return `Calibration Worksheet_${cleanFilePart(serial)}_${cleanFilePart(dateForFile(dateVal))}_${cleanFilePart(jobRef)}.pdf`;
+  return `${certPart}_${cleanFilePart(dateForFile(dateVal))}_${cleanFilePart(serial)}_${cleanFilePart(jobRef)}.pdf`;
 }
 function excelFileName(){ return pdfFileName().replace(/\.pdf$/,'.xlsx'); }
 function refreshPdfHint(){ const el=document.getElementById('pdfNameHint'); if(el) el.textContent='PDF name: '+pdfFileName(); }

@@ -342,8 +342,9 @@ function checkRoomTempRange(){
   return !bad;
 }
 function cleanFilePart(v){return String(v||'').trim().replace(/[^a-z0-9\-_.]+/gi,'_').replace(/^_+|_+$/g,'')||'NA'}
-function pdfFileName(){return `Barkey Calibration Form_${cleanFilePart(serial.value||'Serial')}_${cleanFilePart(dateForFile(date.value)||dateForFile(isoToday()))}_${cleanFilePart(jobRef.value||'JobRef')}.pdf`}
-function excelFileName(){return `Barkey Calibration Form_${cleanFilePart(serial.value||'Serial')}_${cleanFilePart(dateForFile(date.value)||dateForFile(isoToday()))}_${cleanFilePart(jobRef.value||'JobRef')}.xlsx`}
+function sheetNoFilePart(){const digits=(document.getElementById('sheetNo')?.value||'').replace(/[^0-9]/g,'').padStart(5,'0').slice(-5); return 'B'+digits;}
+function pdfFileName(){return `${sheetNoFilePart()}_${cleanFilePart(dateForFile(date.value)||dateForFile(isoToday()))}_${cleanFilePart(serial.value||'Serial')}_${cleanFilePart(jobRef.value||'JobRef')}.pdf`}
+function excelFileName(){return `${sheetNoFilePart()}_${cleanFilePart(dateForFile(date.value)||dateForFile(isoToday()))}_${cleanFilePart(serial.value||'Serial')}_${cleanFilePart(jobRef.value||'JobRef')}.xlsx`}
 function refreshPdfHint(){pdfNameHint.textContent='PDF name: '+pdfFileName()}
 const requiredFieldIds=['sheetNo','jobRef','date','site','dept','model','serial','refTherm'];
 function collectRequiredIds(){
