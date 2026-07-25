@@ -443,7 +443,11 @@ function setupFullscreen(){
 // html2pdf, fonts…) so the whole suite works with zero signal.
 // Keep this URL list in sync with APP_SHELL / CDN_ASSETS in sw.js.
 // ---------------------------------------------------------------------
+// Every same-origin page that must work with no signal. Kept in sync with
+// APP_SHELL in sw.js — monitoring_systems.html comes from the tools list,
+// and cloud_temp.html sits one level below it so is added explicitly.
 const OFFLINE_PAGES = tools.filter(t=>t.status==='active').map(t=>t.href).concat(['cloud_temp.html']);
+// Libraries the worksheets genuinely can't work without offline.
 const OFFLINE_CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.min.js',
@@ -451,7 +455,12 @@ const OFFLINE_CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.0/dist/html2canvas-pro.min.js',
+  'https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.0/dist/html2canvas-pro.min.js'
+];
+// Nice-to-have only — the cursive signature font. If this can't be fetched the
+// suite still works perfectly (the signature just falls back to a normal face),
+// so it must never block the "ready to work offline" status.
+const OFFLINE_OPTIONAL = [
   'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap'
 ];
 
@@ -477,6 +486,16 @@ async function registerSW(){
   try{
     const reg = await navigator.serviceWorker.register('./sw.js');
     await navigator.serviceWorker.ready;
+    // On a first visit the worker activates but isn't controlling this page
+    // yet. Wait briefly for it to claim us so the Download button can hand
+    // the work to it rather than falling back to plain fetches.
+    if(!navigator.serviceWorker.controller){
+      await new Promise(resolve=>{
+        const done = ()=>{ navigator.serviceWorker.removeEventListener('controllerchange', done); resolve(); };
+        navigator.serviceWorker.addEventListener('controllerchange', done);
+        setTimeout(done, 3000);
+      });
+    }
     return reg;
   }catch(e){
     setBoxState('error', 'Could not set up offline mode');
@@ -489,11 +508,11 @@ async function registerSW(){
 async function checkCacheStatus(){
   if(!('caches' in window)) return false;
   try{
-    const keys = await caches.keys();
-    const staticKey = keys.find(k=>k.startsWith('labcal-static-'));
-    if(!staticKey) return false;
-    const cache = await caches.open(staticKey);
-    const has = await Promise.all(['./index.html', ...OFFLINE_PAGES].map(u=>cache.match(u)));
+    // caches.match() searches EVERY cache. The old version only looked inside
+    // labcal-static-*, so anything the service worker had stored in its runtime
+    // cache counted as missing and a perfectly good download reported failure.
+    const required = ['./index.html', ...OFFLINE_PAGES, ...OFFLINE_CDN];
+    const has = await Promise.all(required.map(u => caches.match(u)));
     return has.every(Boolean);
   }catch(e){ return false; }
 }
@@ -512,26 +531,63 @@ async function refreshStatus(){
   return ok;
 }
 
+// Ask the service worker to do the caching. It owns the app-shell cache, so
+// this guarantees files land where the status check looks for them, and it
+// can report exactly which URLs (if any) failed.
+function precacheViaServiceWorker(onProgress){
+  return new Promise((resolve)=>{
+    const sw = navigator.serviceWorker && navigator.serviceWorker.controller;
+    if(!sw){ resolve(null); return; }
+    const channel = new MessageChannel();
+    const timeout = setTimeout(()=>resolve(null), 180000);
+    channel.port1.onmessage = (ev)=>{
+      const d = ev.data || {};
+      if(d.type === 'PROGRESS'){ onProgress(d.done, d.total); }
+      else if(d.type === 'DONE'){ clearTimeout(timeout); resolve(d); }
+    };
+    sw.postMessage({ type:'PRECACHE_ALL' }, [channel.port2]);
+  });
+}
+
 async function downloadForOffline(){
   btn.disabled = true;
-  const total = 1 + OFFLINE_PAGES.length + OFFLINE_CDN.length;
-  let done = 0;
-  const tick = ()=>{ done++; btnLabel.textContent = `Downloading… ${done}/${total}`; };
-
   setBoxState(null, 'Downloading offline copy…');
   sub.textContent = 'Keep this tab open and stay on Wi-Fi until this finishes.';
+  btnLabel.textContent = 'Downloading…';
 
-  const urls = ['./index.html', ...OFFLINE_PAGES, ...OFFLINE_CDN];
-  for(const url of urls){
-    try{ await fetch(url, {cache:'reload'}); }catch(e){ /* picked up by SW runtime cache later if it fails now */ }
-    tick();
+  let result = await precacheViaServiceWorker((done,total)=>{
+    btnLabel.textContent = `Downloading… ${done}/${total}`;
+  });
+
+  // Fallback if the service worker isn't controlling this page yet (e.g. very
+  // first visit before it activates): fetch through it so it still caches.
+  if(!result){
+    const urls = ['./index.html', ...OFFLINE_PAGES, ...OFFLINE_CDN];
+    let done = 0;
+    for(const url of urls){
+      try{ await fetch(url, {cache:'reload', mode: url.startsWith('http') ? 'no-cors' : 'same-origin'}); }catch(e){}
+      done++; btnLabel.textContent = `Downloading… ${done}/${urls.length}`;
+    }
   }
 
   const ok = await refreshStatus();
   btn.disabled = false;
-  if(!ok){
+
+  const allFailed = (result && result.failed) || [];
+  const failed = allFailed.filter(u => !OFFLINE_OPTIONAL.includes(u)); // font is cosmetic
+  const unverified = (result && result.unverified) || [];
+  const short = u => u.split('/').pop().split('?')[0];
+
+  if(!ok || failed.length){
     setBoxState('error', 'Some files failed to download');
-    sub.textContent = 'Check your connection and try again — partial downloads still help, but some worksheets may need a network connection until this succeeds.';
+    sub.textContent = 'Check your connection and try again — partial downloads still help, but some worksheets may need a network connection until this succeeds.'
+      + (failed.length ? ' Could not fetch: ' + failed.map(short).join(', ') + '.' : '');
+  }else if(unverified.length){
+    // Cached, but the browser wouldn't let us confirm the contents are real
+    // (rather than an error page from a captive portal / restricted network).
+    setBoxState('ready', 'Ready to work offline');
+    sub.textContent = 'Every worksheet is stored on this device. Note: ' + unverified.length
+      + ' library file(s) could not be fully verified on this network — if PDF or Excel export misbehaves offline, re-download once on a normal Wi-Fi connection.';
   }
 }
 
