@@ -194,6 +194,25 @@ h1{font-size:clamp(30px,4.4vw,50px);line-height:1.1;margin:0 0 16px;font-weight:
 .card.active:hover .open{gap:8px}
 .open svg{width:13px;height:13px;transition:transform .16s ease}
 
+/* ---- top-level section (category) cards ---- */
+.grid.cats{grid-template-columns:repeat(2,1fr);gap:18px}
+@media (max-width:920px){.grid.cats{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:700px){.grid.cats{grid-template-columns:1fr;gap:12px}}
+.grid.cats .card{min-height:280px;padding:24px 24px 18px}
+@media (max-width:620px){.grid.cats .card{min-height:0;padding:20px}}
+.grid.cats .card h3{font-size:21px;margin:18px 0 8px}
+.grid.cats .icon{width:34px;height:34px}
+
+/* the little list of what lives inside a section */
+.contents{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chip{
+  font-family:var(--mono);font-size:10px;letter-spacing:.3px;
+  color:var(--muted);background:var(--bg2);
+  border:1px solid var(--border-soft);border-radius:3px;padding:3px 7px;
+  white-space:nowrap;
+}
+.chip.soon{border-style:dashed;color:var(--muted-dim);background:transparent}
+
 /* add-new tile */
 .card.addnew{
   align-items:center;justify-content:center;text-align:center;
@@ -232,7 +251,7 @@ footer{
     </div>
     <div class="hgroup">
       <div class="hstat" id="hstat">
-        <div><span class="dot"></span><b id="toolCount">–</b> worksheets · <b id="activeCount">–</b> active</div>
+        <div><span class="dot"></span><b id="toolCount">–</b> tools · <b id="activeCount">–</b> active</div>
         <div id="todayDate">—</div>
       </div>
       <button class="fsbtn" id="fsToggle" type="button" aria-label="Toggle fullscreen" title="Toggle fullscreen">
@@ -252,8 +271,8 @@ footer{
       </g>
     </svg>
     <p class="eyebrow">Offline calibration toolkit</p>
-    <h1>One ecosystem,<br>every calibration worksheet.</h1>
-    <p class="lede">Choose the calibration form for your device. Each worksheet runs independently, fully offline, with PDF/Excel export.</p>
+    <h1>One ecosystem,<br>every calibration tool.</h1>
+    <p class="lede">Pick an area to work in — calibration worksheets, or the supporting tools and utilities. Everything runs on this device, fully offline.</p>
 
     <div class="offlinebox" id="offlinebox">
       <div class="offlinebox-text">
@@ -267,13 +286,13 @@ footer{
     </div>
   </div>
 
-  <div class="section-label">WS · 01–06 — select a worksheet</div>
+  <div class="section-label">Sections — choose an area</div>
 
-  <div class="grid" id="grid"></div>
+  <div class="grid cats" id="grid"></div>
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.0</span>
+    <span id="footYear">v1.1</span>
   </footer>
 
 </div>
@@ -283,70 +302,46 @@ footer{
 // Add new tools here — each entry renders one card. To wire up a new
 // worksheet, add an object with status:'active' and the correct href.
 // ---------------------------------------------------------------------
-const tools = [
+// Two top-level sections. Each one is its own page holding the individual
+// cards — calibration.html for worksheets, tools.html for utilities.
+// `contents` is just the preview list shown on this tile; the real list of
+// tools lives in the section page itself.
+const sections = [
   {
-    code:'WS-01',
-    title:'Barkey Calibration Worksheet',
-    desc:'Standard Barkey calibration worksheet — full field validation, PDF/Excel export, A4 print.',
-    href:'barkey_calibration_form.html',
+    code:'SEC-01',
+    title:'Calibration',
+    desc:'Every UKAS calibration worksheet — Barkey, standard medical and non-medical devices, the 19/24 range, and the monitoring systems.',
+    href:'calibration.html',
     status:'active',
-    meta:'A4 · PDF/Excel',
-    icon:'snowflake'
+    meta:'6 worksheets · 5 active',
+    icon:'snowflake',
+    contents:[
+      {label:'Barkey'},
+      {label:'Standard Medical'},
+      {label:'Standard Non-Medical'},
+      {label:'19 / 24 Range'},
+      {label:'Monitoring Systems'},
+      {label:'IBB / Blood Bank', soon:true}
+    ]
   },
   {
-    code:'WS-02',
-    title:'Calibration Worksheet — Standard Medical Device',
-    desc:'Calibration worksheet for standard medical devices (fridges, freezers, platelet incubators).',
-    href:'calibration_worksheet_SMD.html',
+    code:'SEC-02',
+    title:'Tools & Utilities',
+    desc:'Supporting tools for engineers — controller log review, reporting and document handling. Not calibration forms, but everything around them.',
+    href:'tools.html',
     status:'active',
-    meta:'A4 · PDF/Excel',
-    icon:'fridge'
-  },
-  {
-    code:'WS-03',
-    title:'Calibration Worksheet — IBB / Blood Bank',
-    desc:'Dedicated worksheet for blood bank refrigerators and IBB medical devices.',
-    href:'#',
-    status:'planned',
-    meta:'in development',
-    icon:'icicle'
-  },
-  {
-    code:'WS-04',
-    title:'Calibration Worksheet — Standard Non-Medical Device',
-    desc:'Calibration worksheet for non-medical refrigeration equipment — freezers, fridges and incubators, with device-specific tolerances.',
-    href:'calibration_worksheet_SNMD.html',
-    status:'active',
-    meta:'A4 · PDF/Excel',
-    icon:'crystal'
-  },
-  {
-    code:'WS-05',
-    title:'Calibration Worksheet — Standard 19/24 Range',
-    desc:'Calibration worksheet for Labcold’s standard 19 range and 24 range units, fixed ±0.5°C tolerance.',
-    href:'calibration_worksheet_19_24.html',
-    status:'active',
-    meta:'A4 · PDF/Excel',
-    icon:'thermo'
-  },
-  {
-    code:'WS-06',
-    title:'Monitoring Systems',
-    desc:'Calibration worksheets for monitoring systems — Cloud Temp, Fermomux, Monitor Max.',
-    href:'monitoring_systems.html',
-    status:'active',
-    meta:'3 systems',
-    icon:'cloud'
+    meta:'2 tools · 2 active',
+    icon:'tools',
+    contents:[
+      {label:'Data Logger Viewer'},
+      {label:'PDF Merge & Reorder'}
+    ]
   },
 ];
 
 const icons = {
   snowflake:'<path d="M12 2v20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M12 5.5l-2-1.5m2 1.5l2-1.5M12 18.5l-2 1.5m2-1.5l2 1.5M7.05 7.05l-2.3-.3m2.3.3l-.3-2.3M16.95 7.05l2.3-.3m-2.3.3l.3-2.3M7.05 16.95l-2.3.3m2.3-.3l-.3 2.3M16.95 16.95l2.3.3m-2.3-.3l.3 2.3"/>',
-  fridge:'<path d="M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M5 10h14"/><path d="M8 5.5v3"/><path d="M8 13.5v4"/>',
-  icicle:'<path d="M8 3h8l-1.5 6 1.5 2-1.5 2 1.5 6-2.5 3-2.5-3 1.5-6-1.5-2 1.5-2L8 3Z"/>',
-  crystal:'<path d="M12 2l7 4v8l-7 4-7-4V6l7-4Z"/><path d="M12 2v20M5 6l14 12M19 6 5 18"/>',
-  thermo:'<path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/><path d="M9 6.5h1.4M9 9.5h1.4"/><path d="M17 4.5v3M15.5 6h3"/>',
-  cloud:'<path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A4.5 4.5 0 0 0 6.5 19h11Z"/>',
+  tools:'<rect x="2" y="8" width="20" height="12" rx="2"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M2 13h20"/><path d="M9.5 13v2.2M14.5 13v2.2"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
 };
@@ -359,43 +354,40 @@ function renderCards(){
   const grid = document.getElementById('grid');
   let html = '';
 
-  tools.forEach(t=>{
-    const isActive = t.status === 'active';
+  sections.forEach(s=>{
+    const isActive = s.status === 'active';
+    const chips = (s.contents||[]).map(c=>
+      `<span class="chip${c.soon?' soon':''}">${c.label}${c.soon?' · soon':''}</span>`
+    ).join('');
     html += `
-    <a class="card ${isActive?'active':'planned'}" ${isActive?`href="${t.href}"`:'href="javascript:void(0)" aria-disabled="true"'}>
+    <a class="card ${isActive?'active':'planned'}" ${isActive?`href="${s.href}"`:'href="javascript:void(0)" aria-disabled="true"'}>
       <div class="card-top">
-        <span class="code">${t.code}</span>
-        ${iconSvg(t.icon)}
+        <span class="code">${s.code}</span>
+        ${iconSvg(s.icon)}
       </div>
-      <h3>${t.title}</h3>
-      <p>${t.desc}</p>
-      <div class="card-top" style="margin-top:14px">
-        <span class="stamp ${isActive?'ready':'dev'}">${isActive?'ACTIVE':'IN DEVELOPMENT'}</span>
-      </div>
+      <h3>${s.title}</h3>
+      <p>${s.desc}</p>
+      <div class="contents">${chips}</div>
       <div class="card-foot">
-        <span>${t.meta}</span>
+        <span>${s.meta}</span>
         ${isActive?`<span class="open">Open <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons.arrow}</svg></span>`:'<span>—</span>'}
       </div>
     </a>`;
   });
 
-  html += `
-    <div class="card addnew">
-      ${iconSvg('plus')}
-      <span>More worksheets<br>coming soon</span>
-    </div>`;
-
   grid.innerHTML = html;
 
-  document.getElementById('toolCount').textContent = tools.length;
-  document.getElementById('activeCount').textContent = tools.filter(t=>t.status==='active').length;
+  // Headline counts cover everything the suite can open, across both sections.
+  const all = sections.flatMap(s=>s.contents||[]);
+  document.getElementById('toolCount').textContent = all.length;
+  document.getElementById('activeCount').textContent = all.filter(c=>!c.soon).length;
 }
 
 function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.0 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.1 · ' + d.getFullYear();
 }
 
 // ---- Fullscreen toggle (Android/desktop browsers; on iOS, use
@@ -443,10 +435,27 @@ function setupFullscreen(){
 // html2pdf, fonts…) so the whole suite works with zero signal.
 // Keep this URL list in sync with APP_SHELL / CDN_ASSETS in sw.js.
 // ---------------------------------------------------------------------
-// Every same-origin page that must work with no signal. Kept in sync with
-// APP_SHELL in sw.js — monitoring_systems.html comes from the tools list,
-// and cloud_temp.html sits one level below it so is added explicitly.
-const OFFLINE_PAGES = tools.filter(t=>t.status==='active').map(t=>t.href).concat(['cloud_temp.html']);
+// Every same-origin page that must work with no signal. This is the single
+// authoritative list for the whole suite — keep it in sync with APP_SHELL in
+// sw.js whenever a page is added. Sub-pages (cloud_temp, the worksheets) are
+// listed explicitly because they sit below the section pages.
+const OFFLINE_PAGES = [
+  // section pages
+  'calibration.html',
+  'tools.html',
+  // calibration worksheets
+  'barkey_calibration_form.html',
+  'calibration_worksheet_SMD.html',
+  'calibration_worksheet_SNMD.html',
+  'calibration_worksheet_19_24.html',
+  'monitoring_systems.html',
+  'cloud_temp.html',
+  // tools & utilities
+  'data_logger_viewer.html',
+  // ~1.9 MB — pdf-lib and pdf.js are inlined, so this one page is most of the
+  // offline download. It has no other dependencies at all once cached.
+  'pdf_merge_reorder.html'
+];
 // Libraries the worksheets genuinely can't work without offline.
 const OFFLINE_CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',

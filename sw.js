@@ -3,21 +3,28 @@
 // Bump CACHE_VERSION any time the HTML/JS files change and you want
 // devices that already installed the app to pick up the new version.
 // ---------------------------------------------------------------------
-const CACHE_VERSION  = 'v2';
+const CACHE_VERSION  = 'v4';
 const STATIC_CACHE   = `labcal-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE  = `labcal-runtime-${CACHE_VERSION}`;
 
 // Same-origin app shell — every page in the suite.
-// Add new worksheets here (and to OFFLINE_PAGES in index.html) when you add them.
+// Add new pages here (and to OFFLINE_PAGES in index.html) when you add them.
 const APP_SHELL = [
   './',
   './index.html',
+  // section pages
+  './calibration.html',
+  './tools.html',
+  // calibration worksheets
   './barkey_calibration_form.html',
   './calibration_worksheet_SMD.html',
   './calibration_worksheet_SNMD.html',
   './calibration_worksheet_19_24.html',
   './monitoring_systems.html',
-  './cloud_temp.html'
+  './cloud_temp.html',
+  // tools & utilities
+  './data_logger_viewer.html',
+  './pdf_merge_reorder.html'   // ~1.9 MB, fully self-contained
 ];
 
 // Third-party libraries the worksheets load from CDNs (pdf.js, html2pdf,

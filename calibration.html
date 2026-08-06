@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="LabCal">
 <meta name="theme-color" content="#dfe6ee">
-<title>LabCal — Monitoring Systems</title>
+<title>LabCal — Calibration Worksheets</title>
 <style>
 :root{
   --bg:#dfe6ee;
@@ -70,11 +70,15 @@ header{
 .brandcol{display:flex;flex-direction:column;gap:10px}
 .labcold-logo{font-family:var(--sans);font-size:24px;font-weight:900;letter-spacing:1px;color:var(--ink)}
 .labcold-logo small{display:block;font-size:8.5px;letter-spacing:.4px;font-weight:700;background:#2a2f35;color:#fff;width:max-content;padding:1px 8px;margin-left:30px}
+.hstat{text-align:right;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7}
+.hstat b{color:var(--ink);font-weight:600}
+.hstat .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:5px;box-shadow:0 0 0 3px rgba(63,200,121,.18)}
 @media (max-width:480px){
   header{padding:22px 0 18px;gap:10px}
   .wordmark .mark{font-size:19px}
   .labcold-logo{font-size:19px}
   .labcold-logo small{margin-left:24px}
+  .hstat{text-align:left}
 }
 
 .backlink{
@@ -140,6 +144,14 @@ h1{font-size:clamp(28px,4vw,42px);line-height:1.1;margin:0 0 14px;font-weight:70
 .card.active:hover .open{gap:8px}
 .open svg{width:13px;height:13px;transition:transform .16s ease}
 
+.card.addnew{
+  align-items:center;justify-content:center;text-align:center;
+  border-style:dashed;color:var(--muted-dim);min-height:230px;
+}
+@media (max-width:620px){.card.addnew{min-height:110px;padding:24px 18px}}
+.card.addnew .icon{width:26px;height:26px;margin-bottom:10px;color:var(--muted-dim)}
+.card.addnew span{font-family:var(--mono);font-size:11px;letter-spacing:.5px}
+
 footer{
   margin-top:56px;padding-top:18px;border-top:1px solid var(--border-soft);
   display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
@@ -163,76 +175,117 @@ footer{
       </div>
       <div class="labcold-logo">❄ LABCOLD<small>medical &amp; scientific refrigeration</small></div>
     </div>
+    <div class="hstat" id="hstat">
+      <div><span class="dot"></span><b id="toolCount">–</b> worksheets · <b id="activeCount">–</b> active</div>
+      <div id="todayDate">—</div>
+    </div>
   </header>
 
-  <a class="backlink" href="calibration.html">
+  <a class="backlink" href="index.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    Back to calibration worksheets
+    Back to LabCal home
   </a>
 
   <div class="hero">
-    <p class="eyebrow">WS-06 · Monitoring systems</p>
-    <h1>Monitoring system calibration worksheets.</h1>
-    <p class="lede">Choose a monitoring system to calibrate. Each worksheet runs independently, fully offline, with PDF/Excel export.</p>
+    <p class="eyebrow">Section 01 · Calibration</p>
+    <h1>Every calibration worksheet.</h1>
+    <p class="lede">Choose the calibration form for your device. Each worksheet runs independently, fully offline, with PDF/Excel export.</p>
   </div>
 
-  <div class="section-label">MONITORING SYSTEMS — select a system</div>
+  <div class="section-label">WS · 01–06 — select a worksheet</div>
 
   <div class="grid" id="grid"></div>
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span>v1.0</span>
+    <span id="footYear">v1.1</span>
   </footer>
 
 </div>
 
 <script>
-const systems = [
+// ---------------------------------------------------------------------
+// Add new worksheets here — each entry renders one card. To wire up a new
+// worksheet, add an object with status:'active' and the correct href, then
+// add the same href to APP_SHELL in sw.js and OFFLINE_PAGES in index.html.
+// ---------------------------------------------------------------------
+const tools = [
   {
-    code:'MON-01',
-    title:'Cloud Temp Monitoring System',
-    desc:'Multi-channel UKAS calibration worksheet for Cloud Temp monitoring systems — Quick Add device entry, validity badges, jobsheet PDF import.',
-    href:'cloud_temp.html',
+    code:'WS-01',
+    title:'Barkey Calibration Worksheet',
+    desc:'Standard Barkey calibration worksheet — full field validation, PDF/Excel export, A4 print.',
+    href:'barkey_calibration_form.html',
     status:'active',
     meta:'A4 · PDF/Excel',
+    icon:'snowflake'
+  },
+  {
+    code:'WS-02',
+    title:'Calibration Worksheet — Standard Medical Device',
+    desc:'Calibration worksheet for standard medical devices (fridges, freezers, platelet incubators).',
+    href:'calibration_worksheet_SMD.html',
+    status:'active',
+    meta:'A4 · PDF/Excel',
+    icon:'fridge'
+  },
+  {
+    code:'WS-03',
+    title:'Calibration Worksheet — IBB / Blood Bank',
+    desc:'Dedicated worksheet for blood bank refrigerators and IBB medical devices.',
+    href:'#',
+    status:'planned',
+    meta:'in development',
+    icon:'icicle'
+  },
+  {
+    code:'WS-04',
+    title:'Calibration Worksheet — Standard Non-Medical Device',
+    desc:'Calibration worksheet for non-medical refrigeration equipment — freezers, fridges and incubators, with device-specific tolerances.',
+    href:'calibration_worksheet_SNMD.html',
+    status:'active',
+    meta:'A4 · PDF/Excel',
+    icon:'crystal'
+  },
+  {
+    code:'WS-05',
+    title:'Calibration Worksheet — Standard 19/24 Range',
+    desc:'Calibration worksheet for Labcold’s standard 19 range and 24 range units, fixed ±0.5°C tolerance.',
+    href:'calibration_worksheet_19_24.html',
+    status:'active',
+    meta:'A4 · PDF/Excel',
+    icon:'thermo'
+  },
+  {
+    code:'WS-06',
+    title:'Monitoring Systems',
+    desc:'Calibration worksheets for monitoring systems — Cloud Temp, Thermo Max, Monitor Max.',
+    href:'monitoring_systems.html',
+    status:'active',
+    meta:'3 systems',
     icon:'cloud'
-  },
-  {
-    code:'MON-02',
-    title:'Thermo Max Monitoring System',
-    desc:'Calibration worksheet for Thermo Max monitoring systems.',
-    href:'#',
-    status:'planned',
-    meta:'in development',
-    icon:'wave'
-  },
-  {
-    code:'MON-03',
-    title:'Monitor Max Monitoring System',
-    desc:'Calibration worksheet for Monitor Max monitoring systems.',
-    href:'#',
-    status:'planned',
-    meta:'in development',
-    icon:'gauge'
   },
 ];
 
 const icons = {
+  snowflake:'<path d="M12 2v20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M12 5.5l-2-1.5m2 1.5l2-1.5M12 18.5l-2 1.5m2-1.5l2 1.5M7.05 7.05l-2.3-.3m2.3.3l-.3-2.3M16.95 7.05l2.3-.3m-2.3.3l.3-2.3M7.05 16.95l-2.3.3m2.3-.3l-.3 2.3M16.95 16.95l2.3.3m-2.3-.3l.3 2.3"/>',
+  fridge:'<path d="M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M5 10h14"/><path d="M8 5.5v3"/><path d="M8 13.5v4"/>',
+  icicle:'<path d="M8 3h8l-1.5 6 1.5 2-1.5 2 1.5 6-2.5 3-2.5-3 1.5-6-1.5-2 1.5-2L8 3Z"/>',
+  crystal:'<path d="M12 2l7 4v8l-7 4-7-4V6l7-4Z"/><path d="M12 2v20M5 6l14 12M19 6 5 18"/>',
+  thermo:'<path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/><path d="M9 6.5h1.4M9 9.5h1.4"/><path d="M17 4.5v3M15.5 6h3"/>',
   cloud:'<path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A4.5 4.5 0 0 0 6.5 19h11Z"/>',
-  wave:'<path d="M2 12c2 0 2-3 4-3s2 3 4 3 2-3 4-3 2 3 4 3 2-3 4-3"/><path d="M2 17c2 0 2-3 4-3s2 3 4 3 2-3 4-3 2 3 4 3 2-3 4-3"/>',
-  gauge:'<path d="M12 14 15 9"/><circle cx="12" cy="14" r="1"/><path d="M4.5 19a8 8 0 1 1 15 0"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
   arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
 };
 
-function iconSvg(name){
-  return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icons[name]||''}</svg>`;
+function iconSvg(name, extra=''){
+  return `<svg class="icon ${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icons[name]||''}</svg>`;
 }
 
 function renderCards(){
   const grid = document.getElementById('grid');
   let html = '';
-  systems.forEach(t=>{
+
+  tools.forEach(t=>{
     const isActive = t.status === 'active';
     html += `
     <a class="card ${isActive?'active':'planned'}" ${isActive?`href="${t.href}"`:'href="javascript:void(0)" aria-disabled="true"'}>
@@ -251,10 +304,28 @@ function renderCards(){
       </div>
     </a>`;
   });
+
+  html += `
+    <div class="card addnew">
+      ${iconSvg('plus')}
+      <span>More worksheets<br>coming soon</span>
+    </div>`;
+
   grid.innerHTML = html;
+
+  document.getElementById('toolCount').textContent = tools.length;
+  document.getElementById('activeCount').textContent = tools.filter(t=>t.status==='active').length;
+}
+
+function renderDate(){
+  const d = new Date();
+  const opts = {day:'2-digit', month:'short', year:'numeric'};
+  document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
+  document.getElementById('footYear').textContent = 'v1.1 · ' + d.getFullYear();
 }
 
 renderCards();
+renderDate();
 </script>
 
 </body>

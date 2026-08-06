@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="LabCal">
 <meta name="theme-color" content="#dfe6ee">
-<title>LabCal — Monitoring Systems</title>
+<title>LabCal — Tools &amp; Utilities</title>
 <style>
 :root{
   --bg:#dfe6ee;
@@ -70,11 +70,15 @@ header{
 .brandcol{display:flex;flex-direction:column;gap:10px}
 .labcold-logo{font-family:var(--sans);font-size:24px;font-weight:900;letter-spacing:1px;color:var(--ink)}
 .labcold-logo small{display:block;font-size:8.5px;letter-spacing:.4px;font-weight:700;background:#2a2f35;color:#fff;width:max-content;padding:1px 8px;margin-left:30px}
+.hstat{text-align:right;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7}
+.hstat b{color:var(--ink);font-weight:600}
+.hstat .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:5px;box-shadow:0 0 0 3px rgba(63,200,121,.18)}
 @media (max-width:480px){
   header{padding:22px 0 18px;gap:10px}
   .wordmark .mark{font-size:19px}
   .labcold-logo{font-size:19px}
   .labcold-logo small{margin-left:24px}
+  .hstat{text-align:left}
 }
 
 .backlink{
@@ -140,6 +144,14 @@ h1{font-size:clamp(28px,4vw,42px);line-height:1.1;margin:0 0 14px;font-weight:70
 .card.active:hover .open{gap:8px}
 .open svg{width:13px;height:13px;transition:transform .16s ease}
 
+.card.addnew{
+  align-items:center;justify-content:center;text-align:center;
+  border-style:dashed;color:var(--muted-dim);min-height:230px;
+}
+@media (max-width:620px){.card.addnew{min-height:110px;padding:24px 18px}}
+.card.addnew .icon{width:26px;height:26px;margin-bottom:10px;color:var(--muted-dim)}
+.card.addnew span{font-family:var(--mono);font-size:11px;letter-spacing:.5px}
+
 footer{
   margin-top:56px;padding-top:18px;border-top:1px solid var(--border-soft);
   display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
@@ -163,76 +175,78 @@ footer{
       </div>
       <div class="labcold-logo">❄ LABCOLD<small>medical &amp; scientific refrigeration</small></div>
     </div>
+    <div class="hstat" id="hstat">
+      <div><span class="dot"></span><b id="toolCount">–</b> tools · <b id="activeCount">–</b> active</div>
+      <div id="todayDate">—</div>
+    </div>
   </header>
 
-  <a class="backlink" href="calibration.html">
+  <a class="backlink" href="index.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    Back to calibration worksheets
+    Back to LabCal home
   </a>
 
   <div class="hero">
-    <p class="eyebrow">WS-06 · Monitoring systems</p>
-    <h1>Monitoring system calibration worksheets.</h1>
-    <p class="lede">Choose a monitoring system to calibrate. Each worksheet runs independently, fully offline, with PDF/Excel export.</p>
+    <p class="eyebrow">Section 02 · Tools &amp; utilities</p>
+    <h1>Engineer tools &amp; utilities.</h1>
+    <p class="lede">Supporting tools for the lab and site work — data review, reporting and document handling. Everything runs on this device, fully offline.</p>
   </div>
 
-  <div class="section-label">MONITORING SYSTEMS — select a system</div>
+  <div class="section-label">TL · 01–02 — select a tool</div>
 
   <div class="grid" id="grid"></div>
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span>v1.0</span>
+    <span id="footYear">v1.1</span>
   </footer>
 
 </div>
 
 <script>
-const systems = [
+// ---------------------------------------------------------------------
+// Engineer tools & utilities. Add a new tool by adding an object here with
+// status:'active' and the correct href, then add the same href to
+// APP_SHELL in sw.js and OFFLINE_PAGES in index.html.
+// ---------------------------------------------------------------------
+const tools = [
   {
-    code:'MON-01',
-    title:'Cloud Temp Monitoring System',
-    desc:'Multi-channel UKAS calibration worksheet for Cloud Temp monitoring systems — Quick Add device entry, validity badges, jobsheet PDF import.',
-    href:'cloud_temp.html',
+    code:'TL-01',
+    title:'Data Logger Viewer',
+    desc:'Reads Labcold controller logs (YYMMDD.CSV) straight from the customer folder — day/range calendar, temperature trace, door and cooling-fault events, excursion summary, PNG/CSV export and printable report.',
+    href:'data_logger_viewer.html',
     status:'active',
-    meta:'A4 · PDF/Excel',
-    icon:'cloud'
+    meta:'CSV · PNG/Print',
+    icon:'chart'
   },
   {
-    code:'MON-02',
-    title:'Thermo Max Monitoring System',
-    desc:'Calibration worksheet for Thermo Max monitoring systems.',
-    href:'#',
-    status:'planned',
-    meta:'in development',
-    icon:'wave'
-  },
-  {
-    code:'MON-03',
-    title:'Monitor Max Monitoring System',
-    desc:'Calibration worksheet for Monitor Max monitoring systems.',
-    href:'#',
-    status:'planned',
-    meta:'in development',
-    icon:'gauge'
+    code:'TL-02',
+    title:'PDF Merge & Reorder',
+    desc:'Combine certificates, worksheets and jobsheets into a single PDF — drag to reorder, rotate and delete pages. Fully self-contained, iPad-friendly.',
+    href:'pdf_merge_reorder.html',
+    status:'active',
+    meta:'self-contained · 1.9 MB',
+    icon:'pages'
   },
 ];
 
 const icons = {
-  cloud:'<path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.5A4.5 4.5 0 0 0 6.5 19h11Z"/>',
-  wave:'<path d="M2 12c2 0 2-3 4-3s2 3 4 3 2-3 4-3 2 3 4 3 2-3 4-3"/><path d="M2 17c2 0 2-3 4-3s2 3 4 3 2-3 4-3 2 3 4 3 2-3 4-3"/>',
-  gauge:'<path d="M12 14 15 9"/><circle cx="12" cy="14" r="1"/><path d="M4.5 19a8 8 0 1 1 15 0"/>',
+  chart:'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l3.5-4.5 3 3L20 6"/>',
+  pages:'<rect x="8" y="3" width="12" height="15" rx="1.5"/><path d="M16 21H5.5A1.5 1.5 0 0 1 4 19.5V7"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
   arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
 };
 
-function iconSvg(name){
-  return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icons[name]||''}</svg>`;
+function iconSvg(name, extra=''){
+  return `<svg class="icon ${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icons[name]||''}</svg>`;
 }
 
 function renderCards(){
   const grid = document.getElementById('grid');
   let html = '';
-  systems.forEach(t=>{
+
+  tools.forEach(t=>{
     const isActive = t.status === 'active';
     html += `
     <a class="card ${isActive?'active':'planned'}" ${isActive?`href="${t.href}"`:'href="javascript:void(0)" aria-disabled="true"'}>
@@ -251,10 +265,28 @@ function renderCards(){
       </div>
     </a>`;
   });
+
+  html += `
+    <div class="card addnew">
+      ${iconSvg('plus')}
+      <span>More tools<br>coming soon</span>
+    </div>`;
+
   grid.innerHTML = html;
+
+  document.getElementById('toolCount').textContent = tools.length;
+  document.getElementById('activeCount').textContent = tools.filter(t=>t.status==='active').length;
+}
+
+function renderDate(){
+  const d = new Date();
+  const opts = {day:'2-digit', month:'short', year:'numeric'};
+  document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
+  document.getElementById('footYear').textContent = 'v1.1 · ' + d.getFullYear();
 }
 
 renderCards();
+renderDate();
 </script>
 
 </body>
