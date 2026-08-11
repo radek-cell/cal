@@ -44,7 +44,7 @@
   <div class="room"><b>Room temperature:</b><label><b>Max <span class="req">*</span>:</b> <input id="rtMax" inputmode="decimal" data-decimals="1" placeholder="xx.x"></label><label><b>Min <span class="req">*</span>:</b> <input id="rtMin" inputmode="decimal" data-decimals="1" placeholder="xx.x"></label><label><b>Average:</b> <span id="rtAvg" class="bold">—</span><span id="rtRangeWarn" class="hintText warn" style="display:none;margin-left:6px;font-weight:700">Max must be ≥ Min</span></label><div style="grid-column:1/3">Room temperature thermometer reference <span class="req">*</span>:</div><span style="grid-column:3/5;display:flex;align-items:center;gap:6px;min-width:0"><select id="rtRef" style="flex:1;min-width:0"><option value="">Select thermometer…</option></select><span id="rtRefValidity" class="validityBadge"></span></span></div>
 
   <div class="bar">Temperature Check – As found</div><div class="section" id="foundSec"></div>
-  <div class="bar">Temperature Check – As left after adjustment</div><div class="section" id="leftSec"></div>
+  <div class="bar" id="leftBar">Temperature Check – As left after adjustment</div><div class="section" id="leftSec"></div>
 
   <div class="bar">Stopwatch Check</div>
   <div class="section" id="stopwatchSec" style="padding:7px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:12px">
@@ -231,18 +231,45 @@ function makeRows(prefix){return `
  <div class="row"><div class="lbl">Probe Serial No <span class="req">*</span>:</div><div><select id="${prefix}_probe"${prefix==='left'?' disabled':''}>${probeOptionsHtml()}</select></div><div class="spec">${prefix==='left'?'<span class="hint">(same probe as As Found)</span>':''}</div><div></div></div>
  <div class="row"><div class="lbl">Reference temperature (°C) <span class="req">*</span>:</div><div><input id="${prefix}_ref" inputmode="decimal" data-decimals="3" placeholder="xx.xxx"></div><div class="spec"><span id="${prefix}_nearest" class="status"></span></div><div></div></div>
  <div class="row"><div class="lbl">Probe Correction value (°C):</div><div class="calc" id="${prefix}_corr">—</div><div><span class="hint">auto, 3 d.p.</span></div><div></div></div>
- <div class="row"><div class="lbl bold">Reference + correction (°C):</div><div class="calc" id="${prefix}_refcorr">—</div><div><span class="hint">auto, 3 d.p.</span></div><div id="${prefix}_tickRef"></div></div>
- <div class="row"><div class="lbl bold">Calibration temperature (°C) <span class="req">*</span>:</div><div><input id="${prefix}_cal" inputmode="decimal" data-decimals="2" placeholder="xx.xx"></div><div class="spec">Specification = Cal. temp ± 0.5°C</div><div id="${prefix}_tickCal"></div></div>
- <div class="row"><div class="lbl">Temperature display in the device, heating <span class="req">*</span>:</div><div><input id="${prefix}_heat" inputmode="decimal" data-decimals="2" placeholder="xx.xx"></div><div class="spec">Specification = Ref. ± 0.50°C</div><div id="${prefix}_tickHeat"></div></div>
- <div class="row"><div class="lbl">Temperature display in the device, inlet <span class="req">*</span>:</div><div><input id="${prefix}_inlet" inputmode="decimal" data-decimals="2" placeholder="xx.xx"></div><div class="spec">Specification = Ref. ± 0.50°C</div><div id="${prefix}_tickInlet"></div></div>
- <div class="row"><div class="lbl">SW inlet operating temperature <span class="req">*</span>:</div><div><input id="${prefix}_sw" inputmode="decimal" data-decimals="2" placeholder="xx.xx"></div><div class="spec">Specification = Cal. temp +1°C ± 0.5°C</div><div id="${prefix}_tickSw"></div></div>
- <div class="row"><div class="lbl">HW inlet overtemperature triggering <span class="req">*</span>:</div><div><input id="${prefix}_hw" inputmode="decimal" data-decimals="2" placeholder="xx.xx"></div><div class="spec">Specification = 48°C ± 1.0°C</div><div id="${prefix}_tickHw"></div></div>`}
+ <div class="row"><div class="lbl bold">Reference + correction (°C):</div><div class="calc" id="${prefix}_refcorr">—</div><div><span class="hint" id="${prefix}_window">auto, 3 d.p.</span></div><div id="${prefix}_tickRef"></div></div>
+ <div class="row"><div class="lbl bold">Calibration temperature (°C) <span class="req">*</span>:</div><div><input id="${prefix}_cal" inputmode="decimal" data-decimals="2" placeholder="xx.xx"></div><div class="spec">Spec: Ref. + corr. ± 0.50 °C</div><div id="${prefix}_tickCal"></div></div>
+ <div class="row"><div class="lbl">Temperature display in the device, heating <span class="req">*</span>:</div><div><input id="${prefix}_heat" inputmode="decimal" data-decimals="2" placeholder="xx.xx"></div><div class="spec">Spec: Ref. + corr. ± 0.50 °C</div><div id="${prefix}_tickHeat"></div></div>
+ <div class="row"><div class="lbl">Temperature display in the device, inlet <span class="req">*</span>:</div><div><input id="${prefix}_inlet" inputmode="decimal" data-decimals="2" placeholder="xx.xx"></div><div class="spec">Spec: Ref. + corr. ± 0.50 °C</div><div id="${prefix}_tickInlet"></div></div>
+ <div class="row"><div class="lbl">SW inlet operating temperature <span class="req">*</span>:</div><div><input id="${prefix}_sw" inputmode="decimal" data-decimals="2" placeholder="xx.xx"></div><div class="spec">Spec: Cal. temp + 1.00 ± 0.50 °C</div><div id="${prefix}_tickSw"></div></div>
+ <div class="row"><div class="lbl">HW inlet overtemperature triggering <span class="req">*</span>:</div><div><input id="${prefix}_hw" inputmode="decimal" data-decimals="2" placeholder="xx.xx"></div><div class="spec">Spec: 48.00 ± 1.00 °C</div><div id="${prefix}_tickHw"></div></div>`}
 foundSec.innerHTML=makeRows('found'); leftSec.innerHTML=makeRows('left');
 document.getElementById('found_probe').addEventListener('change',()=>{ syncLeftProbe(); update(); });
 function rowOf(id){return document.getElementById(id).closest('.row')} function mark(id,ok){let el=document.getElementById(id);el.textContent=passCell(ok);let r=rowOf(id);r.classList.remove('pass','fail'); if(ok===true)r.classList.add('pass'); if(ok===false)r.classList.add('fail')}
-function calc(prefix){let probe=document.getElementById(prefix+'_probe').value, ref=n(document.getElementById(prefix+'_ref').value), cal=n(document.getElementById(prefix+'_cal').value); let nc=nearestCorr(probe,cal), corr=nc?nc.val:null, refcorr=ref!=null&&corr!=null?ref+corr:null; document.getElementById(prefix+'_corr').textContent=f(corr,3); document.getElementById(prefix+'_refcorr').textContent=f(refcorr,3); document.getElementById(prefix+'_nearest').textContent=nc?`Correction selected from cal. temp: ${nc.key}°C`:'Enter calibration temperature'; mark(prefix+'_tickRef',refcorr!=null?true:null);
+const TICK_IDS=['tickRef','tickCal','tickHeat','tickInlet','tickSw','tickHw'];
+// Every device-display check is judged against the CORRECTED reference
+// (reference temperature + probe correction), never the raw reference
+// reading. corrTarget is the single value the ± 0.50 °C windows come from.
+function calc(prefix){
+ const naMode = prefix==='left' && leftSec.classList.contains('leftOff');
+ const corrEl=document.getElementById(prefix+'_corr'), refcorrEl=document.getElementById(prefix+'_refcorr'),
+       nearestEl=document.getElementById(prefix+'_nearest'), windowEl=document.getElementById(prefix+'_window');
+ if(naMode){
+   corrEl.textContent='N/A'; refcorrEl.textContent='N/A';
+   nearestEl.textContent='N/A'; if(windowEl) windowEl.textContent='';
+   TICK_IDS.forEach(k=>mark(prefix+'_'+k,null));
+   return {complete:false,allPass:false,anyFail:false};
+ }
+ let probe=document.getElementById(prefix+'_probe').value, ref=n(document.getElementById(prefix+'_ref').value), cal=n(document.getElementById(prefix+'_cal').value);
+ let nc=nearestCorr(probe,cal), corr=nc?nc.val:null;
+ const corrTarget = (ref!=null && corr!=null) ? ref+corr : null; // reference + correction = the true temperature
+ corrEl.textContent=f(corr,3);
+ refcorrEl.textContent=f(corrTarget,3);
+ nearestEl.textContent=nc?`Correction selected from cal. temp: ${nc.key}°C`:'Enter calibration temperature';
+ if(windowEl) windowEl.textContent = corrTarget!=null ? `Window ${f(corrTarget-0.5,2)} – ${f(corrTarget+0.5,2)} °C` : 'auto, 3 d.p.';
+ mark(prefix+'_tickRef',corrTarget!=null?true:null);
  let heat=n(document.getElementById(prefix+'_heat').value), inlet=n(document.getElementById(prefix+'_inlet').value), sw=n(document.getElementById(prefix+'_sw').value), hw=n(document.getElementById(prefix+'_hw').value);
- let calOK=cal!=null&&refcorr!=null?Math.abs(cal-refcorr)<=0.5:null; let heatOK=heat!=null&&refcorr!=null?Math.abs(heat-refcorr)<=0.5:null; let inletOK=inlet!=null&&refcorr!=null?Math.abs(inlet-refcorr)<=0.5:null; let swOK=sw!=null&&cal!=null?Math.abs(sw-(cal+1))<=0.5:null; let hwOK=hw!=null?Math.abs(hw-48)<=1:null; mark(prefix+'_tickCal',calOK);mark(prefix+'_tickHeat',heatOK);mark(prefix+'_tickInlet',inletOK);mark(prefix+'_tickSw',swOK);mark(prefix+'_tickHw',hwOK);
+ const within=(v,target,tol)=>(v!=null&&target!=null)?Math.abs(v-target)<=tol+1e-9:null;
+ let calOK=within(cal,corrTarget,0.5);
+ let heatOK=within(heat,corrTarget,0.5);
+ let inletOK=within(inlet,corrTarget,0.5);
+ let swOK=within(sw,cal!=null?cal+1:null,0.5);
+ let hwOK=within(hw,48,1);
+ mark(prefix+'_tickCal',calOK);mark(prefix+'_tickHeat',heatOK);mark(prefix+'_tickInlet',inletOK);mark(prefix+'_tickSw',swOK);mark(prefix+'_tickHw',hwOK);
  const checks=[calOK,heatOK,inletOK,swOK,hwOK];
  const complete=checks.every(x=>x!==null);
  const allPass=complete && checks.every(x=>x===true);
@@ -308,7 +335,6 @@ function update(){
   validateDecimals(false);
   checkRoomTempRange();
   const foundResult=calc('found');
-  calc('left');
   // As Left only unlocks once As Found is fully calculated AND confirms
   // adjustment is actually needed (one or more checks failing spec). While
   // As Found is incomplete, As Left stays locked — no premature entry.
@@ -318,10 +344,51 @@ function update(){
     const alwaysDisabled=el.id==='left_probe'; // stays synced/disabled regardless — copies As Found's probe
     el.disabled = locked || alwaysDisabled;
   });
-  if(foundResult.allPass){
-    if(!comments.value.includes('No adjustment needed')) comments.value=(comments.value?comments.value+'\n':'')+'No adjustment needed.';
+  applyLeftNA(locked);
+  calc('left');
+  const leftBar=document.getElementById('leftBar');
+  if(leftBar){
+    leftBar.textContent = !locked
+      ? 'Temperature Check – As left after adjustment'
+      : (foundResult.allPass
+          ? 'Temperature Check – As left after adjustment (N/A – no adjustment required)'
+          : 'Temperature Check – As left after adjustment (complete the As Found section first)');
   }
+  syncNoAdjustmentComment(foundResult);
   refreshPdfHint();
+}
+const LEFT_NA_INPUTS=['left_ref','left_cal','left_heat','left_inlet','left_sw','left_hw'];
+// When no adjustment is required the whole As Left block is printed as N/A
+// rather than left blank, so the finished certificate reads as deliberately
+// not applicable instead of simply unfilled.
+function applyLeftNA(locked){
+  LEFT_NA_INPUTS.forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    if(locked){ if(el.value!=='N/A') el.value='N/A'; el.classList.remove('invalid','valid'); }
+    else if(el.value==='N/A'){ el.value=''; }
+  });
+  const sel=document.getElementById('left_probe'); if(!sel) return;
+  let na=[...sel.options].find(o=>o.value==='__na');
+  if(locked){
+    if(!na){ na=document.createElement('option'); na.value='__na'; na.textContent='N/A'; sel.appendChild(na); }
+    sel.value='__na';
+  }else{
+    if(na) na.remove();
+    syncLeftProbe();
+  }
+}
+const NO_ADJ_LINE='No adjustment needed.';
+function syncNoAdjustmentComment(foundResult){
+  const el=document.getElementById('comments'); if(!el) return;
+  const lines=el.value.split('\n');
+  const hasLine=lines.some(l=>l.trim().replace(/\.$/,'')==='No adjustment needed');
+  if(foundResult.allPass && !hasLine){
+    el.value=(el.value?el.value+'\n':'')+NO_ADJ_LINE;
+  }else if(foundResult.anyFail && hasLine){
+    // Readings have since changed and an adjustment IS needed — drop the
+    // auto-added line so it can't contradict the As Left readings.
+    el.value=lines.filter(l=>l.trim().replace(/\.$/,'')!=='No adjustment needed').join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  }
 }
 function checkRoomTempRange(){
   const rmax=n(rtMax.value), rmin=n(rtMin.value);
@@ -570,6 +637,7 @@ async function importExcelFile(ev){
       if(label==='--- Temperature Check: As Left after adjustment ---'){ section='left'; continue; }
       if(label==='--- Stopwatch Check ---'){ section=null; continue; }
       if(!section) continue;
+      if(String(value||'').trim().toUpperCase()==='N/A') continue; // N/A is a placeholder, not a reading
       switch(label){
         case 'Probe Serial No': setSelectByText(section+'_probe', value); break;
         case 'Reference temperature (°C)': setValById(section+'_ref', value); break;
@@ -590,7 +658,8 @@ async function importExcelFile(ev){
     setValById('comments', get('Comments'));
     setValById('eng', get("Engineer's Name"));
     setValById('checker', get("Checker's Name"));
-    setValById('checkDate', get('Checker Date'));
+    const chkDateVal=dateForFile(get('Checker Date'));
+    if(/^\d{4}-\d{2}-\d{2}$/.test(chkDateVal)) setValById('checkDate', chkDateVal);
     setValById('engDate', get('Engineer Date'));
     rebuildRoomThermDropdown();
     refreshRoomThermStatus();
@@ -976,7 +1045,7 @@ function buildExcelWorkbook(){
   push("Engineer's Name", eng.value);
   push('Engineer Date', engDate.value);
   push("Checker's Name", checker.value);
-  push('Checker Date', checkDate.value);
+  push('Checker Date', displayDate(checkDate.value));
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:40},{wch:42}];
   const wb=XLSX.utils.book_new();
@@ -1016,7 +1085,12 @@ async function generateExcel(){
     refreshOffsetWarning();
   }
 }
-function clearForm(){document.querySelectorAll('#foundSec input,#leftSec input,#rtMax,#rtMin,#rtRef,#unitMin,#unitSec,#swMin,#swSec,#comments').forEach(e=>{e.value='';e.classList.remove('invalid','valid')});update()}
+function clearForm(){
+  if(!confirm('Clear all readings, comments and stopwatch entries?\n\nHeader details (job ref, site, model, serial) are kept.')) return;
+  document.querySelectorAll('#foundSec input,#leftSec input,#rtMax,#rtMin,#rtRef,#swSerial,#unitMin,#unitSec,#swMin,#swSec,#comments').forEach(e=>{e.value='';e.classList.remove('invalid','valid')});
+  refreshRoomThermStatus();
+  update();
+}
 document.querySelectorAll('input,select,textarea').forEach(e=>{e.addEventListener('input',()=>{decimalOK(e);update();autoAdvance(e);if(!e.dataset.decimals&&String(e.value||'').trim()!=='')e.classList.remove('invalid')});e.addEventListener('blur',()=>decimalOK(e))});
 document.getElementById('rtRef').addEventListener('change',refreshRoomThermStatus);
 document.getElementById('sheetNo')?.addEventListener('input',()=>{ sanitizeSheetNo(); checkSheetNoFormat(); });
