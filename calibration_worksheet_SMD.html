@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="LabCal">
 <meta name="theme-color" content="#dfe6ee">
 <title>Engineer Calibration Worksheet Prototype</title>
+<script src="labcal_offsets.js"></script>
 <!-- Swapped from html2pdf.bundle.min.js: its built-in html2canvas can't parse the
      color(display-p3 ...) values Safari/iPadOS reports for some elements, causing
      "Attempting to parse an unsupported color function 'color'". html2canvas-pro
@@ -48,7 +49,7 @@
   input.invalid,select.invalid{background:#ffdede!important;border-bottom:2px solid #b00020!important;color:#900!important}
   input.valid{background:#eef9ee!important}
   .btn:disabled{opacity:.45;cursor:not-allowed}
-  .offsetWarning{max-width:210mm;margin:8px auto 0;background:#ffe3e3;border:1.3px solid #b00000;color:#7a0000;font-size:12px;font-weight:700;padding:8px 12px;border-radius:4px}
+  .offsetWarning{max-width:210mm;margin:8px auto 0;background:#ffe3e3;border:1.3px solid #b00000;color:#7a0000;font-size:12px;font-weight:700;padding:8px 12px;border-radius:4px}.offsetWarning.soon{background:#fdf3e3;border-color:#a9690a;color:#7a4c06}
   .validityBadge{font-size:10px;font-weight:800;padding:2px 6px;border-radius:3px;white-space:normal;margin-top:3px;display:block;max-width:100%;box-sizing:border-box;line-height:1.3}
   .validityBadge.ok{background:#e7f7e7;color:#0a7a0a;border:1px solid #a8d8a8}
   .validityBadge.expired{background:#b00000;color:#fff;border:1px solid #7a0000;animation:pulseExpired 1.4s infinite}
@@ -265,14 +266,25 @@ function refreshOffsetWarning(){
   if(!banner) return;
   const current=offsetsAreCurrent();
   if(!current){
+    banner.classList.remove('soon');
     banner.style.display='block';
     banner.textContent = lastOffsetRaw && Object.keys(PROBES).length
-      ? `⚠ Probe offsets expired ${monthYearDisplay(lastOffsetRaw.validUntil)}. Click "Load offsets" and select a current offsets file before generating a certificate.`
-      : '⚠ No probe offsets loaded for this session. Click "Load offsets" and select a current offsets file before generating a certificate.';
+      ? `⚠ Dostmann probe offsets expired ${monthYearDisplay(lastOffsetRaw.validUntil)}. The reference thermometer needs recalibrating — load a current file on the LabCal home page before generating a certificate.`
+      : '⚠ No Dostmann probe offsets available. Load them once on the LabCal home page (they are then remembered for every worksheet), or use "Load offsets" here.';
     if(genBtn) genBtn.disabled=true;
     if(excelBtn) excelBtn.disabled=true;
-  } else {
-    banner.style.display='none';
+  }else{
+    // Still valid — but give plenty of notice before the reference
+    // thermometer's certificate runs out mid-visit.
+    const daysLeft = window.LabCalOffsets ? LabCalOffsets.daysLeft((lastOffsetRaw&&lastOffsetRaw.validUntil)) : null;
+    banner.classList.remove('soon');
+    if(daysLeft!=null && daysLeft<=14){
+      banner.classList.add('soon');
+      banner.style.display='block';
+      banner.textContent = `⏳ Reference thermometer certificate runs out in ${daysLeft} day${daysLeft===1?'':'s'}. Book the recalibration — worksheets lock as soon as it expires.`;
+    }else{
+      banner.style.display='none';
+    }
     if(genBtn) genBtn.disabled=false;
     if(excelBtn) excelBtn.disabled=false;
   }
@@ -344,44 +356,74 @@ function refreshRoomThermStatus(){
     }
   }
 }
+const OFFSET_DEVICE='dostmann';
+// Probe offsets are loaded ONCE on the LabCal home page and held in the shared
+// vault until the reference thermometer's certificate expires; this worksheet
+// simply reads them at startup. The "Load offsets" button here still works and
+// writes back to the vault, so a file loaded on any worksheet is picked up by
+// all the others too.
+function applyOffsetsData(raw, sourceLabel){
+  const probeList=buildProbeListFromOffsets(raw);
+  if(!probeList) return false;
+  lastOffsetRaw=raw;
+  roomTherms=Array.isArray(raw.roomTherms)?raw.roomTherms:[];
+  if(raw.engineerName){
+    const engEl=document.getElementById('engineer');
+    if(engEl && !engEl.value) engEl.value=raw.engineerName;
+  }
+  PROBE_LIST=probeList;
+  PROBES=Object.fromEntries(PROBE_LIST.map(p=>[p.id,p]));
+  DIGITAL_THERMOMETERS=buildDigitalThermometersFromOffsets(raw)||[];
+  fillProbeDropdowns();
+  fillDigitalThermometers();
+  if(DIGITAL_THERMOMETERS.length===1){
+    const drtSel=document.getElementById('drtSerial');
+    if(drtSel) drtSel.value=DIGITAL_THERMOMETERS[0].serial;
+  }
+  applyDigitalThermometer();
+  applyAutoCorrections();
+  rebuildRoomThermDropdown();
+  const statusEl=document.getElementById('offsetStatus');
+  if(statusEl){
+    let left='';
+    if(window.LabCalOffsets){
+      const d=LabCalOffsets.daysLeft(raw.validUntil);
+      if(d!=null) left = d<0 ? ' — EXPIRED' : ` (${d} day${d===1?'':'s'} left)`;
+    }
+    statusEl.textContent=`Offsets ${sourceLabel}: ${Object.keys(PROBES).length} probes, valid until ${monthYearDisplay(raw.validUntil)}${left}${raw.engineerName?', engineer '+raw.engineerName:''}.`;
+    statusEl.style.color=offsetsExpired(raw)?'#b00000':'#0a7a0a';
+  }
+  refreshOffsetWarning();
+  applyOffsetsGate();
+  calculateAll();
+  return true;
+}
+function restoreVaultOffsets(){
+  if(!window.LabCalOffsets) return false;
+  const raw=LabCalOffsets.load(OFFSET_DEVICE);
+  if(!raw) return false;
+  return applyOffsetsData(raw, 'from LabCal home');
+}
 async function loadOffsetsFile(ev){
-  const file=ev.target.files && ev.target.files[0]; if(!file) return;
+  const file=ev.target.files && ev.target.files[0];
+  ev.target.value='';
+  if(!file) return;
+  if(window.LabCalOffsets){
+    const res=await LabCalOffsets.ingestFile(file, OFFSET_DEVICE);
+    if(!res.ok){ alert('Cannot load this offsets file.\n\n'+res.error); return; }
+    if(!applyOffsetsData(res.raw, res.remembered?'loaded from file':'loaded for this session only')){
+      alert('No probe data found in that file.');
+    }
+    return;
+  }
   try{
     const raw=JSON.parse(await file.text());
-    if(raw && raw.device && raw.device!=='dostmann'){ throw new Error('wrong device'); }
-    const probeList=buildProbeListFromOffsets(raw);
-    if(!probeList) throw new Error('No probe data found');
+    if(raw && raw.device!=='dostmann'){ throw new Error('wrong device'); }
     if(!raw.validUntil) throw new Error('Missing validUntil');
-    lastOffsetRaw=raw;
-    roomTherms=Array.isArray(raw.roomTherms)?raw.roomTherms:[];
-    if(raw.engineerName){
-      const engEl=document.getElementById('engineer');
-      if(engEl) engEl.value=raw.engineerName;
-    }
-    PROBE_LIST=probeList;
-    PROBES=Object.fromEntries(PROBE_LIST.map(p=>[p.id,p]));
-    DIGITAL_THERMOMETERS=buildDigitalThermometersFromOffsets(raw)||[];
-    fillProbeDropdowns();
-    fillDigitalThermometers();
-    if(DIGITAL_THERMOMETERS.length===1){
-      const drtSel=document.getElementById('drtSerial');
-      if(drtSel) drtSel.value=DIGITAL_THERMOMETERS[0].serial;
-    }
-    applyDigitalThermometer();
-    applyAutoCorrections();
-    rebuildRoomThermDropdown();
-    const statusEl=document.getElementById('offsetStatus');
-    if(statusEl){
-      statusEl.textContent=`Offsets loaded from file: ${Object.keys(PROBES).length} probes, valid until ${monthYearDisplay(raw.validUntil)}${raw.engineerName?', engineer '+raw.engineerName:''}.`;
-      statusEl.style.color=offsetsExpired(raw)?'#ffb3b3':'#c9f7c9';
-    }
-    refreshOffsetWarning();
-    applyOffsetsGate();
-    calculateAll();
+    if(!applyOffsetsData(raw,'loaded from file')) throw new Error('No probe data found');
   }catch(e){
     alert('Cannot load this offsets file, it has no expiry date set, or it was exported from a different thermometer type (Fluke & Comark). Please export a current JSON file from the Dostmann Offset Manager (with a "valid until" date set).');
   }
-  ev.target.value='';
 }
 if(window.pdfjsLib){
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -1897,6 +1939,8 @@ document.getElementById('certNo')?.addEventListener('focus',function(){ if(this.
 document.getElementById('dateNative')?.addEventListener('click',function(){ if(this.showPicker){ try{ this.showPicker(); }catch(e){} } });
 document.getElementById('dateNative')?.addEventListener('focus',function(){ if(this.showPicker){ try{ this.showPicker(); }catch(e){} } });
 initCert();
+restoreVaultOffsets();
+if(window.LabCalOffsets){ LabCalOffsets.onChange(()=>{ restoreVaultOffsets(); }); }
 calculateAll();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(function(){}); }
 </script>

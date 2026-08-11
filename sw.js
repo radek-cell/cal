@@ -3,7 +3,7 @@
 // Bump CACHE_VERSION any time the HTML/JS files change and you want
 // devices that already installed the app to pick up the new version.
 // ---------------------------------------------------------------------
-const CACHE_VERSION  = 'v4';
+const CACHE_VERSION  = 'v5';
 const STATIC_CACHE   = `labcal-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE  = `labcal-runtime-${CACHE_VERSION}`;
 
@@ -12,6 +12,8 @@ const RUNTIME_CACHE  = `labcal-runtime-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
   './index.html',
+  // shared modules — the probe offsets vault every page reads from
+  './labcal_offsets.js',
   // section pages
   './calibration.html',
   './tools.html',

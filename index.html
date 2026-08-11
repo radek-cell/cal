@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#dfe6ee">
 <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22LabCal%20Calibration%20Suite%22%2C%22short_name%22%3A%22LabCal%22%2C%22display%22%3A%22fullscreen%22%2C%22start_url%22%3A%22.%2Findex.html%22%2C%22background_color%22%3A%22%23dfe6ee%22%2C%22theme_color%22%3A%22%23dfe6ee%22%7D">
 <title>LabCal — Calibration Suite</title>
+<script src="labcal_offsets.js"></script>
 <style>
 :root{
   --bg:#dfe6ee;
@@ -140,6 +141,81 @@ h1{font-size:clamp(30px,4.4vw,50px);line-height:1.1;margin:0 0 16px;font-weight:
   .offlinebox{padding:14px 16px}
   .dlbtn{width:100%;justify-content:center}
 }
+
+/* ---- probe offsets vault ---- */
+.vaultwarn{
+  display:none;margin:0 0 16px;border-radius:8px;padding:14px 18px;
+  border:1.5px solid #c0392b;background:#fdecea;color:#7a1c12;
+  font-size:13.5px;line-height:1.55;font-weight:600;
+}
+.vaultwarn.show{display:block}
+.vaultwarn.soft{border-color:var(--amber);background:#fdf3e3;color:#7a4c06}
+.vaultwarn.info{border-color:var(--border);background:var(--panel);color:var(--muted);font-weight:500}
+.vaultwarn b{display:block;font-size:14.5px;margin-bottom:4px;letter-spacing:-.2px}
+.vaultwarn.critical{animation:vaultPulse 1.6s infinite}
+@keyframes vaultPulse{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.28)}50%{box-shadow:0 0 0 7px rgba(192,57,43,0)}}
+
+.vault{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:38px}
+@media (max-width:700px){.vault{grid-template-columns:1fr;gap:12px}}
+.slot{
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:18px 20px 16px;box-shadow:0 1px 3px rgba(20,30,40,.06);
+  display:flex;flex-direction:column;
+}
+.slot.lvl-none{border-style:dashed}
+.slot.lvl-ok{border-color:var(--cyan-dim)}
+.slot.lvl-soon{border-color:var(--amber-dim)}
+.slot.lvl-critical,.slot.lvl-expired{border-color:#e0a49c;background:#fffaf9}
+.slot-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.slot h4{font-size:16px;margin:12px 0 4px;font-weight:650;letter-spacing:-.2px}
+.slot .used{font-family:var(--mono);font-size:10.5px;color:var(--muted-dim);line-height:1.5}
+.pill{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.6px;
+  padding:4px 9px;border-radius:3px;white-space:nowrap;text-transform:uppercase;
+}
+.pill.none{border:1.5px dashed var(--muted-dim);color:var(--muted-dim)}
+.pill.ok{border:1.5px solid var(--green);color:var(--green)}
+.pill.soon{border:1.5px solid var(--amber);color:var(--amber)}
+.pill.critical,.pill.expired{border:1.5px solid #c0392b;color:#fff;background:#c0392b}
+.pill.expired{animation:pillBlink 1.4s infinite}
+@keyframes pillBlink{0%,100%{opacity:1}50%{opacity:.5}}
+
+.countdown{margin:14px 0 6px}
+.countdown .num{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1}
+.countdown .num small{font-size:11px;font-weight:600;letter-spacing:.5px;color:var(--muted);margin-left:6px}
+.slot.lvl-ok .countdown .num{color:var(--green)}
+.slot.lvl-soon .countdown .num{color:var(--amber)}
+.slot.lvl-critical .countdown .num,.slot.lvl-expired .countdown .num{color:#c0392b}
+.track{height:5px;border-radius:3px;background:var(--bg2);border:1px solid var(--border-soft);margin-top:9px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--green)}
+.slot.lvl-soon .track i{background:var(--amber)}
+.slot.lvl-critical .track i,.slot.lvl-expired .track i{background:#c0392b}
+
+.slot-meta{
+  margin:12px 0 0;padding-top:12px;border-top:1px solid var(--border-soft);
+  font-size:12px;color:var(--muted);line-height:1.75;flex:1;
+}
+.slot-meta span{font-family:var(--mono);color:var(--ink)}
+.slot-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.sbtn{
+  font-family:var(--sans);font-size:12.5px;font-weight:650;color:#fff;
+  background:var(--cyan);border:none;border-radius:6px;padding:9px 15px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:background .15s ease;
+}
+.sbtn:hover{background:#0c7a70}
+.sbtn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.sbtn.ghost:hover{color:#c0392b;border-color:#e0a49c;background:transparent}
+@media (max-width:620px){.sbtn{flex:1;text-align:center}}
+
+/* locked section card (offsets not loaded yet) */
+.card.locked{opacity:.9;cursor:not-allowed}
+.card.locked .icon{color:var(--muted-dim)}
+.lockmsg{
+  display:flex;align-items:center;gap:7px;margin-top:14px;
+  font-family:var(--mono);font-size:10.5px;line-height:1.5;
+  color:#8a3222;background:#fdecea;border:1px solid #f0c5be;border-radius:4px;padding:7px 9px;
+}
+.lockmsg svg{width:13px;height:13px;flex-shrink:0}
 
 /* ---- section label ---- */
 .section-label{
@@ -286,13 +362,19 @@ footer{
     </div>
   </div>
 
-  <div class="section-label">Sections — choose an area</div>
+  <div class="section-label">Step 1 — reference thermometer offsets</div>
+
+  <div class="vaultwarn" id="vaultWarn"></div>
+  <div class="vault" id="vault"></div>
+  <input id="vaultFile" type="file" accept="application/json,.json" style="display:none">
+
+  <div class="section-label">Step 2 — choose an area</div>
 
   <div class="grid cats" id="grid"></div>
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.1</span>
+    <span id="footYear">v1.2</span>
   </footer>
 
 </div>
@@ -315,6 +397,9 @@ const sections = [
     status:'active',
     meta:'6 worksheets · 5 active',
     icon:'snowflake',
+    // Worksheets can't calculate anything without probe corrections, so this
+    // section stays locked until at least one offsets file is in the vault.
+    requiresOffsets:true,
     contents:[
       {label:'Barkey'},
       {label:'Standard Medical'},
@@ -343,7 +428,8 @@ const icons = {
   snowflake:'<path d="M12 2v20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M12 5.5l-2-1.5m2 1.5l2-1.5M12 18.5l-2 1.5m2-1.5l2 1.5M7.05 7.05l-2.3-.3m2.3.3l-.3-2.3M16.95 7.05l2.3-.3m-2.3.3l.3-2.3M7.05 16.95l-2.3.3m2.3-.3l-.3 2.3M16.95 16.95l2.3.3m-2.3-.3l.3 2.3"/>',
   tools:'<rect x="2" y="8" width="20" height="12" rx="2"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M2 13h20"/><path d="M9.5 13v2.2M14.5 13v2.2"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
-  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'
 };
 
 function iconSvg(name, extra=''){
@@ -354,13 +440,19 @@ function renderCards(){
   const grid = document.getElementById('grid');
   let html = '';
 
+  // Fail open: if the shared vault module is unavailable for any reason, the
+  // section stays clickable and each worksheet falls back to its own
+  // "Load offsets" button rather than locking the engineer out entirely.
+  const vaultReady = !window.LabCalOffsets || LabCalOffsets.summary().anyCurrent;
+
   sections.forEach(s=>{
-    const isActive = s.status === 'active';
+    const locked = s.requiresOffsets && !vaultReady;
+    const isActive = s.status === 'active' && !locked;
     const chips = (s.contents||[]).map(c=>
       `<span class="chip${c.soon?' soon':''}">${c.label}${c.soon?' · soon':''}</span>`
     ).join('');
     html += `
-    <a class="card ${isActive?'active':'planned'}" ${isActive?`href="${s.href}"`:'href="javascript:void(0)" aria-disabled="true"'}>
+    <a class="card ${isActive?'active':(locked?'locked':'planned')}" ${isActive?`href="${s.href}"`:'href="javascript:void(0)" aria-disabled="true"'}>
       <div class="card-top">
         <span class="code">${s.code}</span>
         ${iconSvg(s.icon)}
@@ -368,6 +460,7 @@ function renderCards(){
       <h3>${s.title}</h3>
       <p>${s.desc}</p>
       <div class="contents">${chips}</div>
+      ${locked?`<div class="lockmsg">${icons.lock}Load a probe offsets file above to unlock the worksheets.</div>`:''}
       <div class="card-foot">
         <span>${s.meta}</span>
         ${isActive?`<span class="open">Open <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons.arrow}</svg></span>`:'<span>—</span>'}
@@ -387,7 +480,7 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.1 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.2 · ' + d.getFullYear();
 }
 
 // ---- Fullscreen toggle (Android/desktop browsers; on iOS, use
@@ -430,6 +523,123 @@ function setupFullscreen(){
 }
 
 // ---------------------------------------------------------------------
+// Probe offsets vault — load each ecosystem's JSON once, here, and every
+// worksheet picks it up for as long as the certificate is valid.
+// ---------------------------------------------------------------------
+const vaultEl = document.getElementById('vault');
+const vaultWarnEl = document.getElementById('vaultWarn');
+const vaultFileEl = document.getElementById('vaultFile');
+let pendingDevice = null;
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderVault(){
+  if(!vaultEl || !window.LabCalOffsets) return;
+  const infos = LabCalOffsets.all();
+
+  vaultEl.innerHTML = infos.map(i=>{
+    // Bar shows how much of a 12-month certificate is left.
+    const pct = i.loaded && !i.expired ? Math.max(2, Math.min(100, Math.round((i.daysLeft/365)*100))) : (i.expired?100:0);
+    const big = !i.loaded ? '—' : (i.expired ? 'EXPIRED' : i.daysLeft);
+    const bigUnit = (!i.loaded || i.expired) ? '' : `<small>day${i.daysLeft===1?'':'s'} left</small>`;
+    const details = i.loaded ? `
+      <div class="slot-meta">
+        Reference thermometer: <span>${esc(i.refThermSerial||'—')}</span><br>
+        Probes: <span>${i.probes}</span>${i.roomTherms?` · Room thermometers: <span>${i.roomTherms}</span>`:''}${i.stopwatches?` · Stopwatches: <span>${i.stopwatches}</span>`:''}<br>
+        Certificate valid until <span>${esc(i.validLabel)}</span>${i.engineerName?` · Engineer: <span>${esc(i.engineerName)}</span>`:''}<br>
+        Loaded from <span>${esc(i.fileName||'file')}</span>
+      </div>` : `
+      <div class="slot-meta">${esc(i.detail)}</div>`;
+    return `
+    <div class="slot lvl-${i.level}">
+      <div class="slot-top">
+        <span class="code">${esc(i.meta.name).toUpperCase()}</span>
+        <span class="pill ${i.level}">${esc(i.headline)}</span>
+      </div>
+      <h4>${esc(i.meta.full)}</h4>
+      <div class="used">Used by ${esc(i.meta.used)}</div>
+      <div class="countdown">
+        <div class="num">${esc(String(big))}${bigUnit}</div>
+        <div class="track"><i style="width:${pct}%"></i></div>
+      </div>
+      ${details}
+      <div class="slot-actions">
+        <button class="sbtn" type="button" data-load="${i.device}">${i.loaded?'Replace file':'Load '+esc(i.meta.name)+' file'}</button>
+        ${i.loaded?`<button class="sbtn ghost" type="button" data-clear="${i.device}">Remove</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  vaultEl.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',()=>{
+    pendingDevice = b.getAttribute('data-load');
+    vaultFileEl.click();
+  }));
+  vaultEl.querySelectorAll('[data-clear]').forEach(b=>b.addEventListener('click',()=>{
+    const d = b.getAttribute('data-clear');
+    const name = LabCalOffsets.DEVICES[d] ? LabCalOffsets.DEVICES[d].name : d;
+    if(confirm(`Remove the ${name} offsets?\n\nEvery worksheet that uses them will be locked until you load a file again.`)){
+      LabCalOffsets.remove(d);
+    }
+  }));
+
+  renderVaultWarning(infos);
+  renderCards();
+}
+
+function renderVaultWarning(infos){
+  if(!vaultWarnEl) return;
+  const expired  = infos.filter(i=>i.loaded && i.expired);
+  const critical = infos.filter(i=>i.loaded && i.level==='critical');
+  const soon     = infos.filter(i=>i.loaded && i.level==='soon');
+  const missing  = infos.filter(i=>!i.loaded);
+
+  vaultWarnEl.className = 'vaultwarn';
+  let cls = '', html = '';
+
+  if(expired.length){
+    cls = 'show critical';
+    html = `<b>⚠ ${expired.map(i=>i.meta.name).join(' and ')} certificate expired</b>`
+      + expired.map(i=>`${i.meta.name}: ran out at the end of ${i.validLabel} (${Math.abs(i.daysLeft)} days ago). No certificate can be generated from ${i.meta.used}.`).join('<br>');
+  }else if(critical.length){
+    cls = 'show critical';
+    html = `<b>⚠ Reference thermometer recalibration due</b>`
+      + critical.map(i=>`${i.meta.name}: <b style="display:inline">${i.daysLeft} day${i.daysLeft===1?'':'s'}</b> left — certificate ends with ${i.validLabel}. Book it now to avoid losing the ${i.meta.used} worksheets.`).join('<br>');
+  }else if(soon.length){
+    cls = 'show soft';
+    html = `<b>Recalibration coming up</b>`
+      + soon.map(i=>`${i.meta.name}: ${i.daysLeft} days left, certificate ends with ${i.validLabel}.`).join('<br>');
+  }else if(missing.length === infos.length){
+    cls = 'show info';
+    html = `<b>Load your offsets to start</b>Load each Offset Manager JSON file once here. Every worksheet then picks it up automatically until the certificate expires — no more loading offsets on every form.`;
+  }else if(missing.length){
+    cls = 'show info';
+    html = `<b>${missing.map(i=>i.meta.name).join(' and ')} not loaded</b>The ${missing.map(i=>i.meta.used).join(' and ')} worksheets stay locked until that file is loaded.`;
+  }
+
+  vaultWarnEl.className = 'vaultwarn ' + cls;
+  vaultWarnEl.innerHTML = html;
+}
+
+if(vaultFileEl){
+  vaultFileEl.addEventListener('change', async (ev)=>{
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if(!file || !window.LabCalOffsets) return;
+    const res = await LabCalOffsets.ingestFile(file, pendingDevice);
+    pendingDevice = null;
+    if(!res.ok){ alert('Could not load that offsets file.\n\n' + res.error); return; }
+    if(res.warning) alert(res.warning);
+    renderVault();
+  });
+}
+
+if(window.LabCalOffsets){
+  LabCalOffsets.onChange(renderVault);
+  // Day counters go stale if the tab is left open — recheck on return.
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) renderVault(); });
+}
+
+// ---------------------------------------------------------------------
 // Offline install — registers the service worker and lets the engineer
 // explicitly pre-cache every worksheet + its libraries (pdf.js, xlsx,
 // html2pdf, fonts…) so the whole suite works with zero signal.
@@ -440,6 +650,8 @@ function setupFullscreen(){
 // sw.js whenever a page is added. Sub-pages (cloud_temp, the worksheets) are
 // listed explicitly because they sit below the section pages.
 const OFFLINE_PAGES = [
+  // shared modules
+  'labcal_offsets.js',
   // section pages
   'calibration.html',
   'tools.html',
@@ -607,6 +819,7 @@ btn.addEventListener('click', downloadForOffline);
   await refreshStatus();
 })();
 
+renderVault();
 renderCards();
 renderDate();
 setupFullscreen();

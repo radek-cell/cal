@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="LabCal MSW">
 <meta name="theme-color" content="#dfe6ee">
 <title>Monitoring System Calibration Worksheet</title>
+<script src="labcal_offsets.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -82,7 +83,7 @@
   .delBtn{position:absolute;top:1px;right:1px;border:0;background:#b00000;color:#fff;width:15px;height:15px;line-height:14px;border-radius:50%;font-size:10px;font-weight:900;cursor:pointer;padding:0;z-index:2}
   .delBtn:hover{background:#800000}
   .addRow td{background:#f4f8f4;text-align:center;padding:6px;border-top:2px solid #207a20}
-  .offsetWarning{max-width:297mm;margin:8px auto 0;background:#ffe3e3;border:1.3px solid #b00000;color:#7a0000;font-size:12px;font-weight:700;padding:8px 12px;border-radius:4px}
+  .offsetWarning{max-width:297mm;margin:8px auto 0;background:#ffe3e3;border:1.3px solid #b00000;color:#7a0000;font-size:12px;font-weight:700;padding:8px 12px;border-radius:4px}.offsetWarning.soon{background:#fdf3e3;border-color:#a9690a;color:#7a4c06}
   .modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50}
   .modalBox{background:#fff;border-radius:8px;max-width:520px;width:92%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 40px #0006}
   .modalHeader{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #e0e0e0;font-weight:800;font-size:15px;color:#1a3a6b}
@@ -375,12 +376,22 @@ function refreshOffsetWarning(){
   if(!banner) return;
   const current=offsetsAreCurrent();
   if(!current){
+    banner.classList.remove('soon');
     banner.style.display='block';
     banner.textContent=lastOffsetRaw && Object.keys(PROBES).length
-      ? `⚠ Probe offsets expired ${monthYearDisplay(lastOffsetRaw.validUntil)}. Click "Load offsets" and select a current offsets file before generating a certificate.`
-      : '⚠ No probe offsets loaded for this session. Click "Load offsets" and select a current offsets file before generating a certificate.';
+      ? `⚠ Fluke & Comark probe offsets expired ${monthYearDisplay(lastOffsetRaw.validUntil)}. The reference thermometer needs recalibrating — load a current file on the LabCal home page before generating a certificate.`
+      : '⚠ No Fluke & Comark probe offsets available. Load them once on the LabCal home page (they are then remembered for every worksheet), or use "Load offsets" here.';
   } else {
-    banner.style.display='none';
+    // Still valid — but give plenty of notice before the certificate runs out.
+    const daysLeft = window.LabCalOffsets ? LabCalOffsets.daysLeft(lastOffsetRaw&&lastOffsetRaw.validUntil) : null;
+    banner.classList.remove('soon');
+    if(daysLeft!=null && daysLeft<=14){
+      banner.classList.add('soon');
+      banner.style.display='block';
+      banner.textContent = `⏳ Reference thermometer certificate runs out in ${daysLeft} day${daysLeft===1?'':'s'}. Book the recalibration — worksheets lock as soon as it expires.`;
+    }else{
+      banner.style.display='none';
+    }
   }
   updateGenerateButtonsAvailability();
 }
@@ -419,13 +430,38 @@ function applyOffsetsData(raw, sourceLabel){
   calculateAll();
   const statusEl=document.getElementById('offsetStatus');
   if(statusEl){
-    statusEl.textContent=`Offsets ${sourceLabel}: ${Object.keys(PROBES).length} probes, valid until ${monthYearDisplay(raw.validUntil)}${raw.engineerName?', engineer '+raw.engineerName:''}.`;
+    let left='';
+    if(window.LabCalOffsets){
+      const d=LabCalOffsets.daysLeft(raw.validUntil);
+      if(d!=null) left = d<0 ? ' — EXPIRED' : ` (${d} day${d===1?'':'s'} left)`;
+    }
+    statusEl.textContent=`Offsets ${sourceLabel}: ${Object.keys(PROBES).length} probes, valid until ${monthYearDisplay(raw.validUntil)}${left}${raw.engineerName?', engineer '+raw.engineerName:''}.`;
     statusEl.style.color=offsetsExpired(raw)?'#b00000':'#0a7a0a';
   }
   refreshOffsetWarning();
 }
+const OFFSET_DEVICE='fluke_comark';
+// Loaded once on the LabCal home page and kept in the shared vault until the
+// certificate expires — this worksheet reads it at startup. Loading a file
+// here still works and refreshes the vault for every other worksheet.
+function restoreVaultOffsets(){
+  if(!window.LabCalOffsets) return false;
+  const raw=LabCalOffsets.load(OFFSET_DEVICE);
+  if(!raw || !buildProbeListFromOffsets(raw)) return false;
+  applyOffsetsData(raw, 'from LabCal home');
+  return true;
+}
 async function loadOffsetsFile(ev){
-  const file=ev.target.files && ev.target.files[0]; if(!file) return;
+  const file=ev.target.files && ev.target.files[0];
+  ev.target.value='';
+  if(!file) return;
+  if(window.LabCalOffsets){
+    const res=await LabCalOffsets.ingestFile(file, OFFSET_DEVICE);
+    if(!res.ok){ alert('Cannot load this offsets file.\n\n'+res.error); return; }
+    if(!buildProbeListFromOffsets(res.raw)){ alert('No probe data found in that file.'); return; }
+    applyOffsetsData(res.raw, res.remembered?'loaded from file':'loaded for this session only');
+    return;
+  }
   try{
     const raw=JSON.parse(await file.text());
     if(raw && raw.device!=='fluke_comark'){ throw new Error('wrong device'); }
@@ -436,7 +472,6 @@ async function loadOffsetsFile(ev){
   }catch(e){
     alert('Cannot load this offsets file, it has no expiry date set, or it was exported from a different thermometer type (e.g. Dostmann). Please export a current JSON file from the Fluke & Comark Offset Manager (with a "valid until" date set).');
   }
-  ev.target.value='';
 }
 
 // ---- Jobsheet PDF import ----
@@ -1628,6 +1663,8 @@ document.getElementById('qaPointNo')?.addEventListener('blur',function(){ this.v
 document.getElementById('dateNative')?.addEventListener('click',function(){ if(this.showPicker){ try{ this.showPicker(); }catch(e){} } });
 document.getElementById('dateNative')?.addEventListener('focus',function(){ if(this.showPicker){ try{ this.showPicker(); }catch(e){} } });
 (function init(){
+  restoreVaultOffsets();
+  if(window.LabCalOffsets){ LabCalOffsets.onChange(()=>{ restoreVaultOffsets(); }); }
   const dn=document.getElementById('dateNative');
   if(dn && !dn.value){ dn.value=isoToday(); document.getElementById('date').value=displayDate(dn.value); }
   syncFooterDates();
