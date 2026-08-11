@@ -14,7 +14,7 @@
   --ok:#14805c; --ok-soft:#e3f4ee;
   --warn:#a86a06; --warn-soft:#fdf1dd;
   --bad:#c22a30; --bad-soft:#fbe8e8;
-  --t1:#1a6fb5; --t2:#8046c0; --band:#2ea3c722;
+  --t1:#1a6fb5; --t2:#8046c0; --t3:#0d8a6a; --band:#2ea3c722;
   --r:12px; --r-sm:8px;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -50,16 +50,14 @@ button{cursor:pointer}
 .brand h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px;white-space:nowrap}
 .brand span{display:block;font-size:11px;color:#9dc4d8;font-weight:400;letter-spacing:.6px;text-transform:uppercase}
 .topbar .spacer{flex:1}
-/* back to the LabCal tools hub */
-.tb-back{
-  display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
-  color:#bcd8e6;text-decoration:none;font-size:12.5px;font-weight:600;
-  border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:6px 10px;
-  transition:background .15s ease,color .15s ease,border-color .15s ease;
+.range-badge{
+  background:rgba(95,208,232,.16);border:1px solid rgba(95,208,232,.5);color:#bfeaf7;
+  padding:4px 11px;border-radius:20px;font-size:11.5px;font-weight:700;letter-spacing:.5px;white-space:nowrap
 }
-.tb-back:hover{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.34)}
-.tb-back svg{width:14px;height:14px;flex:0 0 auto}
-@media(max-width:660px){.tb-back span{display:none}.tb-back{padding:6px 8px}}
+.jobline .range-tag{
+  font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--ice-dk);background:var(--ice-soft);
+  border:1px solid #b9e0ee;border-radius:20px;padding:2px 9px;font-family:var(--sans)
+}
 .tb-btn .sm{display:none}
 @media(max-width:660px){
   .topbar{gap:8px;padding-left:12px;padding-right:12px}
@@ -232,7 +230,7 @@ button{cursor:pointer}
 }
 .chip.on{background:var(--ice-soft);border-color:var(--ice);color:var(--ink-2)}
 .chip i{width:10px;height:10px;border-radius:3px;background:var(--txt-3);display:inline-block}
-.chip.on i.c1{background:var(--t1)} .chip.on i.c2{background:var(--t2)}
+.chip.on i.c1{background:var(--t1)} .chip.on i.c2{background:var(--t2)} .chip.on i.c3{background:var(--t3)}
 .chip.on i.cd{background:var(--warn)} .chip.on i.cc{background:#9fb6c4}
 .zoomgrp{margin-left:auto;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .zlbl{font-family:var(--mono);font-size:11px;color:var(--txt-2);margin-right:4px;white-space:nowrap}
@@ -276,6 +274,13 @@ tbody tr.click:hover{background:var(--ice-soft)}
 .pill.bad{background:var(--bad-soft);color:var(--bad)}
 .pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.t1{background:#e7f0f9;color:var(--t1)} .pill.t2{background:#f1e9fa;color:var(--t2)}
+.pill.t3{background:#e3f5ef;color:var(--t3)}
+.pill.ev-door{background:#fdf1dd;color:var(--warn)}
+.pill.ev-alarm{background:var(--bad-soft);color:var(--bad)}
+.pill.ev-fault{background:var(--bad-soft);color:var(--bad)}
+.pill.ev-power{background:#ede8fa;color:#6b3fb0}
+.pill.ev-battery{background:#e8f0f7;color:var(--t1)}
+.pill.ev-status{background:#eef2f5;color:var(--txt-2)}
 .empty{padding:26px 16px;text-align:center;color:var(--txt-3);font-size:13px}
 .foot{padding:9px 14px;font-size:11px;color:var(--txt-3);border-top:1px solid var(--line-2);display:flex;gap:14px;flex-wrap:wrap}
 
@@ -323,11 +328,8 @@ tbody tr.click:hover{background:var(--ice-soft)}
       <span>LabCal Suite · Labcold</span>
     </div>
   </div>
+  <span class="range-badge" id="rangeBadge" hidden></span>
   <div class="spacer"></div>
-  <a class="tb-back noprint" href="tools.html" title="Back to tools &amp; utilities">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    <span>Tools</span>
-  </a>
   <button class="tb-btn" id="btnPng" disabled><span class="lg">Save chart</span><span class="sm">PNG</span></button>
   <button class="tb-btn" id="btnCsv" disabled><span class="lg">Export summary</span><span class="sm">CSV</span></button>
   <button class="tb-btn primary" id="btnPrint" disabled><span class="lg">Print report</span><span class="sm">Print</span></button>
@@ -392,7 +394,7 @@ tbody tr.click:hover{background:var(--ice-soft)}
           <div class="f"><label for="hi">High limit °C</label><input id="hi" type="number" step="0.1" value="8"></div>
           <div class="f"><label for="minDur">Ignore under</label><input id="minDur" type="number" step="1" min="0" value="1"></div>
           <div class="f"><label for="chan">Assess</label>
-            <select id="chan"><option value="both">T1 and T2</option><option value="1">T1 only</option><option value="2">T2 only</option></select>
+            <select id="chan"><option value="both">T1 and T2</option><option value="1">T1 only</option><option value="2">T2 only</option><option value="3" hidden>T3 only</option></select>
           </div>
         </div>
         <div class="hint">Excursions shorter than the minutes above are ignored, so a single blip during a defrost cycle doesn't flag the whole day.</div>
@@ -425,6 +427,11 @@ tbody tr.click:hover{background:var(--ice-soft)}
       <div class="alert-body" id="mixedBody"></div>
     </div>
 
+    <div class="card notice" id="pwrCard" hidden>
+      <div class="alert-head"><span class="warn-mark amber">!</span><b id="pwrTitle"></b></div>
+      <div class="alert-body" id="pwrBody"></div>
+    </div>
+
     <div class="card alert" id="alertCard" hidden>
       <div class="alert-head"><span class="warn-mark">!</span><b id="alertTitle"></b></div>
       <div class="alert-body" id="alertBody"></div>
@@ -434,6 +441,7 @@ tbody tr.click:hover{background:var(--ice-soft)}
       <div class="print-head"><b id="phTitle">Temperature record</b><span id="phDate"></span></div>
       <div class="jobline">
         <div class="job" id="jobName" contenteditable="true" spellcheck="false" title="Click to correct the name that appears on the report">—</div>
+        <span class="range-tag" id="rangeTag" hidden></span>
         <div class="meta" id="rangeLbl"></div>
         <div class="meta" id="cover"></div>
       </div>
@@ -446,6 +454,7 @@ tbody tr.click:hover{background:var(--ice-soft)}
       <div class="chart-top noprint">
         <button class="chip on" data-s="t1"><i class="c1"></i>T1 air</button>
         <button class="chip on" data-s="t2"><i class="c2"></i>T2 load</button>
+        <button class="chip on" data-s="t3" hidden><i class="c3"></i>T3 probe</button>
         <button class="chip on" data-s="band"><i class="cb" style="background:#9ed4e6"></i>Limit band</button>
         <button class="chip on" data-s="door"><i class="cd"></i>Door open</button>
         <button class="chip" data-s="comp"><i class="cc"></i>Compressor</button>
@@ -465,6 +474,7 @@ tbody tr.click:hover{background:var(--ice-soft)}
       <div class="legend">
         <span><i style="background:var(--t1)"></i>T1 air sensor</span>
         <span><i style="background:var(--t2)"></i>T2 load / bottle sensor</span>
+        <span id="t3Legend" hidden><i style="background:var(--t3)"></i>T3 probe</span>
         <span><i style="background:#9ed4e6;height:10px;border-radius:2px"></i>Within limits</span>
         <span><i style="background:var(--warn);height:10px;width:4px"></i>Door open</span>
         <span id="setLegend"><i style="background:var(--txt-3);height:0;border-top:2px dashed var(--txt-3)"></i>Set point</span>
@@ -476,6 +486,12 @@ tbody tr.click:hover{background:var(--ice-soft)}
       <h2>Cooling faults and door events <span class="tag" id="faultCount"></span></h2>
       <div class="tbl-scroll"><table id="faultTbl"></table></div>
       <div class="foot noprint">Tap a row to zoom to it. A cooling fault means the compressor was running with the door shut and mains healthy, and the temperature still rose.</div>
+    </div>
+
+    <div class="card" id="rtCard" hidden>
+      <h2>Controller events <span class="tag" id="rtCount"></span></h2>
+      <div class="tbl-scroll"><table id="rtTbl"></table></div>
+      <div class="foot noprint">Tap a row to zoom to it. Codes decoded from the table in Labcold's own CSV Viewer.</div>
     </div>
 
     <div class="card" id="excCard" hidden>
@@ -508,10 +524,12 @@ const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
 const DAYS = new Map();           // 'YYYY-MM-DD' -> day object
-let META = {job:'', customer:'', unit:'', fw:'', pn:'', setpoint:null, title:''};
+let META = {job:'', customer:'', unit:'', fw:'', pn:'', setpoint:null, title:'',
+            range:'', controller:'', fileLimits:null};
 let SEL  = {mode:'day', from:null, to:null, anchor:null};
-let SHOW = {t1:true, t2:true, band:true, door:true, comp:false};
+let SHOW = {t1:true, t2:true, t3:true, band:true, door:true, comp:false};
 let VIEW = null;                  // current computed view
+let HAS_T3 = false;               // a third probe is fitted on some models
 let LIMITS = {lo:2, hi:8, minDur:1, chan:'both'};
 
 /* ---------- tiny store (safe if storage is blocked) ---------- */
@@ -616,8 +634,170 @@ function parseCsv(text, fileName){
     setpoint: isFinite(sp)?sp:null,
     unit: head['unit type']||'',
     fw: head['firmware issue']||'',
-    pn: head['controller pn']||''
+    pn: head['controller pn']||'',
+    range: '19',
+    hasDoor: true,
+    hasT3: false,
+    fileLimits: null,
+    iv: medianInterval(rows)
   };
+}
+
+/* ---------- 24-range event codes ----------
+   Taken from the code table in Labcold's own CSV Viewer (V6). */
+const EVENT_CODES = {
+  '[00]':{d:'Door opened',                 g:'door'},
+  '[01]':{d:'Door closed',                 g:'door'},
+  '[02]':{d:'Door open alarm triggered',   g:'alarm'},
+  '[03]':{d:'Door open alarm cleared',     g:'alarm'},
+  '[10]':{d:'T1 sensor enabled',           g:'status'},
+  '[11]':{d:'T1 sensor disabled',          g:'status'},
+  '[12]':{d:'T1 low alarm triggered',      g:'alarm'},
+  '[13]':{d:'T1 low alarm cleared',        g:'alarm'},
+  '[14]':{d:'T1 high alarm triggered',     g:'alarm'},
+  '[15]':{d:'T1 high alarm cleared',       g:'alarm'},
+  '[16]':{d:'T1 failure warning',          g:'fault'},
+  '[17]':{d:'T1 failure warning cleared',  g:'fault'},
+  '[20]':{d:'T2 sensor enabled',           g:'status'},
+  '[21]':{d:'T2 sensor disabled',          g:'status'},
+  '[22]':{d:'T2 low alarm triggered',      g:'alarm'},
+  '[23]':{d:'T2 low alarm cleared',        g:'alarm'},
+  '[24]':{d:'T2 high alarm triggered',     g:'alarm'},
+  '[25]':{d:'T2 high alarm cleared',       g:'alarm'},
+  '[26]':{d:'T2 failure warning',          g:'fault'},
+  '[27]':{d:'T2 failure warning cleared',  g:'fault'},
+  '[30]':{d:'T3 sensor enabled',           g:'status'},
+  '[31]':{d:'T3 sensor disabled',          g:'status'},
+  '[32]':{d:'T3 low alarm triggered',      g:'alarm'},
+  '[33]':{d:'T3 low alarm cleared',        g:'alarm'},
+  '[34]':{d:'T3 high alarm triggered',     g:'alarm'},
+  '[35]':{d:'T3 high alarm cleared',       g:'alarm'},
+  '[36]':{d:'T3 failure warning',          g:'fault'},
+  '[37]':{d:'T3 failure warning cleared',  g:'fault'},
+  '[40]':{d:'Power back on',               g:'power'},
+  '[41]':{d:'No mains warning triggered',  g:'power'},
+  '[42]':{d:'No mains warning cleared',    g:'power'},
+  '[50]':{d:'No battery warning',          g:'battery'},
+  '[51]':{d:'No battery warning cleared',  g:'battery'},
+  '[52]':{d:'Low battery warning',         g:'battery'},
+  '[53]':{d:'Low battery warning cleared', g:'battery'},
+  '[60]':{d:'Settings changed',            g:'status'},
+  '[61]':{d:'Serial number or name changed', g:'status'},
+  '[70]':{d:'Alarms/warnings muted',       g:'status'}
+};
+function codeInfo(c){ return EVENT_CODES[c] || {d:'Unrecognised code '+c, g:'status'}; }
+
+/* ---------- 24-range controller export ----------
+   One file can hold several days. Rows come at ~2 minute intervals,
+   the compressor is logged as a change of state rather than a state,
+   and a third probe (T3) may be fitted. Alarm limits live in the file. */
+function parse24(text, fileName){
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  const cell = (i,j) => { const p=(lines[i]||'').split(','); return (p[j]||'').trim(); };
+
+  const name   = cell(0,1);
+  const serial = cell(0,3);
+
+  /* the configuration block: header row then one row of values */
+  let cfgHdr=-1;
+  for(let i=0;i<Math.min(lines.length,12);i++) if(/^Fridge Type\s*,/i.test(lines[i])){ cfgHdr=i; break; }
+  const cfg={};
+  if(cfgHdr>=0){
+    const keys=lines[cfgHdr].split(',').map(s=>s.trim().toLowerCase());
+    const vals=(lines[cfgHdr+1]||'').split(',').map(s=>s.trim());
+    keys.forEach((k,i)=>{ if(k) cfg[k]=vals[i]; });
+  }
+  let dHdr=-1;
+  for(let i=0;i<Math.min(lines.length,20);i++) if(/^Log Type\s*,/i.test(lines[i])){ dHdr=i; break; }
+  if(dHdr<0) return null;
+
+  const num = v => { const n=parseFloat(v); return isFinite(n)?n:null; };
+  const sp   = num(cfg['setpoint']);
+  const loA  = num(cfg['t1 low alarm']);
+  const hiA  = num(cfg['t1 high alarm']);
+
+  /* compressor, door and mains all arrive as transitions; carry them forward */
+  let comp=null, door=0, power=0, alarm=0, sawDoor=false;
+  const byDate=new Map();
+  let lastStamp=null;
+
+  for(let i=dHdr+1;i<lines.length;i++){
+    const L=lines[i];
+    if(!L || !L.trim()) continue;
+    const p=L.split(',').map(s=>s.trim());
+    const type=p[0];
+    if(type==='DateTimeChange') continue;               // clock adjustment, no reading
+    const dt=p[1];
+    const dm=dt && dt.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if(!dm) continue;
+    const dateKey = dm[3]+'-'+pad(+dm[2])+'-'+pad(+dm[1]);
+    const mins = (+dm[4])*60 + (+dm[5]);
+
+    const ev = p[7];
+    if(ev==='On')  { if(comp===null && lastStamp===null) comp=0; comp=1; }
+    if(ev==='Off') { if(comp===null) comp=1; comp=0; }   // it must have been running to be switched off
+    if(comp===null) comp=0;
+    lastStamp=mins;
+
+    const code = (p[9] && p[9]!=='N/A') ? p[9].trim() : null;
+    if(code){
+      if(code==='[00]'){ door=1; sawDoor=true; }
+      if(code==='[01]'){ door=0; sawDoor=true; }
+      if(code==='[41]'){ power=1; }
+      if(code==='[40]'||code==='[42]'){ power=0; }
+      if(code==='[12]'||code==='[14]'||code==='[22]'||code==='[24]'||code==='[32]'||code==='[34]'||code==='[02]') alarm=1;
+      if(code==='[13]'||code==='[15]'||code==='[23]'||code==='[25]'||code==='[33]'||code==='[35]'||code==='[03]') alarm=0;
+    }
+
+    if(!byDate.has(dateKey)) byDate.set(dateKey,[]);
+    byDate.get(dateKey).push({
+      m: mins,
+      a: num(p[2]), b: num(p[3]), e: num(p[4]),
+      d: door, c: comp, x: alarm, p: power,
+      rt: code
+    });
+  }
+  if(!byDate.size) return null;
+
+  const out=[];
+  for(const [date,rows] of byDate){
+    rows.sort((r,s)=>r.m-s.m);
+    out.push({
+      date, rows, file:fileName,
+      setpoint: sp,
+      unit: cfg['fridge type']||'',
+      fw: '',
+      pn: serial || name || '',
+      range: '24',
+      controller: name,
+      serial: serial,
+      hasDoor: sawDoor,
+      hasT3: rows.some(r=>r.e!==null),
+      fileLimits: (loA!==null && hiA!==null) ? {lo:loA, hi:hiA} : null,
+      t3Limits: (num(cfg['t3 low limit'])!==null && num(cfg['t3 high alarm'])!==null)
+                ? {lo:num(cfg['t3 low limit']), hi:num(cfg['t3 high alarm'])} : null,
+      offsets: {t1:num(cfg['t1 offset']), t2:num(cfg['t2 offset']), t3:num(cfg['t3 offset'])},
+      iv: medianInterval(rows)
+    });
+  }
+  return out;
+}
+
+/* logging interval in minutes, used so durations stay honest across models */
+function medianInterval(rows){
+  if(rows.length<3) return 1;
+  const gaps=[];
+  for(let i=1;i<rows.length;i++){ const g=rows[i].m-rows[i-1].m; if(g>0 && g<=60) gaps.push(g); }
+  if(!gaps.length) return 1;
+  gaps.sort((a,b)=>a-b);
+  return Math.max(1, gaps[Math.floor(gaps.length/2)]);
+}
+
+/* pick the right reader for whatever was dropped in */
+function parseFile(text, fileName){
+  if(/^\s*Controller Name\s*,/i.test(text.slice(0,200))) return parse24(text, fileName);
+  const one = parseCsv(text, fileName);
+  return one ? [one] : null;
 }
 
 async function ingest(files){
@@ -633,22 +813,42 @@ async function ingest(files){
     else META.customer = titleCase(top);
   }
 
-  let ok=0, bad=0;
+  let ok=0, bad=0, dayCount=0;
   const texts = await Promise.all(csvs.map(f=>f.text().catch(()=>null)));
   texts.forEach((tx,i)=>{
     if(!tx){ bad++; return; }
-    let d=null;
-    try{ d = parseCsv(tx, csvs[i].name); }catch(e){ d=null; }
-    if(!d){ bad++; return; }
-    DAYS.set(d.date, d); ok++;
-    if(d.setpoint!==null) META.setpoint=d.setpoint;
-    if(d.unit) META.unit=d.unit;
-    if(d.fw) META.fw=d.fw;
-    if(d.pn) META.pn=d.pn;
+    let list=null;
+    try{ list = parseFile(tx, csvs[i].name); }catch(e){ list=null; }
+    if(!list || !list.length){ bad++; return; }
+    ok++;
+    for(const d of list){
+      const prev = DAYS.get(d.date);
+      if(prev){
+        /* same day arriving twice — merge without duplicating readings */
+        const seen=new Set(prev.rows.map(r=>r.m+'|'+r.a+'|'+r.b));
+        for(const r of d.rows){
+          const k=r.m+'|'+r.a+'|'+r.b;
+          if(!seen.has(k)){ prev.rows.push(r); seen.add(k); }
+        }
+        prev.rows.sort((x,y)=>x.m-y.m);
+        prev.iv = medianInterval(prev.rows);
+        prev._fk = null;
+        if(d.hasT3) prev.hasT3=true;
+      }else{
+        DAYS.set(d.date, d); dayCount++;
+      }
+      if(d.setpoint!==null && d.setpoint!==undefined) META.setpoint=d.setpoint;
+      if(d.unit) META.unit=d.unit;
+      if(d.fw) META.fw=d.fw;
+      if(d.pn) META.pn=d.pn;
+      if(d.range) META.range=d.range;
+      if(d.controller) META.controller=d.controller;
+      if(d.fileLimits) META.fileLimits=d.fileLimits;
+    }
   });
 
   if(!ok){ toast('Those files were not readable as Labcold logs.'); return; }
-  toast(ok+' day'+(ok===1?'':'s')+' loaded'+(bad?' · '+bad+' skipped':''));
+  toast(dayCount+' day'+(dayCount===1?'':'s')+' loaded'+(bad?' · '+bad+' skipped':''));
   afterLoad();
 }
 
@@ -656,13 +856,31 @@ async function ingest(files){
    2. ANALYSIS
    ============================================================ */
 
+/* minutes each reading stands for — event rows sit between the regular samples,
+   so counting rows would overstate the clock */
+function dayWeights(day){
+  if(day._w && day._wn===day.rows.length) return day._w;
+  const iv=day.iv||1, n=day.rows.length, w=new Float64Array(n);
+  for(let i=0;i<n;i++){
+    const gap = i<n-1 ? (day.rows[i+1].m - day.rows[i].m) : iv;
+    w[i] = Math.max(0, Math.min(gap, iv*2));
+  }
+  if(n) w[n-1]=iv;
+  day._w=w; day._wn=n;
+  return w;
+}
+
 function dayStats(day, lim){
-  let mn=Infinity, mx=-Infinity, sum=0, n=0, mkt=0, out=0, doors=0, prevDoor=0, comp=0;
-  const useA = lim.chan!=='2', useB = lim.chan!=='1';
-  for(const r of day.rows){
+  const W = dayWeights(day);
+  let mn=Infinity, mx=-Infinity, sum=0, n=0, mkt=0;
+  let out=0, tot=0, comp=0, doors=0, prevDoor=0;
+  const useA = lim.chan==='both'||lim.chan==='1', useB = lim.chan==='both'||lim.chan==='2', useE = lim.chan==='3';
+  for(let i=0;i<day.rows.length;i++){
+    const r=day.rows[i], w=W[i];
     const vals=[];
     if(useA && r.a!==null) vals.push(r.a);
     if(useB && r.b!==null) vals.push(r.b);
+    if(useE && r.e!==null && r.e!==undefined) vals.push(r.e);
     let bad=false;
     for(const v of vals){
       if(v<mn) mn=v; if(v>mx) mx=v;
@@ -670,27 +888,33 @@ function dayStats(day, lim){
       mkt += Math.exp(-10000/(v+273.15));
       if(v<lim.lo || v>lim.hi) bad=true;
     }
-    if(bad) out++;
+    tot+=w;
+    if(bad) out+=w;
+    if(r.c) comp+=w;
     if(r.d && !prevDoor) doors++;
     prevDoor = r.d;
-    if(r.c) comp++;
   }
-  const total = day.rows.length;
   return {
     min: n?mn:null, max: n?mx:null,
     mean: n?sum/n:null,
     mkt: n? (-10000/Math.log(mkt/n))-273.15 : null,
-    outMin: out, total, doors, compPct: total?comp/total*100:0,
-    inPct: total? (total-out)/total*100 : 0
+    outMin: Math.round(out), total: Math.round(tot), samples: day.rows.length,
+    doors, compPct: tot?comp/tot*100:0,
+    inPct: tot? (tot-out)/tot*100 : 0
   };
 }
+
+/* how long an event lasted, in real minutes, whatever the logging interval */
+function ivOf(date){ const d=DAYS.get(date); return (d && d.iv) || 1; }
+function evLen(e){ return (e.end - e.start) + ivOf(e.date); }
 
 /* excursions across the selected span, per channel, in absolute minutes */
 function findExcursions(days, lim){
   const list=[];
   const chans=[];
-  if(lim.chan!=='2') chans.push({k:'a',lbl:'T1'});
-  if(lim.chan!=='1') chans.push({k:'b',lbl:'T2'});
+  if(lim.chan==='both'||lim.chan==='1') chans.push({k:'a',lbl:'T1'});
+  if(lim.chan==='both'||lim.chan==='2') chans.push({k:'b',lbl:'T2'});
+  if(lim.chan==='3') chans.push({k:'e',lbl:'T3'});
   for(const ch of chans){
     let cur=null;
     for(const day of days){
@@ -713,7 +937,7 @@ function findExcursions(days, lim){
     if(cur) list.push(cur);
   }
   const min = Math.max(0, lim.minDur|0);
-  return list.filter(e=>(e.end-e.start+1)>=Math.max(1,min))
+  return list.filter(e=>evLen(e)>=Math.max(1,min))
              .sort((x,y)=> x.date===y.date ? x.start-y.start : (x.date<y.date?-1:1));
 }
 
@@ -727,17 +951,20 @@ function buildView(){
 
   const lim = LIMITS;
   const per = days.map(d=>({date:d.date, s:dayStats(d,lim)}));
-  let mn=Infinity, mx=-Infinity, sum=0, n=0, mktS=0, out=0, tot=0, doors=0, comp=0;
+  let mn=Infinity, mx=-Infinity, sum=0, n=0, mktS=0, out=0, tot=0, doors=0, comp=0, samples=0;
   for(let i=0;i<days.length;i++){
     const d=days[i], s=per[i].s;
     if(s.min!==null){ mn=Math.min(mn,s.min); mx=Math.max(mx,s.max); }
-    out+=s.outMin; tot+=s.total; doors+=s.doors;
-    for(const r of d.rows){
+    out+=s.outMin; tot+=s.total; doors+=s.doors; samples+=s.samples;
+    const W=dayWeights(d);
+    for(let k=0;k<d.rows.length;k++){
+      const r=d.rows[k];
       const vals=[];
-      if(lim.chan!=='2' && r.a!==null) vals.push(r.a);
-      if(lim.chan!=='1' && r.b!==null) vals.push(r.b);
+      if((lim.chan==='both'||lim.chan==='1') && r.a!==null) vals.push(r.a);
+      if((lim.chan==='both'||lim.chan==='2') && r.b!==null) vals.push(r.b);
+      if(lim.chan==='3' && r.e!==null && r.e!==undefined) vals.push(r.e);
       for(const v of vals){ sum+=v; n++; mktS+=Math.exp(-10000/(v+273.15)); }
-      if(r.c) comp++;
+      if(r.c) comp+=W[k];
     }
   }
   const exc = findExcursions(days, lim);
@@ -750,9 +977,9 @@ function buildView(){
     mean: n?sum/n:null,
     mkt: n? (-10000/Math.log(mktS/n))-273.15 : null,
     inPct: tot? (tot-out)/tot*100 : 0,
-    outMin: out, totMin: tot, doors,
+    outMin: out, totMin: tot, samples, doors,
     compPct: tot? comp/tot*100 : 0,
-    excMin: exc.reduce((a,e)=>a+(e.end-e.start+1),0)
+    excMin: exc.reduce((a,e)=>a+evLen(e),0)
   };
 }
 
@@ -781,8 +1008,9 @@ function dayFaults(day, lim){
   const runs=[]; let cur=null, last=null;
   for(const r of day.rows){
     const t=tempOf(r);
-    const cooling = r.c && !r.p && !r.d && t!==null;
-    const blocked = r.d || r.p || t===null;
+    /* a compressor that is running has mains, whatever a latched warning says */
+    const cooling = r.c && !r.d && t!==null;
+    const blocked = r.d || t===null;
     if(cooling){
       if(cur && last!==null && (r.m-last)<=FAULT.bridge) cur[1]=r.m;
       else { if(cur) runs.push(cur); cur=[r.m,r.m]; }
@@ -822,7 +1050,7 @@ function dayFaults(day, lim){
     if(rise>=FAULT.rampRise && len>=FAULT.rampMin){
       const seg=R.slice(i,pk+1);
       const duty=seg.filter(r=>r.c).length/seg.length*100;
-      const blocked=seg.some(r=>r.d||r.p);
+      const blocked=seg.some(r=>r.d);
       if(duty>=FAULT.rampDuty && !blocked){
         list.push({kind:'cool', date:day.date, start:R[i].m, end:R[pk].m, rise, peak,
                    duty, from:tempOf(R[i]), to:peak,
@@ -899,7 +1127,7 @@ function render(){
     ? '<b>'+fmtDate(v.from)+'</b>'
     : '<b>'+fmtDate(v.from)+'</b> to <b>'+fmtDate(v.to)+'</b>';
   const expect = v.days.length*1440;
-  $('#cover').innerHTML = v.days.length+' day'+(v.days.length===1?'':'s')+' · '+v.totMin.toLocaleString()+
+  $('#cover').innerHTML = v.days.length+' day'+(v.days.length===1?'':'s')+' · '+v.samples.toLocaleString()+
     ' readings'+(v.totMin<expect ? ' · <b>'+Math.round(v.totMin/expect*100)+'% coverage</b>' : '');
 
   const clean = v.exc.length===0 && v.coolFaults.length===0;
@@ -927,13 +1155,15 @@ function render(){
     st('MKT',     t1(v.mkt), '°C', cls(v.mkt)),
     st('Time in range', pctTxt(v.inPct, v.outMin), '%', v.outMin===0?'ok':(v.inPct>=99?'warn':'bad')),
     st('Time out',  v.outMin?dur(v.outMin):'0 min','', v.outMin?'bad':'ok'),
-    st('Door openings', String(v.doors), '', ''),
+    st('Door openings', v.days.some(d=>d.hasDoor!==false)? String(v.doors) : '—', '', ''),
     st('Compressor duty', v.compPct.toFixed(0), '%', '')
   ].join('');
 
   renderMixed();
+  renderPower();
   renderAlert();
   renderFaults();
+  renderRtEvents();
   renderExcursions();
   renderDayTable();
   drawChart();
@@ -999,6 +1229,35 @@ function renderMixed(){
   card.querySelectorAll('.dates button').forEach(b=>b.onclick=()=>selectDay(b.dataset.d));
 }
 
+/* mains and battery warnings are worth an engineer's attention on their own */
+function renderPower(){
+  const card=$('#pwrCard');
+  const evs=[];
+  for(const k of [...DAYS.keys()].sort()){
+    for(const r of DAYS.get(k).rows){
+      if(!r.rt) continue;
+      const g=codeInfo(r.rt).g;
+      if(g==='power'||g==='battery'||g==='fault') evs.push({date:k, m:r.m, code:r.rt, g});
+    }
+  }
+  if(!evs.length){ card.hidden=true; return; }
+  card.hidden=false;
+  const mains = evs.filter(e=>e.code==='[41]');
+  const batt  = evs.filter(e=>e.g==='battery');
+  const sens  = evs.filter(e=>e.g==='fault');
+  const bits=[];
+  if(mains.length) bits.push('<b>'+mains.length+'</b> mains warning'+(mains.length===1?'':'s'));
+  if(batt.length)  bits.push('<b>'+batt.length+'</b> battery warning'+(batt.length===1?'':'s'));
+  if(sens.length)  bits.push('<b>'+sens.length+'</b> sensor failure warning'+(sens.length===1?'':'s'));
+  $('#pwrTitle').textContent='Mains and battery warnings logged';
+  const days=[...new Set(evs.map(e=>e.date))];
+  $('#pwrBody').innerHTML = bits.join(', ')+
+    '. The compressor kept cycling through these, so the unit had power — this usually points at the backup battery '+
+    'or mains detection rather than a real outage. Worth checking the battery before it masks a genuine failure.'+
+    '<div class="dates">'+days.map(d=>'<button data-d="'+d+'">'+fmtDate(d)+'</button>').join('')+'</div>';
+  card.querySelectorAll('.dates button').forEach(b=>b.onclick=()=>selectDay(b.dataset.d));
+}
+
 function renderFaults(){
   const v=VIEW, t=$('#faultTbl'), card=$('#faultCard');
   const list=v.faults||[];
@@ -1007,7 +1266,7 @@ function renderFaults(){
   const nCool=v.coolFaults.length;
   $('#faultCount').textContent = nCool ? nCool+' cooling fault'+(nCool===1?'':'s') : 'door events only';
   const rows=list.map((e,i)=>{
-    const len=e.end-e.start+1;
+    const len=evLen(e);
     return '<tr class="click" data-i="'+i+'">'+
       '<td class="txt">'+fmtDate(e.date)+'</td>'+
       '<td><span class="pill '+(e.kind!=='cool'?'door':(e.why==='Poor cooling'?'weak':'cool'))+'">'+e.why+'</span></td>'+
@@ -1031,6 +1290,35 @@ function st(k,val,u,c){
          (u?' <small>'+u+'</small>':'')+'</div></div>';
 }
 
+/* the 24-range export carries event codes with no key — show them, don't guess */
+function renderRtEvents(){
+  const card=$('#rtCard'), t=$('#rtTbl');
+  const list=[];
+  for(const d of VIEW.days) for(const r of d.rows) if(r.rt) list.push({date:d.date, m:r.m, code:r.rt, a:r.a, b:r.b, e:r.e});
+  if(!list.length){ card.hidden=true; return; }
+  card.hidden=false;
+  const counts={};
+  list.forEach(x=>counts[x.code]=(counts[x.code]||0)+1);
+  const CAP=300;
+  $('#rtCount').textContent = list.length+' logged · '+Object.keys(counts).length+' distinct';
+  const rows=list.slice(0,CAP).map(x=>{
+    const ci=codeInfo(x.code);
+    return '<tr class="click" data-d="'+x.date+'" data-m="'+x.m+'">'+
+      '<td class="txt">'+fmtDate(x.date)+'</td><td>'+hhmm(x.m)+'</td>'+
+      '<td class="txt"><span class="pill ev-'+ci.g+'">'+ci.d+'</span></td>'+
+      '<td>'+x.code+'</td>'+
+      '<td>'+t1(x.a)+'</td><td>'+t1(x.b)+'</td>'+
+      '<td>'+(x.e===null||x.e===undefined?'—':t1(x.e))+'</td></tr>';
+  }).join('');
+  const more = list.length>CAP ? '<tr><td colspan="7" class="txt" style="color:var(--txt-3)">Showing the first '+CAP+' of '+list.length.toLocaleString()+'.</td></tr>' : '';
+  t.innerHTML='<thead><tr><th>Date</th><th>Time</th><th>Event</th><th>Code</th><th>T1 °C</th><th>T2 °C</th><th>T3 °C</th></tr></thead><tbody>'+rows+more+'</tbody>';
+  t.querySelectorAll('tr.click').forEach(tr=>tr.onclick=()=>{
+    selectDay(tr.dataset.d);
+    const m=+tr.dataset.m;
+    ZOOM={a:m-20,b:m+20}; clampZoom(); updateZoomUi(); drawChart();
+  });
+}
+
 function renderExcursions(){
   const v=VIEW, t=$('#excTbl');
   $('#excCount').textContent = v.exc.length ? v.exc.length.toLocaleString()+' logged' : 'none';
@@ -1042,9 +1330,9 @@ function renderExcursions(){
   const CAP = 300;
   const shown = v.exc.slice(0,CAP);
   const rows = shown.map((e,i)=>{
-    const len=e.end-e.start+1;
+    const len=evLen(e);
     return '<tr class="click" data-i="'+i+'" data-d="'+e.date+'"><td class="txt">'+fmtDate(e.date)+'</td>'+
-      '<td><span class="pill '+(e.ch==='T1'?'t1':'t2')+'">'+e.ch+'</span></td>'+
+      '<td><span class="pill '+(e.ch==='T1'?'t1':e.ch==='T2'?'t2':'t3')+'">'+e.ch+'</span></td>'+
       '<td><span class="pill '+(e.side==='High'?'bad':'warn')+'">'+e.side+'</span></td>'+
       '<td>'+hhmm(e.start)+'</td><td>'+hhmm(e.end)+'</td>'+
       '<td>'+dur(len)+'</td><td><b>'+t1(e.peak)+' °C</b></td>'+
@@ -1105,19 +1393,36 @@ function fullSpan(){
   const d0=fromIso(VIEW.from).getTime();
   return ((fromIso(VIEW.to).getTime()-d0)/60000)+1440;
 }
-function clampZoom(){
+/* the window the data actually occupies — a two hour bench capture should not
+   be drawn across an empty 24 hour axis */
+function dataExtent(){
+  if(!VIEW) return {a:0,b:1440};
+  const d0=fromIso(VIEW.from).getTime();
+  let a=Infinity,b=-Infinity;
+  for(const d of VIEW.days){
+    const base=(fromIso(d.date).getTime()-d0)/60000;
+    if(!d.rows.length) continue;
+    const iv=d.iv||1;
+    a=Math.min(a, base+d.rows[0].m);
+    b=Math.max(b, base+d.rows[d.rows.length-1].m+iv);
+  }
   const S=fullSpan();
+  if(a===Infinity) return {a:0,b:S};
+  const padm=Math.max(2,(b-a)*0.02);
+  return {a:Math.max(0,a-padm), b:Math.min(S,b+padm)};
+}
+function clampZoom(){
+  const E=dataExtent();
   if(!ZOOM) return;
   let {a,b}=ZOOM;
   if(b-a < 10){ const c=(a+b)/2; a=c-5; b=c+5; }     // never tighter than 10 minutes
-  if(a<0){ b+=-a; a=0; }
-  if(b>S){ a-=(b-S); b=S; }
-  if(a<0) a=0;
-  ZOOM = (a<=0 && b>=S) ? null : {a,b};
+  if(a<E.a){ b+=(E.a-a); a=E.a; }
+  if(b>E.b){ a-=(b-E.b); b=E.b; }
+  if(a<E.a) a=E.a;
+  ZOOM = (a<=E.a && b>=E.b) ? null : {a,b};
 }
 function zoomBy(factor, focus){
-  const S=fullSpan();
-  const z=ZOOM||{a:0,b:S};
+  const z=ZOOM||dataExtent();
   const f=(focus===undefined)?(z.a+z.b)/2:focus;
   const na=f-(f-z.a)*factor, nb=f+(z.b-f)*factor;
   ZOOM={a:na,b:nb}; clampZoom(); updateZoomUi(); drawChart();
@@ -1131,7 +1436,7 @@ function panBy(frac){
 function resetZoom(){ ZOOM=null; updateZoomUi(); drawChart(); }
 
 function updateZoomUi(){
-  const S=fullSpan(), z=ZOOM||{a:0,b:S};
+  const z=ZOOM||dataExtent();
   const lbl=$('#zoomLbl');
   if(!lbl) return;
   if(!ZOOM){ lbl.textContent='Full range'; }
@@ -1173,8 +1478,9 @@ function drawChart(){
   const d0 = fromIso(v.from).getTime();
   const spanMin = fullSpan();
   const absMin = day => (fromIso(day).getTime()-d0)/60000;
-  const vA = ZOOM ? ZOOM.a : 0;
-  const vB = ZOOM ? ZOOM.b : spanMin;
+  const EXT = dataExtent();
+  const vA = ZOOM ? ZOOM.a : EXT.a;
+  const vB = ZOOM ? ZOOM.b : EXT.b;
   const vSpan = vB-vA;
 
   /* y domain: follow whatever is actually on screen once zoomed in */
@@ -1187,6 +1493,7 @@ function drawChart(){
         const m=base+r.m; if(m<vA||m>vB) continue;
         if(SHOW.t1 && r.a!==null){ if(r.a<dLo)dLo=r.a; if(r.a>dHi)dHi=r.a; }
         if(SHOW.t2 && r.b!==null){ if(r.b<dLo)dLo=r.b; if(r.b>dHi)dHi=r.b; }
+        if(SHOW.t3 && r.e!==null && r.e!==undefined){ if(r.e<dLo)dLo=r.e; if(r.e>dHi)dHi=r.e; }
       }
     }
   }
@@ -1321,6 +1628,7 @@ function drawChart(){
   PLOT = {pad,pw,ph,X,Y,lo,hi,vA,vB,vSpan,d0,absMin,W,H,spanMin};
   if(SHOW.t1) line('a', getComputedStyle(document.body).getPropertyValue('--t1').trim()||'#1a6fb5');
   if(SHOW.t2) line('b', getComputedStyle(document.body).getPropertyValue('--t2').trim()||'#8046c0');
+  if(SHOW.t3 && HAS_T3) line('e', getComputedStyle(document.body).getPropertyValue('--t3').trim()||'#0d8a6a');
 
   cx.strokeStyle='#d6e1e9'; cx.lineWidth=1;
   cx.strokeRect(pad.l+.5, pad.t+.5, pw-1, ph-1);
@@ -1335,8 +1643,10 @@ function drawChart(){
     cx.moveTo(b+.5,pad.t); cx.lineTo(b+.5,pad.t+ph); cx.stroke();
   }
 
-  const shownReadings = ZOOM ? countVisible() : v.totMin;
-  $('#resLbl').textContent = shownReadings.toLocaleString()+' readings · 1 min interval';
+  const shownReadings = ZOOM ? countVisible() : v.samples;
+  const ivs=[...new Set(v.days.map(d=>d.iv||1))];
+  $('#resLbl').textContent = shownReadings.toLocaleString()+' readings · '+
+    (ivs.length===1? ivs[0]+' min interval' : 'mixed interval');
 
   function countVisible(){
     let n=0;
@@ -1464,9 +1774,9 @@ function readout(clientX, clientY){
   const tol = Math.max(2, (P.vSpan/P.pw)*4);
   if(!best||bd>tol){ tip.style.opacity=0; return; }
 
-  [['a','--t1'],['b','--t2']].forEach(([k,c])=>{
-    if((k==='a'&&!SHOW.t1)||(k==='b'&&!SHOW.t2)) return;
-    if(best[k]===null) return;
+  [['a','--t1'],['b','--t2'],['e','--t3']].forEach(([k,c])=>{
+    if((k==='a'&&!SHOW.t1)||(k==='b'&&!SHOW.t2)||(k==='e'&&!SHOW.t3)) return;
+    if(best[k]===null||best[k]===undefined) return;
     const py=P.Y(best[k]);
     cx.fillStyle=getComputedStyle(document.body).getPropertyValue(c).trim();
     cx.beginPath(); cx.arc(x,py,3.5,0,7); cx.fill();
@@ -1477,6 +1787,8 @@ function readout(clientX, clientY){
   tip.innerHTML = '<b>'+fmtDate(key)+' '+hhmm(best.m)+'</b>'+
     (SHOW.t1&&best.a!==null?'<br>T1 '+t1(best.a)+' °C'+(out(best.a)?' ⚠':''):'')+
     (SHOW.t2&&best.b!==null?'<br>T2 '+t1(best.b)+' °C'+(out(best.b)?' ⚠':''):'')+
+    (SHOW.t3&&best.e!==null&&best.e!==undefined?'<br>T3 '+t1(best.e)+' °C':'')+
+    (best.rt?'<br>'+codeInfo(best.rt).d:'')+
     (best.d?'<br>Door open':'')+(best.c?'<br>Compressor on':'')+(best.p?'<br>Power lost':'');
   tip.style.opacity=1;
   const tw=tip.offsetWidth||140;
@@ -1696,14 +2008,14 @@ function exportCsv(){
   L.push(['Cooling faults and door events'].map(q).join(','));
   L.push(['Date','Finding','From','To','Duration min','Start C','End C','Change C','Compressor on %'].map(q).join(','));
   if(!(v.faults||[]).length) L.push(['None','','','','','','','',''].map(q).join(','));
-  (v.faults||[]).forEach(e=>L.push([fmtDate(e.date),e.why,hhmm(e.start),hhmm(e.end),e.end-e.start+1,
+  (v.faults||[]).forEach(e=>L.push([fmtDate(e.date),e.why,hhmm(e.start),hhmm(e.end),evLen(e),
     e.kind==='cool'?t1(e.from):'',e.kind==='cool'?t1(e.to):'',e.kind==='cool'?e.rise.toFixed(1):'',
     e.kind==='cool'?Math.round(e.duty):''].map(q).join(',')));
   L.push('');
   L.push(['Excursions'].map(q).join(','));
   L.push(['Date','Sensor','Type','From','To','Duration min','Peak C'].map(q).join(','));
   if(!v.exc.length) L.push([ 'None','','','','','','' ].map(q).join(','));
-  v.exc.forEach(e=>L.push([fmtDate(e.date),e.ch,e.side,hhmm(e.start),hhmm(e.end),e.end-e.start+1,t1(e.peak)].map(q).join(',')));
+  v.exc.forEach(e=>L.push([fmtDate(e.date),e.ch,e.side,hhmm(e.start),hhmm(e.end),evLen(e),t1(e.peak)].map(q).join(',')));
 
   const blob=new Blob(['\ufeff'+L.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
@@ -1730,6 +2042,21 @@ function afterLoad(){
   ['btnPng','btnCsv','btnPrint'].forEach(id=>$('#'+id).disabled=false);
   $('#btnClear').hidden=false;
 
+  /* a third probe only exists on some models */
+  HAS_T3=false;
+  for(const d of DAYS.values()){ if(d.rows.some(r=>r.e!==null&&r.e!==undefined)){ HAS_T3=true; break; } }
+  $('.chip[data-s="t3"]').hidden = !HAS_T3;
+  $('#t3Legend').hidden = !HAS_T3;
+  $('#chan').querySelector('option[value="3"]').hidden = !HAS_T3;
+  if(!HAS_T3 && LIMITS.chan==='3'){ LIMITS.chan='both'; $('#chan').value='both'; }
+
+  /* not every controller logs the door */
+  const anyDoor=[...DAYS.values()].some(d=>d.hasDoor!==false);
+  const doorChip=$('.chip[data-s="door"]');
+  doorChip.disabled=!anyDoor;
+  doorChip.title = anyDoor? '' : 'This controller does not log door state';
+  if(!anyDoor){ SHOW.door=false; doorChip.classList.remove('on'); }
+
   /* some models log T2 as N/A — don't leave an empty series switched on */
   let anyT2=false;
   for(const d of DAYS.values()){ if(d.rows.some(r=>r.b!==null)){ anyT2=true; break; } }
@@ -1745,6 +2072,14 @@ function afterLoad(){
   $('#loadHint').innerHTML = DAYS.size+' day'+(DAYS.size===1?'':'s')+' in memory, '+
     fmtDate(keys[0])+' to '+fmtDate(keys[keys.length-1])+'. Load another folder to add more.';
 
+  /* the 24-range file states its own alarm limits — trust those over a guess */
+  if(!afterLoad._done && META.fileLimits){
+    LIMITS.lo=META.fileLimits.lo; LIMITS.hi=META.fileLimits.hi;
+    $('#lo').value=LIMITS.lo; $('#hi').value=LIMITS.hi;
+    const o=[...$('#preset').options].find(x=>x.value===LIMITS.lo+','+LIMITS.hi);
+    $('#preset').value = o?o.value:'custom';
+    afterLoad._done=true;
+  }
   /* sensible limits from the set point, first load only */
   if(!afterLoad._done && META.setpoint!==null){
     const sp=META.setpoint;
@@ -1759,10 +2094,22 @@ function afterLoad(){
   }
   afterLoad._done=true;
 
+  const rangeName = META.range==='24' ? '24 Range' : META.range==='19' ? '19 Range' : '';
+  const badge=$('#rangeBadge'), tag=$('#rangeTag');
+  if(rangeName){
+    badge.hidden=false; badge.textContent=rangeName;
+    tag.hidden=false;   tag.textContent=rangeName;
+  }else{ badge.hidden=true; tag.hidden=true; }
+
   $('#instBody').innerHTML =
     row('Customer', META.customer||'—') + row('Job', META.job||'—') +
-    row('Unit type', META.unit||'—') + row('Controller PN', META.pn||'—') +
-    row('Firmware', META.fw||'—') + row('Set point', META.setpoint===null?'—':t1(META.setpoint)+' °C');
+    row('Controller', rangeName||'—') +
+    (META.controller? row('Name', META.controller):'') +
+    row(META.range==='24'?'Fridge type':'Unit type', META.unit||'—') +
+    row(META.range==='24'?'Serial number':'Controller PN', META.pn||'—') +
+    (META.fw? row('Firmware', META.fw):'') +
+    row('Set point', META.setpoint===null?'—':t1(META.setpoint)+' °C') +
+    (META.fileLimits? row('Alarm limits', t1(META.fileLimits.lo)+' to '+t1(META.fileLimits.hi)+' °C'):'');
 
   buildCalendar();
   if(!SEL.from){ SEL.from=SEL.to=keys[keys.length-1]; }
@@ -1863,7 +2210,8 @@ $$('.chart-top .chip').forEach(b=>b.onclick=()=>{
 $('#btnClear').onclick = ()=>{
   if(!confirm('Clear all '+DAYS.size+' loaded days and start a new customer?\n\nNothing is saved — you would need to load the folder again.')) return;
   DAYS.clear();
-  META = {job:'', customer:'', unit:'', fw:'', pn:'', setpoint:null, title:''};
+  META = {job:'', customer:'', unit:'', fw:'', pn:'', setpoint:null, title:'',
+          range:'', controller:'', fileLimits:null};
   SEL  = {mode:'day', from:null, to:null, anchor:null};
   CAL  = {ym:null};
   VIEW = null; ZOOM = null; PLOT = null;
@@ -1871,13 +2219,17 @@ $('#btnClear').onclick = ()=>{
   document.body.classList.remove('loaded');
   $('#welcome').hidden = false;
   ['calCard','limCard','instCard','sumCard','chartCard','excCard','dayCard','alertCard','faultCard']
-    .concat(['mixedCard'])
+    .concat(['mixedCard','rtCard','pwrCard'])
     .forEach(id=>$('#'+id).hidden = true);
   ['btnPng','btnCsv','btnPrint'].forEach(id=>$('#'+id).disabled = true);
   $('#btnClear').hidden = true;
   $('#fDir').value=''; $('#fFiles').value='';
   $('#cal').innerHTML=''; $('#dayCount').textContent='';
   $('#jobName').textContent='—';
+  $('#rangeBadge').hidden=true; $('#rangeTag').hidden=true;
+  $('.chip[data-s="t3"]').hidden=true; $('#t3Legend').hidden=true;
+  $('#chan').querySelector('option[value="3"]').hidden=true;
+  HAS_T3=false;
   $$('.chart-top .chip').forEach(b=>{ b.disabled=false; b.title=''; });
   SHOW.t2 = true; $('.chip[data-s="t2"]').classList.add('on');
   if(LIMITS._autoChan){ LIMITS.chan='both'; LIMITS._autoChan=false; $('#chan').value='both'; }
