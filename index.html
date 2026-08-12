@@ -308,6 +308,7 @@ footer{
 
 @media (prefers-reduced-motion:reduce){
   .card{transition:none}
+  .vaultwarn.critical,.pill.expired{animation:none}
 }
 </style>
 </head>
@@ -374,7 +375,7 @@ footer{
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.2</span>
+    <span id="footYear">v1.2.1</span>
   </footer>
 
 </div>
@@ -468,7 +469,7 @@ function renderCards(){
     </a>`;
   });
 
-  grid.innerHTML = html;
+  setHtml(grid, html);
 
   // Headline counts cover everything the suite can open, across both sections.
   const all = sections.flatMap(s=>s.contents||[]);
@@ -480,7 +481,7 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.2 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.2.1 · ' + d.getFullYear();
 }
 
 // ---- Fullscreen toggle (Android/desktop browsers; on iOS, use
@@ -533,11 +534,21 @@ let pendingDevice = null;
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+// Only touch the DOM when the markup has genuinely changed. Rewriting
+// innerHTML destroys the element under the user's finger, so a redraw that
+// changes nothing can still swallow a tap on a touchscreen.
+function setHtml(el, html){
+  if(!el || el.__labcalHtml === html) return false;
+  el.__labcalHtml = html;
+  el.innerHTML = html;
+  return true;
+}
+
 function renderVault(){
   if(!vaultEl || !window.LabCalOffsets) return;
   const infos = LabCalOffsets.all();
 
-  vaultEl.innerHTML = infos.map(i=>{
+  const html = infos.map(i=>{
     // Bar shows how much of a 12-month certificate is left.
     const pct = i.loaded && !i.expired ? Math.max(2, Math.min(100, Math.round((i.daysLeft/365)*100))) : (i.expired?100:0);
     const big = !i.loaded ? '—' : (i.expired ? 'EXPIRED' : i.daysLeft);
@@ -570,6 +581,8 @@ function renderVault(){
     </div>`;
   }).join('');
 
+  // Listeners only need re-attaching when the markup was actually replaced.
+  if(setHtml(vaultEl, html)){
   vaultEl.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',()=>{
     pendingDevice = b.getAttribute('data-load');
     vaultFileEl.click();
@@ -581,6 +594,7 @@ function renderVault(){
       LabCalOffsets.remove(d);
     }
   }));
+  }
 
   renderVaultWarning(infos);
   renderCards();
@@ -617,7 +631,7 @@ function renderVaultWarning(infos){
   }
 
   vaultWarnEl.className = 'vaultwarn ' + cls;
-  vaultWarnEl.innerHTML = html;
+  setHtml(vaultWarnEl, html);
 }
 
 if(vaultFileEl){

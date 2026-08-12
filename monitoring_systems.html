@@ -178,7 +178,7 @@ footer{
   font-family:var(--mono);font-size:10.5px;color:var(--muted-dim);
 }
 
-@media (prefers-reduced-motion:reduce){.card{transition:none}}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.opill.expired{animation:none}}
 </style>
 </head>
 <body>
@@ -265,6 +265,15 @@ function iconSvg(name){
   return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icons[name]||''}</svg>`;
 }
 
+// Only touch the DOM when the markup changed — rewriting innerHTML under a
+// finger mid-tap is what made the tiles feel frozen on iPad.
+function setHtml(el, html){
+  if(!el || el.__labcalHtml === html) return false;
+  el.__labcalHtml = html;
+  el.innerHTML = html;
+  return true;
+}
+
 function renderCards(){
   const grid = document.getElementById('grid');
   let html = '';
@@ -301,7 +310,7 @@ function renderCards(){
       </div>
     </a>`;
   });
-  grid.innerHTML = html;
+  setHtml(grid, html);
 }
 
 function renderOffsetStrip(){
@@ -310,12 +319,12 @@ function renderOffsetStrip(){
   const infos = LabCalOffsets.all();
   const alert = infos.some(i=>!i.loaded || i.expired || i.level==='critical');
   strip.className = 'offsets' + (alert?' alert':'');
-  strip.innerHTML = infos.map(i=>`
+  setHtml(strip, infos.map(i=>`
     <span class="oitem">
       <span class="oname">${i.meta.name}</span>
       <span class="opill ${i.level}">${i.headline}</span>
     </span>`).join('')
-    + '<a class="manage" href="index.html">Manage offsets →</a>';
+    + '<a class="manage" href="index.html">Manage offsets →</a>');
 }
 
 renderOffsetStrip();

@@ -359,10 +359,20 @@ function applyOffsetsData(raw, sourceLabel){
   refreshOffsetWarning();
   return true;
 }
+let appliedOffsetsSig=null;
+function offsetsFingerprint(raw){
+  return [raw.validUntil, raw.refThermSerial||'', raw.engineerName||'',
+          Object.keys(raw.probes||{}).join(',')].join('|');
+}
 function restoreVaultOffsets(){
   if(!window.LabCalOffsets) return false;
   const raw=LabCalOffsets.load(OFFSET_DEVICE);
   if(!raw) return false;
+  // Re-applying identical offsets would rebuild every dropdown and throw away
+  // the probe/thermometer already chosen on a part-finished worksheet.
+  const sig=offsetsFingerprint(raw);
+  if(sig===appliedOffsetsSig) return true;
+  appliedOffsetsSig=sig;
   return applyOffsetsData(raw, 'from LabCal home');
 }
 async function loadOffsetsFile(ev){

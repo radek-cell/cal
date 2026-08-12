@@ -121,13 +121,38 @@
   }
 
   // ---- storage -----------------------------------------------------------
+  // The availability probe writes a throwaway key. That write must NOT sit
+  // under PREFIX, and must NOT be repeated on every read: every write raises a
+  // `storage` event in every OTHER tab of this site, so a probe inside the
+  // watched prefix made two open tabs answer each other forever — each one
+  // re-rendering its tiles hundreds of times a second until every tab was
+  // closed. Probe once, off-prefix, and cache the answer.
+  var PROBE_KEY = '__labcal_storage_probe__';
+  var storageChecked = false;
+  var storageRef = null;
   function storage() {
+    if (storageChecked) return storageRef;
+    storageChecked = true;
     try {
       var s = global.localStorage;
-      var probe = PREFIX + '__t';
-      s.setItem(probe, '1'); s.removeItem(probe);
-      return s;
-    } catch (e) { return null; }
+      s.setItem(PROBE_KEY, '1');
+      s.removeItem(PROBE_KEY);
+      storageRef = s;
+    } catch (e) { storageRef = null; }
+    return storageRef;
+  }
+
+  function deviceKeys() {
+    return DEVICE_IDS.map(function (d) { return PREFIX + d; });
+  }
+
+  // Cheap fingerprint of what is actually in the vault, so listeners can tell
+  // a real change from noise and skip redundant redraws entirely.
+  function signature() {
+    return DEVICE_IDS.map(function (d) {
+      var rec = readRecord(d);
+      return d + ':' + (rec ? (rec.savedAt || '') + '|' + (rec.raw.validUntil || '') : '-');
+    }).join(';');
   }
 
   function readRecord(device) {
@@ -255,12 +280,33 @@
     }
   }
 
+  // Listeners are called at most once per real change. Bursts are coalesced
+  // and a callback is skipped entirely when the vault contents are identical
+  // to the last time it ran — so nothing can be redrawn in a tight loop, and
+  // a tap can never land on a tile that is about to be replaced.
   function onChange(fn) {
     if (typeof fn !== 'function') return;
-    global.addEventListener(CHANGE_EVENT, fn);
-    // Another tab (e.g. home page open alongside a worksheet) changing the vault.
+    var last = signature();
+    var queued = false;
+    function trigger() {
+      if (queued) return;
+      queued = true;
+      global.setTimeout(function () {
+        queued = false;
+        var now = signature();
+        if (now === last) return;   // nothing actually changed — do nothing
+        last = now;
+        try { fn(); } catch (e) {}
+      }, 60);
+    }
+    global.addEventListener(CHANGE_EVENT, trigger);
+    // Another tab (home page open alongside a worksheet) changing the vault.
+    // Only the two real ecosystem keys count; everything else on this origin
+    // — worksheet autosaves included — is ignored.
     global.addEventListener('storage', function (e) {
-      if (e && e.key && e.key.indexOf(PREFIX) === 0) fn(e);
+      if (!e || !e.key) return;
+      if (deviceKeys().indexOf(e.key) === -1) return;
+      trigger();
     });
   }
 
@@ -306,6 +352,7 @@
     isCurrent: isCurrent,
     summary: summary,
     onChange: onChange,
+    signature: signature,
     ingestFile: ingestFile,
     available: function () { return !!storage(); }
   };

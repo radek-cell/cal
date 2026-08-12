@@ -444,10 +444,20 @@ const OFFSET_DEVICE='fluke_comark';
 // Loaded once on the LabCal home page and kept in the shared vault until the
 // certificate expires — this worksheet reads it at startup. Loading a file
 // here still works and refreshes the vault for every other worksheet.
+let appliedOffsetsSig=null;
+function offsetsFingerprint(raw){
+  return [raw.validUntil, raw.refThermSerial||'', raw.engineerName||'',
+          Object.keys(raw.probes||{}).join(',')].join('|');
+}
 function restoreVaultOffsets(){
   if(!window.LabCalOffsets) return false;
   const raw=LabCalOffsets.load(OFFSET_DEVICE);
   if(!raw || !buildProbeListFromOffsets(raw)) return false;
+  // Re-applying identical offsets would rebuild every dropdown and throw away
+  // the channel/probe setup already entered on a part-finished worksheet.
+  const sig=offsetsFingerprint(raw);
+  if(sig===appliedOffsetsSig) return true;
+  appliedOffsetsSig=sig;
   applyOffsetsData(raw, 'from LabCal home');
   return true;
 }

@@ -194,7 +194,7 @@ footer{
   font-family:var(--mono);font-size:10.5px;color:var(--muted-dim);
 }
 
-@media (prefers-reduced-motion:reduce){.card{transition:none}}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.opill.expired{animation:none}}
 </style>
 </head>
 <body>
@@ -236,7 +236,7 @@ footer{
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.2</span>
+    <span id="footYear">v1.2.1</span>
   </footer>
 
 </div>
@@ -331,6 +331,15 @@ function offsetsInfo(device){
 
 // A worksheet only opens when its own ecosystem's offsets are loaded and the
 // certificate is still in date — the two ecosystems are never interchangeable.
+// Only touch the DOM when the markup changed — rewriting innerHTML under a
+// finger mid-tap is what made the tiles feel frozen on iPad.
+function setHtml(el, html){
+  if(!el || el.__labcalHtml === html) return false;
+  el.__labcalHtml = html;
+  el.innerHTML = html;
+  return true;
+}
+
 function renderCards(){
   const grid = document.getElementById('grid');
   let html = '';
@@ -375,7 +384,7 @@ function renderCards(){
       <span>More worksheets<br>coming soon</span>
     </div>`;
 
-  grid.innerHTML = html;
+  setHtml(grid, html);
 
   document.getElementById('toolCount').textContent = tools.length;
   document.getElementById('activeCount').textContent = tools.filter(t=>t.status==='active').length;
@@ -387,19 +396,19 @@ function renderOffsetStrip(){
   const infos = LabCalOffsets.all();
   const alert = infos.some(i=>!i.loaded || i.expired || i.level==='critical');
   strip.className = 'offsets' + (alert?' alert':'');
-  strip.innerHTML = infos.map(i=>`
+  setHtml(strip, infos.map(i=>`
     <span class="oitem">
       <span class="oname">${i.meta.name}</span>
       <span class="opill ${i.level}">${i.headline}</span>
     </span>`).join('')
-    + '<a class="manage" href="index.html">Manage offsets →</a>';
+    + '<a class="manage" href="index.html">Manage offsets →</a>');
 }
 
 function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.2 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.2.1 · ' + d.getFullYear();
 }
 
 renderOffsetStrip();
