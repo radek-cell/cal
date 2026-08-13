@@ -10,6 +10,8 @@
 <meta name="theme-color" content="#dfe6ee">
 <title>LabCal — Calibration Worksheets</title>
 <script src="labcal_offsets.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="labcal_jobsheet.js"></script>
 <style>
 :root{
   --bg:#dfe6ee;
@@ -137,6 +139,53 @@ h1{font-size:clamp(28px,4vw,42px);line-height:1.1;margin:0 0 14px;font-weight:70
 .lockmsg svg{width:13px;height:13px;flex-shrink:0;margin-top:1px}
 .needs{font-family:var(--mono);font-size:10px;color:var(--muted-dim);letter-spacing:.3px;margin-top:10px}
 
+/* ---- jobsheet worklist ---- */
+.job{
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:16px 18px;margin:0 0 24px;box-shadow:0 1px 3px rgba(20,30,40,.06);
+}
+.job.empty{border-style:dashed;background:transparent;box-shadow:none}
+.job-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.job-title{font-size:15.5px;font-weight:650;letter-spacing:-.2px;margin:0}
+.job-sub{font-family:var(--mono);font-size:11px;color:var(--muted-dim);line-height:1.6;margin-top:4px}
+.job-sub b{color:var(--muted);font-weight:600}
+.jbtn{
+  font-family:var(--sans);font-size:12.5px;font-weight:650;color:#fff;background:var(--cyan);
+  border:none;border-radius:6px;padding:9px 15px;cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.jbtn:hover{background:#0c7a70}
+.jbtn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.jbtn.ghost:hover{color:#c0392b;border-color:#e0a49c}
+.jbtn:disabled{opacity:.45;cursor:not-allowed}
+.job-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.prog{display:flex;align-items:center;gap:10px;margin:14px 0 4px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.prog .ptrack{flex:1;height:5px;border-radius:3px;background:var(--bg2);border:1px solid var(--border-soft);overflow:hidden}
+.prog .ptrack i{display:block;height:100%;background:var(--green);transition:width .25s ease}
+
+.jdev{
+  display:grid;grid-template-columns:1fr auto;gap:10px 14px;align-items:center;
+  padding:12px 0;border-top:1px solid var(--border-soft);
+}
+.jdev.done{opacity:.6}
+.jdev-main{min-width:0}
+.jdev-model{font-size:14px;font-weight:650;letter-spacing:-.1px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.jdev-model .tick{color:var(--green);font-weight:700}
+.jdev-meta{font-family:var(--mono);font-size:11px;color:var(--muted-dim);line-height:1.6;margin-top:3px;word-break:break-word}
+.jdev-ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.jdev-ctl select{
+  font-family:var(--sans);font-size:12.5px;padding:8px 10px;border:1px solid var(--border);
+  border-radius:6px;background:#fff;color:var(--ink);max-width:190px;
+}
+.jdev-ctl select.ask{border-color:var(--amber);background:#fdf3e3}
+.why{font-family:var(--mono);font-size:9.5px;color:var(--muted-dim);letter-spacing:.3px}
+.jdev-warn{grid-column:1/-1;font-family:var(--mono);font-size:10.5px;color:#8a3222;background:#fdecea;border:1px solid #f0c5be;border-radius:4px;padding:6px 9px}
+@media (max-width:620px){
+  .jdev{grid-template-columns:1fr}
+  .jdev-ctl{justify-content:flex-start}
+  .jdev-ctl select{flex:1;max-width:none}
+}
+
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media (max-width:920px){.grid{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:620px){.grid{grid-template-columns:1fr;gap:12px}}
@@ -166,7 +215,7 @@ h1{font-size:clamp(28px,4vw,42px);line-height:1.1;margin:0 0 14px;font-weight:70
   padding:3px 8px;border-radius:2px;transform:rotate(4deg);white-space:nowrap;
 }
 .stamp.ready{border:1.5px solid var(--green);color:var(--green)}
-.stamp.dev{border:1.5px dashed var(--amber);color:var(--amber)}
+.stamp.jdev{border:1.5px dashed var(--amber);color:var(--amber)}
 
 .card h3{font-size:17px;margin:16px 0 6px;font-weight:650;letter-spacing:-.2px}
 .card p{font-size:13px;color:var(--muted);line-height:1.55;margin:0;flex:1}
@@ -230,13 +279,16 @@ footer{
 
   <div class="offsets" id="offsetStrip"></div>
 
+  <div class="job" id="jobPanel"></div>
+  <input id="jobFile" type="file" accept="application/pdf,.pdf" style="display:none">
+
   <div class="section-label">WS · 01–06 — select a worksheet</div>
 
   <div class="grid" id="grid"></div>
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.2.1</span>
+    <span id="footYear">v1.3</span>
   </footer>
 
 </div>
@@ -408,15 +460,153 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.2.1 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.3 · ' + d.getFullYear();
 }
+
+
+// ---------------------------------------------------------------------
+// Jobsheet worklist — drop the PDF once, work through the devices, each
+// one opening the right worksheet with the header already filled in.
+// ---------------------------------------------------------------------
+const jobPanel = document.getElementById('jobPanel');
+const jobFile  = document.getElementById('jobFile');
+
+function jesc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function sheetOptions(selected){
+  const S = LabCalJobsheet.SHEETS;
+  return ['<option value="">Choose worksheet…</option>']
+    .concat(Object.keys(S).map(k=>`<option value="${k}"${k===selected?' selected':''}>${jesc(S[k].name)}</option>`))
+    .join('');
+}
+
+// A device can only be opened when its worksheet's offsets are in date —
+// same rule as the cards below, surfaced here so it's obvious before the tap.
+function sheetBlockedReason(sheetId){
+  const S = LabCalJobsheet.SHEETS[sheetId];
+  if(!S || !S.offsets || !window.LabCalOffsets) return '';
+  const info = LabCalOffsets.info(S.offsets);
+  if(info.loaded && !info.expired) return '';
+  return info.expired
+    ? `${info.meta.name} offsets expired ${info.validLabel} — load a current file on the LabCal home page.`
+    : `Needs the ${info.meta.name} offsets file — load it once on the LabCal home page.`;
+}
+
+function renderJobPanel(){
+  if(!jobPanel || !window.LabCalJobsheet) return;
+  const js = LabCalJobsheet.current();
+
+  if(!js){
+    setHtml(jobPanel, `
+      <div class="job-head">
+        <div>
+          <p class="job-title">No jobsheet loaded</p>
+          <div class="job-sub">Optional — load the jobsheet PDF and each unit on it opens the right worksheet with the customer, job reference, model and serial already filled in. Or just pick a worksheet below and work as usual.</div>
+        </div>
+        <div class="job-actions"><button class="jbtn" type="button" id="jobLoadBtn">Load jobsheet PDF</button></div>
+      </div>`);
+    jobPanel.className = 'job empty';
+    const b = document.getElementById('jobLoadBtn');
+    if(b) b.addEventListener('click', ()=>jobFile.click());
+    return;
+  }
+
+  const p = LabCalJobsheet.progress();
+  const pct = p.total ? Math.round((p.done/p.total)*100) : 0;
+  const meta = [
+    js.customer ? `<b>${jesc(js.customer)}</b>` : '',
+    js.callNumber ? `Job ${jesc(js.callNumber)}` : '',
+    js.department ? jesc(js.department) : '',
+    js.fileName ? jesc(js.fileName) : ''
+  ].filter(Boolean).join(' · ');
+
+  const rows = js.devices.map((d,i)=>{
+    const blocked = d.sheet ? sheetBlockedReason(d.sheet) : '';
+    const whyText = d.sheetWhy==='learned' ? 'remembered' : (d.sheetWhy==='rule' ? 'matched' : '');
+    return `
+    <div class="jdev${d.done?' done':''}">
+      <div class="jdev-main">
+        <div class="jdev-model">${d.done?'<span class="tick">✓</span>':''}${jesc(d.model||d.equipment||'(no model)')}</div>
+        <div class="jdev-meta">${jesc(d.serial||'no serial')}${d.location?' · '+jesc(d.location):''}${d.done&&d.certRef?' · cert '+jesc(d.certRef):''}</div>
+      </div>
+      <div class="jdev-ctl">
+        ${whyText?`<span class="why">${whyText}</span>`:''}
+        <select data-route="${i}" class="${d.sheet?'':'ask'}">${sheetOptions(d.sheet)}</select>
+        <button class="jbtn" type="button" data-open="${i}" ${(!d.sheet||blocked)?'disabled':''}>${d.done?'Reopen':'Open'}</button>
+      </div>
+      ${blocked?`<div class="jdev-warn">${jesc(blocked)}</div>`:''}
+    </div>`;
+  }).join('');
+
+  const html = `
+    <div class="job-head">
+      <div>
+        <p class="job-title">Today's worklist — ${js.devices.length} unit${js.devices.length===1?'':'s'}</p>
+        <div class="job-sub">${meta}</div>
+      </div>
+      <div class="job-actions">
+        <button class="jbtn ghost" type="button" id="jobReplaceBtn">Replace</button>
+        <button class="jbtn ghost" type="button" id="jobClearBtn">Clear</button>
+      </div>
+    </div>
+    <div class="prog">
+      <span>${p.done} of ${p.total} done</span>
+      <span class="ptrack"><i style="width:${pct}%"></i></span>
+    </div>
+    ${rows}`;
+
+  if(setHtml(jobPanel, html)){
+    jobPanel.querySelectorAll('[data-route]').forEach(sel=>sel.addEventListener('change',()=>{
+      const i = Number(sel.getAttribute('data-route'));
+      LabCalJobsheet.updateDevice(i, {sheet: sel.value, sheetWhy: sel.value?'chosen':''});
+    }));
+    jobPanel.querySelectorAll('[data-open]').forEach(btn=>btn.addEventListener('click',()=>{
+      const i = Number(btn.getAttribute('data-open'));
+      const d = LabCalJobsheet.current().devices[i];
+      const S = LabCalJobsheet.SHEETS[d.sheet];
+      if(!S) return;
+      LabCalJobsheet.handoff(i);          // also remembers this model's route
+      window.location.href = S.href;
+    }));
+    const rb = document.getElementById('jobReplaceBtn');
+    if(rb) rb.addEventListener('click', ()=>jobFile.click());
+    const cb = document.getElementById('jobClearBtn');
+    if(cb) cb.addEventListener('click', ()=>{
+      if(confirm('Clear the jobsheet worklist?\n\nProgress ticks are lost. Certificates already generated are not affected.')){
+        LabCalJobsheet.clearCurrent();
+      }
+    });
+  }
+  jobPanel.className = 'job';
+}
+
+if(jobFile){
+  jobFile.addEventListener('change', async (ev)=>{
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if(!file) return;
+    try{
+      const parsed = await LabCalJobsheet.parseFile(file);
+      LabCalJobsheet.setCurrent(parsed, file.name);
+      renderJobPanel();
+    }catch(e){
+      alert('Cannot read this jobsheet PDF: ' + (e && e.message ? e.message : e));
+    }
+  });
+}
+
+if(window.LabCalJobsheet){
+  LabCalJobsheet.onChange(renderJobPanel);
+}
+
+renderJobPanel();
 
 renderOffsetStrip();
 renderCards();
 renderDate();
 if(window.LabCalOffsets){
-  LabCalOffsets.onChange(()=>{ renderOffsetStrip(); renderCards(); });
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ renderOffsetStrip(); renderCards(); } });
+  LabCalOffsets.onChange(()=>{ renderOffsetStrip(); renderCards(); renderJobPanel(); });
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ renderOffsetStrip(); renderCards(); renderJobPanel(); } });
 }
 </script>
 

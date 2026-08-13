@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Barkey Calibration Worksheet</title>
 <script src="labcal_offsets.js"></script>
+<script src="labcal_jobsheet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -194,6 +195,31 @@ let appliedOffsetsSig=null;
 function offsetsFingerprint(raw){
   return [raw.validUntil, raw.refThermSerial||'', raw.engineerName||'',
           Object.keys(raw.probes||{}).join(',')].join('|');
+}
+// Device handed over from the jobsheet worklist on the calibration page.
+// Consumed once, and only ever into empty fields — reopening a worksheet
+// must never quietly overwrite readings already taken.
+function applyJobsheetHandoff(){
+  if(!window.LabCalJobsheet) return false;
+  const p=LabCalJobsheet.takeHandoff('barkey');
+  if(!p) return false;
+  const d=p.device||{}, j=p.jobsheet||{};
+  const fill=(id,val)=>{
+    const el=document.getElementById(id);
+    if(el && val && !String(el.value||'').trim()){ el.value=val; return true; }
+    return false;
+  };
+  fill('model', d.model||d.equipment||'');
+  fill('serial', d.serial||'');
+  fill('dept', d.location||j.department||'');
+  fill('site', j.customer||'');
+  fill('jobRef', j.callNumber||'');
+  const statusEl=document.getElementById('offsetStatus');
+  if(statusEl){
+    statusEl.textContent=`${statusEl.textContent} · From jobsheet ${j.callNumber||''}: ${d.model||d.equipment||''} ${d.serial||''}`.trim();
+  }
+  update();
+  return true;
 }
 function restoreVaultOffsets(){
   if(!window.LabCalOffsets) return false;
@@ -578,6 +604,15 @@ function swapFieldsForText(root){
 function restoreSwappedFields(swaps){
   swaps.forEach(({div,el})=>{ if(div.parentNode) div.replaceWith(el); });
 }
+// A certificate was produced for this unit — tick it off the jobsheet
+// worklist so the calibration page shows what's left to do.
+function markJobsheetDone(){
+  if(!window.LabCalJobsheet) return;
+  const serialEl=document.getElementById('serial');
+  const certEl=document.getElementById('sheetNo');
+  if(!serialEl || !serialEl.value) return;
+  LabCalJobsheet.markDone(serialEl.value, certEl?certEl.value:'');
+}
 async function generatePDF(){
   if(!runPreGenerationChecks()) return;
 
@@ -632,6 +667,7 @@ async function generatePDF(){
       // Browser doesn't support a native save dialog (e.g. Firefox/Safari) - fall back to a normal download.
       downloadBlob(blob,filename);
     }
+    markJobsheetDone();
   }catch(err){
     alert('PDF generation failed: '+(err && err.message ? err.message : err));
   }finally{
@@ -1154,6 +1190,7 @@ document.getElementById('sheetNo')?.addEventListener('blur', checkSheetNoFormat)
 document.getElementById('sheetNo')?.addEventListener('focus',function(){ if(this.selectionStart<2) this.setSelectionRange(this.value.length,this.value.length); });
 if(!date.value){ dateNative.value=isoToday(); date.value=displayDate(isoToday()); }
 restoreVaultOffsets();
+applyJobsheetHandoff();
 if(window.LabCalOffsets){ LabCalOffsets.onChange(()=>{ restoreVaultOffsets(); }); }
 refreshOffsetWarning(); update(); checkSecretSheetCode(); fitPageToScreen(); setTimeout(fitPageToScreen,300);
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(function(){}); }

@@ -1,0 +1,595 @@
+/* ---------------------------------------------------------------------
+   LabCal — shared jobsheet module
+   ---------------------------------------------------------------------
+   Load the jobsheet ONCE on the calibration page. It parses the equipment
+   list, keeps it as the day's worklist, and hands each device off to the
+   right worksheet with the header already filled in.
+
+   The parser below is lifted verbatim from the worksheets, where it has
+   been proven against four different jobsheet layouts (Formats A-D plus a
+   generic fallback). Nothing about the parsing logic has been changed.
+
+   Storage:  localStorage
+             labcal.jobsheet.current  — parsed sheet + per-device progress
+             labcal.jobsheet.handoff  — the one device a worksheet should load
+             labcal.jobsheet.routes   — learned model -> worksheet mapping
+
+   Requires pdf.js (window.pdfjsLib) on any page that parses a PDF.
+   --------------------------------------------------------------------- */
+(function (global) {
+  'use strict';
+
+  var KEY_CURRENT = 'labcal.jobsheet.current';
+  var KEY_HANDOFF = 'labcal.jobsheet.handoff';
+  var KEY_ROUTES  = 'labcal.jobsheet.routes';
+  var CHANGE_EVENT = 'labcal-jobsheet-changed';
+
+  // ===================================================================
+  // PARSER (verbatim from the worksheets)
+  // ===================================================================
+  async function pdfToRows(file){
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    const rows=[];
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const content=await page.getTextContent();
+      const byY={};
+      content.items.forEach(it=>{
+        if(!it.str || !it.str.trim()) return;
+        const y=Math.round(it.transform[5]);
+        let key=null;
+        for(const k of Object.keys(byY)){ if(Math.abs(Number(k)-y)<=3){ key=k; break; } }
+        if(key===null) key=String(y);
+        (byY[key]=byY[key]||[]).push({x:it.transform[4],str:it.str});
+      });
+      Object.keys(byY).map(Number).sort((a,b)=>b-a).forEach(y=>{
+        const items=byY[String(y)].sort((a,b)=>a.x-b.x);
+        const text=items.map(o=>o.str).join(' ').replace(/\s+/g,' ').trim();
+        if(text) rows.push({page:p,y,items,text});
+      });
+    }
+    return rows;
+  }
+  function findItemX(items,word){
+    const w=word.toLowerCase();
+    // startsWith handles cases where the PDF text engine merges adjacent
+    // header words into one run, e.g. "Model" + "No" -> a single item "Model No"
+    const it=items.find(i=>{
+      const s=i.str.toLowerCase().trim();
+      return s===w || s.startsWith(w+' ') || s.startsWith(w);
+    });
+    if(it) return it.x;
+    // Some PDFs' embedded fonts cause the browser's text engine to split a
+    // single word mid-letter across 2-3 separate items (e.g. "Serial" comes
+    // out as "Ser" + "ial"). Try concatenating a few consecutive items and
+    // matching the word at the start of that combined string.
+    for(let i=0;i<items.length;i++){
+      let combined='';
+      for(let j=i;j<Math.min(i+4,items.length);j++){
+        combined+=items[j].str;
+        if(combined.toLowerCase().startsWith(w)) return items[i].x;
+        if(combined.length>=w.length+4) break;
+      }
+    }
+    return null;
+  }
+  function leadingWordX(items,word){
+    const x=findItemX(items,word);
+    if(x==null || !items.length) return null;
+    const minX=Math.min(...items.map(it=>it.x));
+    return Math.abs(x-minX)<3 ? x : null;
+  }
+  function classifyRowToColumns(items,anchors,maxDist){
+    const cols={};
+    items.forEach(it=>{
+      let best=null,bestD=Infinity;
+      anchors.forEach(a=>{ const d=Math.abs(it.x-a.x); if(d<bestD){bestD=d;best=a;} });
+      if(best && bestD<=maxDist) cols[best.key]=(cols[best.key]?cols[best.key]+' ':'')+it.str;
+    });
+    return cols;
+  }
+  // Fallback when column-anchor matching fails to find a model value: strip
+  // known dates and the already-identified serial(s) from the row text, and
+  // take what's left over as the model code.
+  function guessModelFromText(rowText,knownValues){
+    let t=rowText.replace(/\d{2}\/\d{2}\/\d{4}/g,' ');
+    (knownValues||[]).filter(Boolean).forEach(v=>{ t=t.split(v).join(' '); });
+    const tokens=t.split(/\s+/).filter(Boolean);
+    const candidate=tokens.find(tok=>/[A-Za-z]/.test(tok) && /\d/.test(tok) && tok.length>=4);
+    return candidate||(tokens[0]||'');
+  }
+  function isBoilerplateLine(text){
+    return /^labcold limited$/i.test(text) ||
+      /^cherrywood$/i.test(text) ||
+      /^chineham park$/i.test(text) ||
+      /^basingstoke$/i.test(text) ||
+      /^hants$/i.test(text) ||
+      /^rg24\s*8wf$/i.test(text) ||
+      /^registered in england/i.test(text) ||
+      /^vat ref\.?\s*no\.?/i.test(text) ||
+      /^sales tel:/i.test(text) ||
+      /^e-mail:/i.test(text);
+  }
+  function parseJobsheetRows(rowsIn){
+    // Every page repeats the same Labcold letterhead/footer block. When a
+    // table or section runs past the bottom of a page, that boilerplate would
+    // otherwise get scanned as if it were more table rows or section content.
+    const rows=rowsIn.filter(r=>!isBoilerplateLine(r.text));
+    const texts=rows.map(r=>r.text);
+    const devices=[];
+
+    // Format A / C: single-line 3-column header — "Model Serial Location" or
+    // "Serial No Model No Type" (maintenance route jobsheets), or "Model No
+    // Serial Department" (single-unit jobsheets), or "Serial Equipment #
+    // Location" (asset-tag jobsheets with no true model number). Column order
+    // and the exact label on the 2nd/3rd columns vary between jobsheets, so we
+    // match Model OR Equipment for the 2nd column, and Location/Department/Type
+    // for the 3rd, looking up each column's x position independently (order on
+    // the page doesn't matter for that).
+    const hdrAIdx=rows.findIndex(r=>{
+      const items=r.items;
+      const hasModel=findItemX(items,'model')!=null;
+      const hasEquip=findItemX(items,'equipment')!=null;
+      const hasSerial=findItemX(items,'serial')!=null;
+      const hasLoc=findItemX(items,'location')!=null || findItemX(items,'department')!=null || findItemX(items,'type')!=null;
+      return (hasModel||hasEquip) && hasSerial && hasLoc;
+    });
+    if(hdrAIdx!==-1){
+      const hdrItems=rows[hdrAIdx].items;
+      const anchors=[];
+      let modelX=findItemX(hdrItems,'Model');
+      let modelColIsEquipment=false;
+      if(modelX==null){ modelX=findItemX(hdrItems,'Equipment'); modelColIsEquipment=true; }
+      if(modelX!=null) anchors.push({key:'model',x:modelX});
+      const serialX=findItemX(hdrItems,'Serial'); if(serialX!=null) anchors.push({key:'serial',x:serialX});
+      let locationX=findItemX(hdrItems,'Location');
+      if(locationX==null) locationX=findItemX(hdrItems,'Department');
+      if(locationX==null) locationX=findItemX(hdrItems,'Type');
+      if(locationX!=null) anchors.push({key:'location',x:locationX});
+      const locationFragments=[];
+      for(let i=hdrAIdx+1;i<rows.length;i++){
+        const t=texts[i];
+        if(!t || /^customer\b/i.test(t)) break;
+        // x-anchored classification handles model/location values that contain
+        // spaces (e.g. "LEC - LSR151UK", "Research & Development Clinic Room"),
+        // which a plain whitespace split would break apart incorrectly.
+        const cols=classifyRowToColumns(rows[i].items,anchors,300);
+        const modelOrEquip=(cols.model||'').trim();
+        const serial=(cols.serial||'').trim();
+        const location=(cols.location||'').trim();
+        if(location) locationFragments.push(location);
+        if(!modelOrEquip && !serial){
+          // No model/serial on this line — likely a wrapped continuation line
+          // of a single Location cell that's vertically merged across several
+          // device rows (one shared site description spanning many units).
+          // Skip it rather than stopping the whole table scan.
+          continue;
+        }
+        if(!/\d/.test(serial)) break;
+        const device={model:modelColIsEquipment?'':modelOrEquip,serial,location};
+        if(modelColIsEquipment) device.equipment=modelOrEquip;
+        devices.push(device);
+      }
+      // If a location cell is merged across rows, most/all devices will have
+      // come out with an empty or only-partial location. Reassemble the full
+      // text from every fragment seen in the table and apply it uniformly.
+      const mergedLocation=locationFragments.join(' ').replace(/\s+/g,' ').trim();
+      const withOwnLocation=devices.filter(d=>d.location).length;
+      if(mergedLocation && withOwnLocation<devices.length){
+        devices.forEach(d=>{ d.location=mergedLocation; });
+      }
+    }
+
+    // Format B: "Labcold S/Number | Non Labcold S/Number | Model No | Type | Warranty End Date | Maintenance End Date" (single-unit breakdown jobsheets)
+    if(!devices.length){
+      // Header wording is always split as "Labcold S/Number", "Non Labcold S/Number",
+      // "Model No", "Warranty End Date", "Maintenance End Date" — but different PDFs
+      // wrap the line breaks differently (sometimes "No"/"Date" fall onto a second
+      // continuation line, sometimes not). Detecting by first-word items on a single
+      // row is robust to all the wrapping variants seen so far.
+      const hdrBIdx=rows.findIndex(r=>{
+        const items=r.items;
+        const hasLabcold=findItemX(items,'labcold')!=null;
+        const hasModel=findItemX(items,'model')!=null;
+        const hasWarranty=findItemX(items,'warranty')!=null;
+        const hasMaintenance=findItemX(items,'maintenance')!=null;
+        return hasLabcold && hasModel && hasWarranty && hasMaintenance;
+      });
+      if(hdrBIdx!==-1){
+        const hdrItems=rows[hdrBIdx].items;
+        const anchors=[];
+        const labcoldX=findItemX(hdrItems,'Labcold'); if(labcoldX!=null) anchors.push({key:'serial',x:labcoldX});
+        const nonX=findItemX(hdrItems,'Non'); if(nonX!=null) anchors.push({key:'serial2',x:nonX});
+        const modelX=findItemX(hdrItems,'Model'); if(modelX!=null) anchors.push({key:'model',x:modelX});
+        const typeX=findItemX(hdrItems,'Type'); if(typeX!=null) anchors.push({key:'type',x:typeX});
+        const warrantyX=findItemX(hdrItems,'Warranty'); if(warrantyX!=null) anchors.push({key:'warranty',x:warrantyX});
+        const maintX=findItemX(hdrItems,'Maintenance'); if(maintX!=null) anchors.push({key:'maintenance',x:maintX});
+        // Skip any further header continuation lines (e.g. "S/Number S/Number",
+        // "S/Number No Date Date") — these never contain digits, unlike the
+        // actual data row (serial numbers, dates) that follows them.
+        let i=hdrBIdx+1;
+        while(i<rows.length && texts[i] && !/\d/.test(texts[i]) && !/^customer\b/i.test(texts[i])) i++;
+        for(;i<rows.length;i++){
+          const t=texts[i];
+          if(!t || /^customer\b/i.test(t)) break;
+          const cols=classifyRowToColumns(rows[i].items,anchors,60);
+          let model=(cols.model||'').trim();
+          let serial=(cols.serial||cols.serial2||'').trim();
+          if(!model && !serial) break;
+          if(!model) model=guessModelFromText(t,[serial]);
+          if(!serial) serial=guessModelFromText(t,[model]);
+          devices.push({model,serial,location:''});
+        }
+      }
+    }
+
+    // Format D: generic fallback for any jobsheet layout not matched above.
+    // Rather than requiring an exact known header wording, this looks for any
+    // row containing a serial-like column ("Serial", "S/Number") together with
+    // a model-like column ("Model", "Equipment") — whatever labels the third
+    // (location-ish) column uses, if any, are picked up too. This is what
+    // catches new/unseen jobsheet layouts without needing a dedicated branch
+    // for each one.
+    if(!devices.length){
+      const hdrDIdx=rows.findIndex(r=>{
+        const items=r.items;
+        const hasSerial=findItemX(items,'serial')!=null || findItemX(items,'s/number')!=null;
+        const hasModel=findItemX(items,'model')!=null || findItemX(items,'equipment')!=null;
+        return hasSerial && hasModel;
+      });
+      if(hdrDIdx!==-1){
+        const hdrItems=rows[hdrDIdx].items;
+        const anchors=[];
+        let serialX=findItemX(hdrItems,'serial');
+        if(serialX==null) serialX=findItemX(hdrItems,'s/number');
+        if(serialX!=null) anchors.push({key:'serial',x:serialX});
+        let modelX=findItemX(hdrItems,'model');
+        const modelColIsEquipment=modelX==null;
+        if(modelX==null) modelX=findItemX(hdrItems,'equipment');
+        if(modelX!=null) anchors.push({key:'model',x:modelX});
+        let locationX=findItemX(hdrItems,'Location');
+        if(locationX==null) locationX=findItemX(hdrItems,'Department');
+        if(locationX==null) locationX=findItemX(hdrItems,'Type');
+        if(locationX!=null) anchors.push({key:'location',x:locationX});
+        const locationFragments=[];
+        let i=hdrDIdx+1;
+        while(i<rows.length && texts[i] && !/\d/.test(texts[i]) && !/^customer\b/i.test(texts[i])) i++;
+        for(;i<rows.length;i++){
+          const t=texts[i];
+          if(!t || /^customer\b/i.test(t)) break;
+          const cols=classifyRowToColumns(rows[i].items,anchors,300);
+          const modelOrEquip=(cols.model||'').trim();
+          const serial=(cols.serial||'').trim();
+          const location=(cols.location||'').trim();
+          if(location) locationFragments.push(location);
+          if(!modelOrEquip && !serial) continue;
+          if(!/\d/.test(serial) && !/\d/.test(modelOrEquip)) break;
+          const device={model:modelColIsEquipment?'':modelOrEquip,serial,location};
+          if(modelColIsEquipment) device.equipment=modelOrEquip;
+          devices.push(device);
+        }
+        const mergedLocation=locationFragments.join(' ').replace(/\s+/g,' ').trim();
+        const withOwnLocation=devices.filter(d=>d.location).length;
+        if(mergedLocation && withOwnLocation<devices.length){
+          devices.forEach(d=>{ d.location=mergedLocation; });
+        }
+      }
+    }
+
+    let customer='',callNumber='',callDate='',visitDate='',address='',department='';
+    const custHeaderIdx=rows.findIndex(r=>leadingWordX(r.items,'customer')!=null);
+    if(custHeaderIdx!==-1 && texts[custHeaderIdx+1]){
+      const dl=texts[custHeaderIdx+1];
+      const dateM=dl.match(/(\d{2}\/\d{2}\/\d{4}\s+\d{1,2}:\d{2})/);
+      const lastToken=dl.match(/(\S+)\s*$/);
+      if(lastToken) callNumber=lastToken[1];
+      if(dateM){ callDate=dateM[1]; customer=dl.slice(0,dateM.index).trim(); }
+      else customer=dl.replace(callNumber,'').trim();
+      // Long customer names sometimes wrap onto their own continuation line
+      // (e.g. "The Clatterbridge Cancer" / "Centre - Liverpool") — that line
+      // has no Call Date/Type/Number values, just more customer-column text.
+      const callDateX=findItemX(rows[custHeaderIdx].items,'call') ?? Infinity;
+      let ci=custHeaderIdx+2, contLines=0;
+      while(ci<rows.length && contLines<2 && rows[ci].items.length && rows[ci].items.every(it=>it.x<callDateX-10)){
+        const items=rows[ci].items;
+        if(leadingWordX(items,'address')!=null || leadingWordX(items,'department')!=null || leadingWordX(items,'main')!=null || leadingWordX(items,'site')!=null || leadingWordX(items,'fault')!=null || leadingWordX(items,'customer')!=null) break;
+        customer=(customer+' '+texts[ci]).trim();
+        ci++; contLines++;
+      }
+    }
+    // Some jobsheets pack a stray right-hand notes column onto the same rows as
+    // Department/Address (e.g. "Department Please report to porter cabin
+    // outside"). Detecting these sections by their leftmost word only — and
+    // clipping continuation lines to whatever x-boundary that row implies —
+    // keeps that overflow text out of the extracted value.
+    const deptHeaderRowIdx=rows.findIndex((r,idx)=>idx!==hdrAIdx && leadingWordX(r.items,'department')!=null);
+    if(deptHeaderRowIdx!==-1){
+      const hdrItems=rows[deptHeaderRowIdx].items;
+      const deptX=Math.min(...hdrItems.map(it=>it.x));
+      const rightItems=hdrItems.filter(it=>it.x>deptX+5).sort((a,b)=>a.x-b.x);
+      const boundaryX=rightItems.length?rightItems[0].x:Infinity;
+      const dlines=[];
+      for(let i=deptHeaderRowIdx+1;i<rows.length;i++){
+        const items=rows[i].items;
+        if(!items.length || leadingWordX(items,'address')!=null || leadingWordX(items,'main')!=null || leadingWordX(items,'site')!=null || leadingWordX(items,'fault')!=null || leadingWordX(items,'customer')!=null) break;
+        const own=items.filter(it=>it.x<boundaryX-10);
+        if(own.length) dlines.push(own.map(it=>it.str).join(' '));
+      }
+      department=dlines.join(', ');
+    }
+    const addrHeaderIdx=rows.findIndex(r=>leadingWordX(r.items,'address')!=null);
+    if(addrHeaderIdx!==-1){
+      const hdrItems=rows[addrHeaderIdx].items;
+      const addrX=Math.min(...hdrItems.map(it=>it.x));
+      const rightItems=hdrItems.filter(it=>it.x>addrX+5).sort((a,b)=>a.x-b.x);
+      const boundaryX=rightItems.length?rightItems[0].x:Infinity;
+      const addrLines=[];
+      for(let i=addrHeaderIdx+1;i<rows.length;i++){
+        const items=rows[i].items;
+        if(!items.length || leadingWordX(items,'main')!=null || leadingWordX(items,'site')!=null || leadingWordX(items,'fault')!=null || leadingWordX(items,'customer')!=null || leadingWordX(items,'department')!=null || findItemX(items,'details')!=null) break;
+        const own=items.filter(it=>it.x<boundaryX-10);
+        if(own.length) addrLines.push(own.map(it=>it.str).join(' '));
+      }
+      address=addrLines.join(', ');
+    }
+    const faultHeaderIdx=rows.findIndex(r=>findItemX(r.items,'fault')!=null && findItemX(r.items,'visit')!=null);
+    if(faultHeaderIdx!==-1){
+      let di=faultHeaderIdx+1;
+      if(/^for$/i.test(texts[di]||'')) di++;
+      const dl=texts[di]||'';
+      const dates=[...dl.matchAll(/\d{2}\/\d{2}\/\d{4}/g)];
+      if(dates.length) visitDate=dates[dates.length-1][0];
+    }
+
+    if(department) devices.forEach(d=>{ if(!d.location) d.location=department; });
+
+    // Job reference numbers are consistently formatted like "ENQ123456"
+    // regardless of jobsheet layout, so a direct search across the whole
+    // document is more reliable than reading it out of a specific table
+    // column — use it to fill in (or correct) whatever the per-row parsing
+    // above found.
+    const enqMatch=texts.join(' ').match(/\bENQ-?\d{4,}\b/i)
+      || rows.map(r=>r.items.map(it=>it.str).join('')).join(' ').match(/\bENQ-?\d{4,}\b/i);
+    if(enqMatch) callNumber=enqMatch[0].toUpperCase();
+
+    return {devices,customer,callNumber,callDate,visitDate,address,department};
+  }
+  function ddmmyyyyToIso(v){
+    const m=String(v||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(!m) return '';
+    return `${m[3]}-${m[2]}-${m[1]}`;
+  }
+  // ===================================================================
+  // WORKSHEET ROUTING
+  // ===================================================================
+  // Which worksheet does a given model need? These are the only rules I can
+  // state with confidence; everything else is learned from what you pick.
+  //
+  // To add a rule by hand, add an entry below: `match` is tried against the
+  // model, equipment and location text (case-insensitive), `sheet` is the
+  // worksheet id from SHEETS.
+  var RULES = [
+    { match: /barkey|plasmatherm|plasma\s*therm/i, sheet: 'barkey' },
+    { match: /cloud\s*temp|cloudtemp/i,            sheet: 'cloud_temp' },
+    { match: /thermo\s*max|monitor\s*max/i,        sheet: 'monitoring' }
+  ];
+
+  var SHEETS = {
+    barkey:      { id:'barkey',      name:'Barkey',                 href:'barkey_calibration_form.html',        offsets:'dostmann' },
+    smd:         { id:'smd',         name:'Standard Medical',       href:'calibration_worksheet_SMD.html',      offsets:'dostmann' },
+    snmd:        { id:'snmd',        name:'Standard Non-Medical',   href:'calibration_worksheet_SNMD.html',     offsets:'fluke_comark' },
+    ws19_24:     { id:'ws19_24',     name:'19/24 Range',            href:'calibration_worksheet_19_24.html',    offsets:'fluke_comark' },
+    cloud_temp:  { id:'cloud_temp',  name:'Cloud Temp',             href:'cloud_temp.html',                     offsets:'fluke_comark' },
+    monitoring:  { id:'monitoring',  name:'Monitoring Systems',     href:'monitoring_systems.html',             offsets:'fluke_comark' }
+  };
+
+  // Model codes are normalised so that "RLDF 1010A", "rldf-1010a" and
+  // "RLDF1010A" all learn and match as the same thing.
+  function modelKey(model) {
+    return String(model || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  }
+
+  function readJson(key, fallback) {
+    try {
+      var txt = global.localStorage.getItem(key);
+      return txt ? JSON.parse(txt) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function writeJson(key, value) {
+    try {
+      if (value === null) global.localStorage.removeItem(key);
+      else global.localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function routes() { return readJson(KEY_ROUTES, {}) || {}; }
+
+  // Remember that this model goes to this worksheet, so the next jobsheet
+  // with the same kit routes itself without being asked.
+  function learnRoute(model, sheetId) {
+    var k = modelKey(model);
+    if (!k || !SHEETS[sheetId]) return;
+    var r = routes();
+    r[k] = sheetId;
+    writeJson(KEY_ROUTES, r);
+  }
+  function forgetRoutes() { writeJson(KEY_ROUTES, null); announce(); }
+
+  // Returns { sheet, why } — `why` is 'learned', 'rule' or '' (unknown).
+  function suggestSheet(device) {
+    var hay = [device.model, device.equipment, device.location].filter(Boolean).join(' ');
+    var learned = routes()[modelKey(device.model)];
+    if (learned && SHEETS[learned]) return { sheet: learned, why: 'learned' };
+    for (var i = 0; i < RULES.length; i++) {
+      if (RULES[i].match.test(hay)) return { sheet: RULES[i].sheet, why: 'rule' };
+    }
+    return { sheet: '', why: '' };
+  }
+
+  // ===================================================================
+  // THE DAY'S WORKLIST
+  // ===================================================================
+  function todayIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function current() {
+    var js = readJson(KEY_CURRENT, null);
+    if (!js || !js.devices) return null;
+    return js;
+  }
+
+  // Store a freshly parsed sheet as today's worklist.
+  function setCurrent(parsed, fileName) {
+    var js = {
+      loadedAt: new Date().toISOString(),
+      day: todayIso(),
+      fileName: fileName || '',
+      customer: parsed.customer || '',
+      callNumber: parsed.callNumber || '',
+      callDate: parsed.callDate || '',
+      visitDate: parsed.visitDate || '',
+      address: parsed.address || '',
+      department: parsed.department || '',
+      devices: (parsed.devices || []).map(function (d, i) {
+        var s = suggestSheet(d);
+        return {
+          idx: i,
+          model: d.model || '',
+          equipment: d.equipment || '',
+          serial: d.serial || '',
+          location: d.location || '',
+          sheet: s.sheet,
+          sheetWhy: s.why,
+          done: false,
+          doneAt: '',
+          certRef: ''
+        };
+      })
+    };
+    writeJson(KEY_CURRENT, js);
+    announce();
+    return js;
+  }
+
+  function clearCurrent() { writeJson(KEY_CURRENT, null); writeJson(KEY_HANDOFF, null); announce(); }
+
+  function updateDevice(idx, patch) {
+    var js = current(); if (!js || !js.devices[idx]) return null;
+    Object.keys(patch || {}).forEach(function (k) { js.devices[idx][k] = patch[k]; });
+    writeJson(KEY_CURRENT, js);
+    announce();
+    return js;
+  }
+
+  function markDone(serial, certRef) {
+    var js = current(); if (!js) return;
+    var hit = js.devices.filter(function (d) {
+      return d.serial && String(d.serial).trim() === String(serial || '').trim();
+    })[0];
+    if (!hit) return;
+    hit.done = true;
+    hit.doneAt = new Date().toISOString();
+    if (certRef) hit.certRef = certRef;
+    writeJson(KEY_CURRENT, js);
+    announce();
+  }
+
+  function progress() {
+    var js = current();
+    if (!js) return { total: 0, done: 0 };
+    return { total: js.devices.length, done: js.devices.filter(function (d) { return d.done; }).length };
+  }
+
+  // ===================================================================
+  // HANDOFF TO A WORKSHEET
+  // ===================================================================
+  // The calibration page writes one device here, then navigates. The
+  // worksheet picks it up on load and clears it, so a later refresh of that
+  // worksheet doesn't silently overwrite work in progress.
+  function handoff(idx) {
+    var js = current(); if (!js || !js.devices[idx]) return null;
+    var d = js.devices[idx];
+    var payload = {
+      at: new Date().toISOString(),
+      sheet: d.sheet,
+      device: { model: d.model, equipment: d.equipment, serial: d.serial, location: d.location },
+      jobsheet: {
+        customer: js.customer, callNumber: js.callNumber, address: js.address,
+        department: js.department, visitDate: js.visitDate
+      }
+    };
+    writeJson(KEY_HANDOFF, payload);
+    if (d.sheet) learnRoute(d.model, d.sheet);
+    return payload;
+  }
+
+  // Read AND clear — a handoff is consumed exactly once.
+  function takeHandoff(expectedSheet) {
+    var p = readJson(KEY_HANDOFF, null);
+    if (!p) return null;
+    // Opened a different worksheet than the one routed to? Leave it alone so
+    // the intended worksheet still gets it.
+    if (expectedSheet && p.sheet && p.sheet !== expectedSheet) return null;
+    writeJson(KEY_HANDOFF, null);
+    return p;
+  }
+
+  function announce() {
+    try { global.dispatchEvent(new CustomEvent(CHANGE_EVENT)); } catch (e) {}
+  }
+
+  function onChange(fn) {
+    if (typeof fn !== 'function') return;
+    global.addEventListener(CHANGE_EVENT, fn);
+    var queued = false;
+    global.addEventListener('storage', function (e) {
+      if (!e || !e.key) return;
+      if (e.key !== KEY_CURRENT && e.key !== KEY_ROUTES) return;
+      if (queued) return;
+      queued = true;
+      global.setTimeout(function () { queued = false; try { fn(); } catch (err) {} }, 60);
+    });
+  }
+
+  // ===================================================================
+  // PUBLIC API
+  // ===================================================================
+  global.LabCalJobsheet = {
+    SHEETS: SHEETS,
+    CHANGE_EVENT: CHANGE_EVENT,
+    // parsing
+    pdfToRows: pdfToRows,
+    parseRows: parseJobsheetRows,
+    parseFile: async function (file) {
+      if (!global.pdfjsLib) throw new Error('PDF library not available (no internet connection to load it)');
+      var rows = await pdfToRows(file);
+      var parsed = parseJobsheetRows(rows);
+      if (!parsed.devices.length) {
+        console.error('Jobsheet PDF parsing found no devices. Extracted lines:', rows.map(function (r) { return r.text; }));
+        throw new Error('No equipment list found in this PDF. Open the browser console for the extracted text — share that if you need this fixed.');
+      }
+      return parsed;
+    },
+    // worklist
+    current: current,
+    setCurrent: setCurrent,
+    clearCurrent: clearCurrent,
+    updateDevice: updateDevice,
+    markDone: markDone,
+    progress: progress,
+    // routing
+    suggestSheet: suggestSheet,
+    learnRoute: learnRoute,
+    forgetRoutes: forgetRoutes,
+    routes: routes,
+    // handoff
+    handoff: handoff,
+    takeHandoff: takeHandoff,
+    onChange: onChange,
+    ddmmyyyyToIso: ddmmyyyyToIso
+  };
+})(typeof window !== 'undefined' ? window : this);

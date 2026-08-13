@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#dfe6ee">
 <title>Monitoring System Calibration Worksheet</title>
 <script src="labcal_offsets.js"></script>
+<script src="labcal_jobsheet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -448,6 +449,24 @@ let appliedOffsetsSig=null;
 function offsetsFingerprint(raw){
   return [raw.validUntil, raw.refThermSerial||'', raw.engineerName||'',
           Object.keys(raw.probes||{}).join(',')].join('|');
+}
+// Device handed over from the jobsheet worklist. Cloud Temp systems are
+// entered per monitoring point rather than per unit, so only the shared
+// header fields are prefilled — never into a field already filled in.
+function applyJobsheetHandoff(){
+  if(!window.LabCalJobsheet) return false;
+  const p=LabCalJobsheet.takeHandoff('cloud_temp');
+  if(!p) return false;
+  const d=p.device||{}, j=p.jobsheet||{};
+  const fill=(id,val)=>{
+    const el=document.getElementById(id);
+    if(el && val && !String(el.value||'').trim()) el.value=val;
+  };
+  fill('site', j.customer||'');
+  fill('jobRef', j.callNumber||'');
+  fill('department', d.location||j.department||'');
+  fill('serial', d.serial||'');
+  return true;
 }
 function restoreVaultOffsets(){
   if(!window.LabCalOffsets) return false;
@@ -1432,6 +1451,15 @@ async function buildPaginatedPdfBlob(pageEl, scale, headerInfo){
     stage.remove();
   }
 }
+// A certificate was produced for this unit — tick it off the jobsheet
+// worklist so the calibration page shows what's left to do.
+function markJobsheetDone(){
+  if(!window.LabCalJobsheet) return;
+  const serialEl=document.getElementById('serial');
+  const certEl=document.getElementById('sheetNo');
+  if(!serialEl || !serialEl.value) return;
+  LabCalJobsheet.markDone(serialEl.value, certEl?certEl.value:'');
+}
 async function generatePDF(){
   if(!offsetsAreCurrent()){ alert('The digital reference thermometer / probe offsets are not currently valid (missing, not loaded, or expired). Load a current offsets file before generating a certificate.'); return; }
   if(!validateDecimals(true)) return;
@@ -1468,6 +1496,7 @@ async function generatePDF(){
         const writable=await handle.createWritable(); await writable.write(blob); await writable.close();
       }catch(pickerErr){ if(pickerErr && pickerErr.name==='AbortError'){} else { downloadBlob(blob,filename); } }
     } else { downloadBlob(blob,filename); }
+    markJobsheetDone();
   }catch(err){
     alert('PDF generation failed: '+(err && err.message ? err.message : err));
   }finally{
@@ -1674,6 +1703,7 @@ document.getElementById('dateNative')?.addEventListener('click',function(){ if(t
 document.getElementById('dateNative')?.addEventListener('focus',function(){ if(this.showPicker){ try{ this.showPicker(); }catch(e){} } });
 (function init(){
   restoreVaultOffsets();
+  applyJobsheetHandoff();
   if(window.LabCalOffsets){ LabCalOffsets.onChange(()=>{ restoreVaultOffsets(); }); }
   const dn=document.getElementById('dateNative');
   if(dn && !dn.value){ dn.value=isoToday(); document.getElementById('date').value=displayDate(dn.value); }
