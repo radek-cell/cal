@@ -1,7 +1,30 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving (v1.4)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.5)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.5 — today's certificates
+
+Below the worklist on the calibration page there is now a panel listing every
+certificate generated today: filename, time, site, model, serial and size. Each
+one has **View** (opens it in a tab, no second download), **Save / Share** (the
+same iOS share sheet), and **Delete**.
+
+**Merge all & share** staples the whole day into a single PDF and hands it to
+the share sheet — one file to email or file at the end of a run. It uses the
+same pdf-lib engine as the merge tool, served from your own site rather than a
+CDN so it works offline, and only downloaded when you actually press the button.
+An unreadable certificate is skipped rather than sinking the whole merge.
+
+If you worked on previous days, a day selector appears so you can go back.
+Records older than 14 days are pruned automatically.
+
+**Read the yellow note on the panel.** This is a convenience buffer held by the
+browser, not an archive. iPadOS clears it after about a week away from the site,
+and so does anything that clears site data. Save each certificate properly the
+same day — the panel says so on screen for exactly this reason. A storage
+failure here can never lose you a certificate: the file is saved or shared
+first, and filing it in the list is a separate, non-fatal step afterwards.
 
 ## v1.4 — saving files on iPad
 
@@ -82,7 +105,9 @@ that actually changed:
 |---|---|
 | `labcal_offsets.js` | The shared offsets vault. Must sit next to the HTML files. |
 | `labcal_jobsheet.js` | Jobsheet parser, worklist and worksheet routing. |
-| `labcal_save.js` | **NEW** — save/share routing, including the iOS share sheet. |
+| `labcal_save.js` | Save/share routing, including the iOS share sheet. |
+| `labcal_certs.js` | **NEW** — the day's certificate list (IndexedDB) and day merge. |
+| `pdf-lib.min.js` | **NEW** — PDF merge engine, lazy-loaded only when merging. |
 | `index.html` | Offsets panel with countdown + warnings; Calibration section locks until a file is loaded |
 | `calibration.html` | Jobsheet worklist panel; each worksheet card locks unless *its own* ecosystem's file is loaded |
 | `monitoring_systems.html` | Same gating for Cloud Temp |
@@ -91,13 +116,13 @@ that actually changed:
 | `calibration_worksheet_SNMD.html` | Auto-loads Fluke & Comark offsets |
 | `calibration_worksheet_19_24.html` | Auto-loads Fluke & Comark offsets |
 | `cloud_temp.html` | Auto-loads Fluke & Comark offsets |
-| `sw.js` | Cache bumped to **v8**, caches all three shared modules |
+| `sw.js` | Cache bumped to **v9**, caches all shared modules |
 | `data_logger_viewer.html` | Chart PNG and summary CSV go through the share sheet on iPad |
 | `pdf_merge_reorder.html` | Merged PDF goes through the share sheet on iPad |
 | `tools.html` | Unchanged — included so the folder is complete |
 
 After uploading, open the home page once while online so the service worker
-picks up v8, then hit **Refresh offline copy**.
+picks up v9, then hit **Refresh offline copy**.
 
 ## Which file unlocks what
 
@@ -118,11 +143,6 @@ The vault counts down to the **last day of the "valid until" month**.
 - 14 days or less → red pulsing warning on the home page **and** an amber strip
   at the top of every worksheet
 - expired → everything using that file locks; no PDF or Excel can be generated
-
-## Still to come
-
-- **Day panel** of the certificates generated, with a single merged PDF at the
-  end of the day.
 
 ## Notes
 

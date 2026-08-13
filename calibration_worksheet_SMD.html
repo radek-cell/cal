@@ -12,6 +12,7 @@
 <script src="labcal_offsets.js"></script>
 <script src="labcal_jobsheet.js"></script>
 <script src="labcal_save.js"></script>
+<script src="labcal_certs.js"></script>
 <!-- Swapped from html2pdf.bundle.min.js: its built-in html2canvas can't parse the
      color(display-p3 ...) values Safari/iPadOS reports for some elements, causing
      "Attempting to parse an unsupported color function 'color'". html2canvas-pro
@@ -1613,6 +1614,18 @@ const restoreSwappedInputs=restoreSwappedFields;
 
 // A certificate was produced for this unit — tick it off the jobsheet
 // worklist so the calibration page shows what's left to do.
+// Keep a copy of the certificate in the day list on the calibration page.
+// Purely additive — the file has already been saved or shared by this point,
+// so a storage failure here can never lose the engineer their work.
+function fileCertificateForToday(blob, filename){
+  if(!window.LabCalCerts || !blob) return;
+  const v=id=>{ const el=document.getElementById(id); return el?el.value:''; };
+  LabCalCerts.add(blob, {
+    filename, sheet:'smd',
+    certRef:v('certNo'), serial:v('serial'), model:v('model'),
+    site:v('site'), jobRef:v('jobRef')
+  });
+}
 function markJobsheetDone(){
   if(!window.LabCalJobsheet) return;
   const serialEl=document.getElementById('serial');
@@ -1655,6 +1668,7 @@ async function generatePDF(){
     // folder. Plain download everywhere else. See labcal_save.js.
     if(window.LabCalSave){ await LabCalSave.deliver(blob, filename); }
     else { downloadBlob(blob,filename); }
+    fileCertificateForToday(blob, filename);
     markJobsheetDone();
   }catch(err){
     alert('PDF generation failed: '+(err && err.message ? err.message : err));

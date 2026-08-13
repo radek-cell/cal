@@ -12,6 +12,8 @@
 <script src="labcal_offsets.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="labcal_jobsheet.js"></script>
+<script src="labcal_save.js"></script>
+<script src="labcal_certs.js"></script>
 <style>
 :root{
   --bg:#dfe6ee;
@@ -138,6 +140,45 @@ h1{font-size:clamp(28px,4vw,42px);line-height:1.1;margin:0 0 14px;font-weight:70
 }
 .lockmsg svg{width:13px;height:13px;flex-shrink:0;margin-top:1px}
 .needs{font-family:var(--mono);font-size:10px;color:var(--muted-dim);letter-spacing:.3px;margin-top:10px}
+
+/* ---- today's certificates ---- */
+.certs{
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:16px 18px;margin:0 0 24px;box-shadow:0 1px 3px rgba(20,30,40,.06);
+}
+.certs.empty{border-style:dashed;background:transparent;box-shadow:none}
+.cert-sub{font-family:var(--mono);font-size:11px;color:var(--muted-dim);line-height:1.6;margin-top:4px}
+.cert-note{
+  margin-top:12px;font-size:11.5px;line-height:1.5;color:#7a4c06;
+  background:#fdf3e3;border:1px solid var(--amber-dim);border-radius:5px;padding:8px 10px;
+}
+.crow{
+  display:grid;grid-template-columns:1fr auto;gap:8px 14px;align-items:center;
+  padding:11px 0;border-top:1px solid var(--border-soft);
+}
+.crow-main{min-width:0}
+.crow-name{font-size:13.5px;font-weight:650;letter-spacing:-.1px;word-break:break-all}
+.crow-meta{font-family:var(--mono);font-size:10.5px;color:var(--muted-dim);line-height:1.6;margin-top:2px}
+.crow-ctl{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.cbtn{
+  font-family:var(--sans);font-size:12px;font-weight:650;color:var(--muted);
+  background:transparent;border:1px solid var(--border);border-radius:6px;
+  padding:8px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.cbtn:hover{border-color:var(--cyan-dim);color:var(--cyan)}
+.cbtn.solid{background:var(--cyan);border-color:var(--cyan);color:#fff}
+.cbtn.solid:hover{background:#0c7a70;color:#fff}
+.cbtn.danger:hover{color:#c0392b;border-color:#e0a49c}
+.cbtn:disabled{opacity:.45;cursor:not-allowed}
+.daysel{
+  font-family:var(--mono);font-size:11.5px;padding:7px 9px;border:1px solid var(--border);
+  border-radius:6px;background:#fff;color:var(--ink);
+}
+@media (max-width:620px){
+  .crow{grid-template-columns:1fr}
+  .crow-ctl{justify-content:flex-start}
+  .cbtn{flex:1;text-align:center}
+}
 
 /* ---- jobsheet worklist ---- */
 .job{
@@ -282,13 +323,15 @@ footer{
   <div class="job" id="jobPanel"></div>
   <input id="jobFile" type="file" accept="application/pdf,.pdf" style="display:none">
 
+  <div class="certs" id="certPanel"></div>
+
   <div class="section-label">WS · 01–06 — select a worksheet</div>
 
   <div class="grid" id="grid"></div>
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.4</span>
+    <span id="footYear">v1.5</span>
   </footer>
 
 </div>
@@ -460,7 +503,7 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.4 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.5 · ' + d.getFullYear();
 }
 
 
@@ -600,6 +643,164 @@ if(window.LabCalJobsheet){
 }
 
 renderJobPanel();
+
+
+// ---------------------------------------------------------------------
+// Today's certificates — every PDF generated is kept here so it can be
+// re-opened, shared again, or stapled into one file at the end of the day.
+// ---------------------------------------------------------------------
+const certPanel = document.getElementById('certPanel');
+let certDay = null;   // null = today
+
+function fmtTime(iso){
+  try{ return new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+  catch(e){ return ''; }
+}
+function fmtDay(day){
+  if(day === LabCalCerts.todayIso()) return 'today';
+  try{ return new Date(day+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+  catch(e){ return day; }
+}
+
+async function renderCertPanel(){
+  if(!certPanel || !window.LabCalCerts) return;
+  if(!LabCalCerts.supported()){
+    setHtml(certPanel, '<div class="job-head"><div><p class="job-title">Certificate list unavailable</p><div class="cert-sub">This browser will not let LabCal keep a list of the day\'s certificates. Everything else works normally.</div></div></div>');
+    certPanel.className = 'certs empty';
+    return;
+  }
+
+  const day = certDay || LabCalCerts.todayIso();
+  let list = [], allDays = [];
+  try{
+    list = await LabCalCerts.listDay(day);
+    allDays = await LabCalCerts.days();
+  }catch(e){
+    setHtml(certPanel, '<div class="job-head"><div><p class="job-title">Certificate list unavailable</p><div class="cert-sub">'+jesc(e.message||e)+'</div></div></div>');
+    certPanel.className = 'certs empty';
+    return;
+  }
+
+  const daySelect = allDays.length > 1
+    ? `<select class="daysel" id="certDaySel">${allDays.map(d=>`<option value="${d.day}"${d.day===day?' selected':''}>${jesc(fmtDay(d.day))} — ${d.count}</option>`).join('')}</select>`
+    : '';
+
+  if(!list.length){
+    setHtml(certPanel, `
+      <div class="job-head">
+        <div>
+          <p class="job-title">No certificates ${day===LabCalCerts.todayIso()?'yet today':'on '+jesc(fmtDay(day))}</p>
+          <div class="cert-sub">Every PDF you generate appears here, ready to re-open, share again, or merge into one file.</div>
+        </div>
+        <div class="job-actions">${daySelect}</div>
+      </div>`);
+    certPanel.className = 'certs empty';
+    bindDaySelect();
+    return;
+  }
+
+  const totalBytes = list.reduce((n,r)=>n+(r.size||0),0);
+  const rows = list.map(r=>`
+    <div class="crow">
+      <div class="crow-main">
+        <div class="crow-name">${jesc(r.filename)}</div>
+        <div class="crow-meta">${fmtTime(r.savedAt)}${r.site?' · '+jesc(r.site):''}${r.model?' · '+jesc(r.model):''}${r.serial?' · '+jesc(r.serial):''}${r.size?' · '+LabCalCerts.formatSize(r.size):''}</div>
+      </div>
+      <div class="crow-ctl">
+        <button class="cbtn" type="button" data-view="${r.id}">View</button>
+        <button class="cbtn" type="button" data-share="${r.id}">Save / Share</button>
+        <button class="cbtn danger" type="button" data-del="${r.id}">Delete</button>
+      </div>
+    </div>`).join('');
+
+  const html = `
+    <div class="job-head">
+      <div>
+        <p class="job-title">Certificates ${day===LabCalCerts.todayIso()?'today':'on '+jesc(fmtDay(day))} — ${list.length}</p>
+        <div class="cert-sub">${LabCalCerts.formatSize(totalBytes)} in total</div>
+      </div>
+      <div class="job-actions">
+        ${daySelect}
+        <button class="cbtn solid" type="button" id="certMergeBtn">Merge all &amp; share</button>
+        <button class="cbtn danger" type="button" id="certClearBtn">Clear</button>
+      </div>
+    </div>
+    ${rows}
+    <div class="cert-note"><b>Keep your own copy.</b> This list is a convenience buffer held by the browser, not an archive — iPadOS clears it after about a week away from the site. Save each certificate properly the same day.</div>`;
+
+  if(setHtml(certPanel, html)) bindCertActions();
+  certPanel.className = 'certs';
+}
+
+function bindDaySelect(){
+  const sel = document.getElementById('certDaySel');
+  if(sel) sel.addEventListener('change', ()=>{ certDay = sel.value; renderCertPanel(); });
+}
+
+function bindCertActions(){
+  bindDaySelect();
+
+  certPanel.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click', async ()=>{
+    const rec = await LabCalCerts.get(Number(b.getAttribute('data-view')));
+    if(!rec) return;
+    // Opened in a tab rather than downloaded again, so it can be checked
+    // without cluttering the device with duplicates.
+    const url = URL.createObjectURL(rec.blob);
+    window.open(url, '_blank');
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  }));
+
+  certPanel.querySelectorAll('[data-share]').forEach(b=>b.addEventListener('click', async ()=>{
+    const rec = await LabCalCerts.get(Number(b.getAttribute('data-share')));
+    if(!rec) return;
+    if(window.LabCalSave) await LabCalSave.deliver(rec.blob, rec.filename);
+  }));
+
+  certPanel.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const id = Number(b.getAttribute('data-del'));
+    const rec = await LabCalCerts.get(id);
+    if(!rec) return;
+    if(confirm(`Remove ${rec.filename} from this list?\n\nThis only clears it from the panel — any copy you already saved or shared is untouched.`)){
+      await LabCalCerts.remove(id);
+      renderCertPanel();
+    }
+  }));
+
+  const mergeBtn = document.getElementById('certMergeBtn');
+  if(mergeBtn) mergeBtn.addEventListener('click', async ()=>{
+    const day = certDay || LabCalCerts.todayIso();
+    const label = mergeBtn.textContent;
+    mergeBtn.disabled = true;
+    try{
+      const res = await LabCalCerts.mergeDay(day, (n,total)=>{
+        mergeBtn.textContent = `Merging ${n}/${total}…`;
+      });
+      const name = `LabCal_certificates_${day}.pdf`;
+      mergeBtn.textContent = label;
+      if(window.LabCalSave) await LabCalSave.deliver(res.blob, name);
+    }catch(e){
+      alert('Could not merge the certificates.\n\n' + (e && e.message ? e.message : e));
+    }finally{
+      mergeBtn.disabled = false;
+      mergeBtn.textContent = label;
+    }
+  });
+
+  const clearBtn = document.getElementById('certClearBtn');
+  if(clearBtn) clearBtn.addEventListener('click', async ()=>{
+    const day = certDay || LabCalCerts.todayIso();
+    if(confirm(`Clear every certificate in this list for ${fmtDay(day)}?\n\nOnly the panel is cleared — copies you already saved or shared are untouched. Make sure they are filed first.`)){
+      await LabCalCerts.clearDay(day);
+      renderCertPanel();
+    }
+  });
+}
+
+if(window.LabCalCerts){
+  LabCalCerts.prune().then(renderCertPanel);
+  LabCalCerts.onChange(renderCertPanel);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) renderCertPanel(); });
+}
 
 renderOffsetStrip();
 renderCards();

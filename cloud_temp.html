@@ -12,6 +12,7 @@
 <script src="labcal_offsets.js"></script>
 <script src="labcal_jobsheet.js"></script>
 <script src="labcal_save.js"></script>
+<script src="labcal_certs.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1454,6 +1455,18 @@ async function buildPaginatedPdfBlob(pageEl, scale, headerInfo){
 }
 // A certificate was produced for this unit — tick it off the jobsheet
 // worklist so the calibration page shows what's left to do.
+// Keep a copy of the certificate in the day list on the calibration page.
+// Purely additive — the file has already been saved or shared by this point,
+// so a storage failure here can never lose the engineer their work.
+function fileCertificateForToday(blob, filename){
+  if(!window.LabCalCerts || !blob) return;
+  const v=id=>{ const el=document.getElementById(id); return el?el.value:''; };
+  LabCalCerts.add(blob, {
+    filename, sheet:'cloud_temp',
+    certRef:v('sheetNo'), serial:v('serial'), model:v('model'),
+    site:v('site'), jobRef:v('jobRef')
+  });
+}
 function markJobsheetDone(){
   if(!window.LabCalJobsheet) return;
   const serialEl=document.getElementById('serial');
@@ -1496,6 +1509,7 @@ async function generatePDF(){
     // folder. Plain download everywhere else. See labcal_save.js.
     if(window.LabCalSave){ await LabCalSave.deliver(blob, filename); }
     else { downloadBlob(blob,filename); }
+    fileCertificateForToday(blob, filename);
     markJobsheetDone();
   }catch(err){
     alert('PDF generation failed: '+(err && err.message ? err.message : err));
