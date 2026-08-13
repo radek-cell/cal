@@ -110,12 +110,33 @@
     return tx('readonly').then(function (os) { return wrap(os.getAll()); });
   }
 
-  function listDay(day) {
+  // jobRef narrows to a single job. More than one job in a day is normal, and
+  // the certificates for each must stay separable.
+  function listDay(day, jobRef) {
     var want = day || todayIso();
     return all().then(function (list) {
       return list
         .filter(function (r) { return r.day === want; })
+        .filter(function (r) { return jobRef === undefined || (r.jobRef || '') === jobRef; })
         .sort(function (a, b) { return a.savedAt < b.savedAt ? -1 : 1; });
+    });
+  }
+
+  // The jobs worked on a given day, in the order they were first certified.
+  function jobsOnDay(day) {
+    return listDay(day).then(function (list) {
+      var order = [], byRef = {};
+      list.forEach(function (r) {
+        var ref = r.jobRef || '';
+        if (!byRef[ref]) {
+          byRef[ref] = { jobRef: ref, site: r.site || '', count: 0, bytes: 0 };
+          order.push(ref);
+        }
+        byRef[ref].count += 1;
+        byRef[ref].bytes += r.size || 0;
+        if (!byRef[ref].site && r.site) byRef[ref].site = r.site;
+      });
+      return order.map(function (ref) { return byRef[ref]; });
     });
   }
 
@@ -178,11 +199,11 @@
   }
 
   // Staple every certificate from a day into one PDF, in the order produced.
-  function mergeDay(day, onProgress) {
+  function mergeDay(day, onProgress, jobRef) {
     var want = day || todayIso();
-    return Promise.all([listDay(want), loadPdfLib()]).then(function (res) {
+    return Promise.all([listDay(want, jobRef), loadPdfLib()]).then(function (res) {
       var list = res[0], PDFLib = res[1];
-      if (!list.length) throw new Error('There are no certificates to merge for that day.');
+      if (!list.length) throw new Error('There are no certificates to merge for that job.');
       return PDFLib.PDFDocument.create().then(function (out) {
         var i = 0;
         function next() {
@@ -218,6 +239,14 @@
     if (typeof fn === 'function') global.addEventListener(CHANGE_EVENT, fn);
   }
 
+  // The merged file is named after the job so two jobs on the same day can
+  // never be confused for each other.
+  function mergedFileName(day, jobRef) {
+    var d = day || todayIso();
+    var ref = String(jobRef || '').trim().replace(/[^A-Za-z0-9_-]/g, '');
+    return (ref ? ref + '_' : 'LabCal_') + 'certificates_' + d + '.pdf';
+  }
+
   function formatSize(bytes) {
     if (!bytes) return '';
     if (bytes < 1024) return bytes + ' B';
@@ -235,6 +264,8 @@
     remove: remove,
     clearDay: clearDay,
     listDay: listDay,
+    jobsOnDay: jobsOnDay,
+    mergedFileName: mergedFileName,
     days: days,
     prune: prune,
     mergeDay: mergeDay,

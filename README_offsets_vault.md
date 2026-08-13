@@ -1,7 +1,69 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.5)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.16)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## Version numbering
+
+Renumbered to **v1.16** and counting up from there (1.17, 1.18 …). Earlier
+releases in these notes were numbered 1.2–1.6; they are the same builds, just
+renumbered so there is plenty of room before 2.0. The `sw.js` CACHE_VERSION is a
+separate counter — it only has to differ from the previous one to force a
+refresh, and is now **v11**.
+
+## v1.16 — two fixes
+
+**Wrapped serials no longer create phantom units.** A long serial in a narrow
+table cell wraps onto a second line in the PDF. The tail arrived as its own row
+with no model, and became a second unit with a stub serial — so ENQ139969 showed
+two units when it has one. Tails are now stitched back onto the serial above
+them, and rows with no model and only a stub serial are dropped as table noise.
+That jobsheet now reads correctly as one unit, `761503260747PW-LC` / RLDG1010.
+
+Note the serial keeps the hyphen, because that is what the PDF's text layer and
+the printed page both show. If it should really be `761503260747PWLC` with no
+hyphen, say so and I will strip it on the join.
+
+**More than one job a day.** The certificate panel is now grouped by job. Each
+group shows its ENQ number, the site, how many certificates and their size, and
+has its own **Merge job & share** button. The merged file is named after the
+job — `ENQ139969_certificates_2026-08-13.pdf` — so two jobs on the same day can
+never be confused. Certificates generated without a job reference are grouped
+under "No job reference". **Clear day** still clears the whole day.
+
+## v1.6 — routing rules and feedback
+
+Three rules are now built in, on top of the named-kit ones:
+
+| Model code | Worksheet |
+|---|---|
+| ends in **19** or **24** (0119, 0219, 0519, 1019, 1519 and the 24s) | 19/24 Range |
+| ends in **MD** | Standard Medical |
+| **LPTU0008** | Barkey |
+
+Matching is done on the model code with spaces, dashes and case stripped, so
+"RLDF 15-19", "rldf1519" and "RLDF1519" all behave the same. The MD rule is
+checked before the 19/24 rule — a code ending "MD" cannot also end in "19" or
+"24", so they can never both fire, but the order makes that explicit. If you do
+have codes like **RLDF1519MD**, tell me which way they should go.
+
+**Corrections beat rules.** If a rule sends something to the wrong worksheet and
+you change it, that choice is remembered and wins from then on.
+
+**Sending the learned data back.** At the bottom of the worklist panel there is
+now a line showing how many models have been learned, with **Export routing**.
+That produces a JSON file (through the usual share sheet) containing, for each
+model: what you chose, what the built-in rules would have said, whether the two
+agree, how many times it has been used, and — where relevant — what rule your
+choice overrode. The `disagreeWithRules` and `notCoveredByRules` totals at the
+top are the entries worth acting on. Send me that file and I will fold it into
+the built-in rules.
+
+The export contains equipment model codes and routing choices only. No customer,
+site, job reference, serial or location data goes into it.
+
+**Reset learned** clears everything the app has worked out, leaving the built-in
+rules in place.
 
 ## v1.5 — today's certificates
 
@@ -116,13 +178,13 @@ that actually changed:
 | `calibration_worksheet_SNMD.html` | Auto-loads Fluke & Comark offsets |
 | `calibration_worksheet_19_24.html` | Auto-loads Fluke & Comark offsets |
 | `cloud_temp.html` | Auto-loads Fluke & Comark offsets |
-| `sw.js` | Cache bumped to **v9**, caches all shared modules |
+| `sw.js` | Cache bumped to **v11**, caches all shared modules |
 | `data_logger_viewer.html` | Chart PNG and summary CSV go through the share sheet on iPad |
 | `pdf_merge_reorder.html` | Merged PDF goes through the share sheet on iPad |
 | `tools.html` | Unchanged — included so the folder is complete |
 
 After uploading, open the home page once while online so the service worker
-picks up v9, then hit **Refresh offline copy**.
+picks up v11, then hit **Refresh offline copy**.
 
 ## Which file unlocks what
 

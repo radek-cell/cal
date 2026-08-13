@@ -353,8 +353,44 @@
       || rows.map(r=>r.items.map(it=>it.str).join('')).join(' ').match(/\bENQ-?\d{4,}\b/i);
     if(enqMatch) callNumber=enqMatch[0].toUpperCase();
 
-    return {devices,customer,callNumber,callDate,visitDate,address,department};
+    return {devices:tidyDevices(devices),customer,callNumber,callDate,visitDate,address,department};
   }
+  // A long serial in a narrow table cell wraps onto a second line. The tail
+  // ("LC" under "761503260747PW-") arrives as its own row with no model, and
+  // was previously turned into a phantom second unit with a stub serial.
+  // Stitch those tails back onto the serial above them.
+  function isContinuationFragment(prev, cur){
+    if(!prev) return false;
+    if(String(cur.model||'').trim() || String(cur.equipment||'').trim()) return false;
+    var frag=String(cur.serial||'').trim();
+    var prevSerial=String(prev.serial||'').trim();
+    if(!frag || !prevSerial) return false;
+    // The cell was split mid-code: the line above ends on a hyphen or slash.
+    if(/[-\/]$/.test(prevSerial)) return true;
+    // Or a very short letters-only tail sitting under a long code.
+    if(frag.length<=4 && !/[0-9]/.test(frag) && prevSerial.length>=6) return true;
+    return false;
+  }
+
+  function tidyDevices(devices){
+    var out=[];
+    for(var i=0;i<devices.length;i++){
+      var d=devices[i], prev=out[out.length-1];
+      if(isContinuationFragment(prev,d)){
+        prev.serial=String(prev.serial||'')+String(d.serial||'').trim();
+        if(!prev.location && d.location) prev.location=d.location;
+        continue;
+      }
+      // A row with no model, no equipment and only a stub serial is table
+      // noise rather than a unit.
+      var hasModel=String(d.model||'').trim() || String(d.equipment||'').trim();
+      var serial=String(d.serial||'').trim();
+      if(!hasModel && serial.length<5) continue;
+      out.push(d);
+    }
+    return out;
+  }
+
   function ddmmyyyyToIso(v){
     const m=String(v||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if(!m) return '';
@@ -363,16 +399,32 @@
   // ===================================================================
   // WORKSHEET ROUTING
   // ===================================================================
-  // Which worksheet does a given model need? These are the only rules I can
-  // state with confidence; everything else is learned from what you pick.
+  // Two kinds of rule:
+  //   match      — tested against the model + equipment + location text
+  //   modelMatch — tested against the NORMALISED model code only
+  //                (uppercased, punctuation and spaces stripped), so
+  //                "RLDF 15-19", "rldf1519" and "RLDF1519" behave the same.
   //
-  // To add a rule by hand, add an entry below: `match` is tried against the
-  // model, equipment and location text (case-insensitive), `sheet` is the
-  // worksheet id from SHEETS.
+  // Rules are tried in order and the first hit wins. Anything that matches
+  // nothing asks the engineer once, then remembers the answer.
   var RULES = [
+    // Named kit — unambiguous from the description itself.
     { match: /barkey|plasmatherm|plasma\s*therm/i, sheet: 'barkey' },
     { match: /cloud\s*temp|cloudtemp/i,            sheet: 'cloud_temp' },
-    { match: /thermo\s*max|monitor\s*max/i,        sheet: 'monitoring' }
+    { match: /thermo\s*max|monitor\s*max/i,        sheet: 'monitoring' },
+
+    // LPTU0008 is a Barkey. Tolerant of how many leading zeros get typed.
+    { modelMatch: /^LPTU0*8(?![0-9])/,             sheet: 'barkey' },
+
+    // Anything whose model code ends in MD is a medical device.
+    // Checked BEFORE the 19/24 rule: a code ending "MD" cannot also end in
+    // "19"/"24", so the two can never both fire, but the order makes that
+    // explicit rather than accidental.
+    { modelMatch: /MD$/,                           sheet: 'smd' },
+
+    // The 19 range and the 24 range: 0119, 0219, 0519, 1019, 1519 and the
+    // matching 24s. Anchored to the end of the model code.
+    { modelMatch: /(?:19|24)$/,                    sheet: 'ws19_24' }
   ];
 
   var SHEETS = {
@@ -384,10 +436,15 @@
     monitoring:  { id:'monitoring',  name:'Monitoring Systems',     href:'monitoring_systems.html',             offsets:'fluke_comark' }
   };
 
+  // Full normalised model code, used by the modelMatch rules.
+  function normalisedModel(model) {
+    return String(model || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
   // Model codes are normalised so that "RLDF 1010A", "rldf-1010a" and
   // "RLDF1010A" all learn and match as the same thing.
   function modelKey(model) {
-    return String(model || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+    return normalisedModel(model).slice(0, 12);
   }
 
   function readJson(key, fallback) {
@@ -406,26 +463,94 @@
 
   function routes() { return readJson(KEY_ROUTES, {}) || {}; }
 
+  // Records were plain strings ("modelKey": "smd") in v1.3. Read both shapes.
+  function routeRecord(value) {
+    if (!value) return null;
+    if (typeof value === 'string') return { sheet: value };
+    return value;
+  }
+
   // Remember that this model goes to this worksheet, so the next jobsheet
   // with the same kit routes itself without being asked.
-  function learnRoute(model, sheetId) {
+  //
+  // `suggested` is what the app had proposed before the engineer chose. When
+  // the two differ, that disagreement is the single most useful thing in the
+  // export — it says a built-in rule is wrong or missing.
+  function learnRoute(model, sheetId, suggested) {
     var k = modelKey(model);
     if (!k || !SHEETS[sheetId]) return;
     var r = routes();
-    r[k] = sheetId;
+    var prev = routeRecord(r[k]) || {};
+    var rec = {
+      sheet: sheetId,
+      model: String(model || ''),
+      uses: (prev.uses || 0) + 1,
+      updated: new Date().toISOString()
+    };
+    if (suggested && suggested !== sheetId) rec.correctedFrom = suggested;
+    else if (prev.correctedFrom && prev.sheet === sheetId) rec.correctedFrom = prev.correctedFrom;
+    r[k] = rec;
     writeJson(KEY_ROUTES, r);
+    announce();
   }
   function forgetRoutes() { writeJson(KEY_ROUTES, null); announce(); }
 
-  // Returns { sheet, why } — `why` is 'learned', 'rule' or '' (unknown).
-  function suggestSheet(device) {
+  function routeCount() { return Object.keys(routes()).length; }
+
+  // A shareable summary of everything the app has learned, so it can be sent
+  // back and folded into the built-in RULES above. Contains equipment model
+  // codes and routing choices only — no customer, site or job information.
+  function exportRoutes() {
+    var r = routes();
+    var keys = Object.keys(r).sort();
+    var learned = keys.map(function (k) {
+      var rec = routeRecord(r[k]) || {};
+      var device = { model: rec.model || k };
+      var s = suggestFromRules(device);
+      return {
+        key: k,
+        model: rec.model || '',
+        chosen: rec.sheet,
+        uses: rec.uses || 1,
+        updated: rec.updated || '',
+        // What the built-in rules would say today. 'agrees:false' entries are
+        // the ones worth acting on.
+        ruleWouldSay: s.sheet || null,
+        agrees: !s.sheet ? null : s.sheet === rec.sheet,
+        correctedFrom: rec.correctedFrom || null
+      };
+    });
+    return {
+      kind: 'labcal-routing-feedback',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      totals: {
+        learned: learned.length,
+        notCoveredByRules: learned.filter(function (e) { return e.ruleWouldSay === null; }).length,
+        disagreeWithRules: learned.filter(function (e) { return e.agrees === false; }).length
+      },
+      routes: learned
+    };
+  }
+
+  // Built-in rules only, ignoring anything learned.
+  function suggestFromRules(device) {
     var hay = [device.model, device.equipment, device.location].filter(Boolean).join(' ');
-    var learned = routes()[modelKey(device.model)];
-    if (learned && SHEETS[learned]) return { sheet: learned, why: 'learned' };
+    var code = normalisedModel(device.model);
     for (var i = 0; i < RULES.length; i++) {
-      if (RULES[i].match.test(hay)) return { sheet: RULES[i].sheet, why: 'rule' };
+      var rule = RULES[i];
+      if (rule.match && rule.match.test(hay)) return { sheet: rule.sheet, why: 'rule' };
+      if (rule.modelMatch && code && rule.modelMatch.test(code)) return { sheet: rule.sheet, why: 'rule' };
     }
     return { sheet: '', why: '' };
+  }
+
+  // Returns { sheet, why } — `why` is 'learned', 'rule' or '' (unknown).
+  // What you have chosen before beats a built-in rule, so a correction sticks.
+  function suggestSheet(device) {
+    var learned = routeRecord(routes()[modelKey(device.model)]);
+    if (learned && SHEETS[learned.sheet]) return { sheet: learned.sheet, why: 'learned' };
+    return suggestFromRules(device);
   }
 
   // ===================================================================
@@ -464,6 +589,7 @@
           location: d.location || '',
           sheet: s.sheet,
           sheetWhy: s.why,
+          suggested: s.sheet,
           done: false,
           doneAt: '',
           certRef: ''
@@ -523,7 +649,7 @@
       }
     };
     writeJson(KEY_HANDOFF, payload);
-    if (d.sheet) learnRoute(d.model, d.sheet);
+    if (d.sheet) learnRoute(d.model, d.sheet, d.suggested);
     return payload;
   }
 
@@ -586,6 +712,11 @@
     learnRoute: learnRoute,
     forgetRoutes: forgetRoutes,
     routes: routes,
+    routeCount: routeCount,
+    exportRoutes: exportRoutes,
+    suggestFromRules: suggestFromRules,
+    normalisedModel: normalisedModel,
+    modelKey: modelKey,
     // handoff
     handoff: handoff,
     takeHandoff: takeHandoff,
