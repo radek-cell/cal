@@ -1,7 +1,32 @@
-# LabCal — offsets vault + jobsheet worklist (v1.3)
+# LabCal — offsets vault, jobsheet worklist, iPad saving (v1.4)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.4 — saving files on iPad
+
+**The constraint:** a web page cannot choose a save folder on iPad. Safari has
+no save-file picker, and Chrome on iPad is Safari underneath, so it inherits the
+same limit. That part cannot be coded around.
+
+**What now happens instead:** every generated file goes through
+`labcal_save.js`, which picks the best route the device actually offers.
+
+- **Desktop (Chrome/Edge)** — the native save dialog, exactly as before.
+- **iPad** — a bar appears at the bottom: *"PDF ready — Save / Share"*. Tapping
+  it opens the iOS share sheet, where **Save to Files** lets you choose any
+  folder, including iCloud, OneDrive and Dropbox. Or send it straight to Mail
+  without saving first. There is also a **Download** button on the bar if you
+  just want the old behaviour.
+- **Anything else** — a plain download, unchanged.
+
+The extra tap is deliberate and unavoidable: iOS only allows a share that comes
+from a fresh tap, and generating a PDF takes long enough that the original
+button press has gone stale. Cancelling the share sheet leaves the bar up so the
+file is never lost.
+
+This covers **PDF and Excel from every worksheet**, the **merged PDF** from the
+merge tool, and the **chart PNG and summary CSV** from the data logger viewer.
 
 ## v1.3 — jobsheet worklist
 
@@ -56,7 +81,8 @@ that actually changed:
 | File | What changed |
 |---|---|
 | `labcal_offsets.js` | The shared offsets vault. Must sit next to the HTML files. |
-| `labcal_jobsheet.js` | **NEW** — jobsheet parser, worklist and worksheet routing. |
+| `labcal_jobsheet.js` | Jobsheet parser, worklist and worksheet routing. |
+| `labcal_save.js` | **NEW** — save/share routing, including the iOS share sheet. |
 | `index.html` | Offsets panel with countdown + warnings; Calibration section locks until a file is loaded |
 | `calibration.html` | Jobsheet worklist panel; each worksheet card locks unless *its own* ecosystem's file is loaded |
 | `monitoring_systems.html` | Same gating for Cloud Temp |
@@ -65,11 +91,13 @@ that actually changed:
 | `calibration_worksheet_SNMD.html` | Auto-loads Fluke & Comark offsets |
 | `calibration_worksheet_19_24.html` | Auto-loads Fluke & Comark offsets |
 | `cloud_temp.html` | Auto-loads Fluke & Comark offsets |
-| `sw.js` | Cache bumped to **v7**, caches both shared modules |
-| `tools.html`, `data_logger_viewer.html`, `pdf_merge_reorder.html` | Unchanged — included so the folder is complete |
+| `sw.js` | Cache bumped to **v8**, caches all three shared modules |
+| `data_logger_viewer.html` | Chart PNG and summary CSV go through the share sheet on iPad |
+| `pdf_merge_reorder.html` | Merged PDF goes through the share sheet on iPad |
+| `tools.html` | Unchanged — included so the folder is complete |
 
 After uploading, open the home page once while online so the service worker
-picks up v7, then hit **Refresh offline copy**.
+picks up v8, then hit **Refresh offline copy**.
 
 ## Which file unlocks what
 
@@ -93,10 +121,6 @@ The vault counts down to the **last day of the "valid until" month**.
 
 ## Still to come
 
-- **Save location on iPad** — a web page cannot choose a folder on iOS (Safari
-  has no save-file picker, and Chrome on iPad is Safari underneath). The fix is
-  the iOS share sheet, which does let you pick a folder via "Save to Files".
-  Next on the list.
 - **Day panel** of the certificates generated, with a single merged PDF at the
   end of the day.
 

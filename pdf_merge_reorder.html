@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="labcal_save.js"></script>
 <title>PDF Merge & Reorder</title>
 <!--
   pdf-lib 1.17.1 and pdf.js 3.11.174 are embedded below so this tool has
@@ -1280,18 +1281,27 @@ downloadBtn.addEventListener('click', async () => {
       await writable.close();
       toast(`Saved ${fileHandle.name} (${pages.length} pages)`);
     }else{
-      // fallback: browser download, using the name from the input field.
-      // Some browsers will still prompt for a save location depending on settings.
+      // No native save dialog (iPad, Firefox, Safari). Hand the merged PDF to
+      // the shared delivery module: on iPad that opens the iOS share sheet so
+      // "Save to Files" can choose the folder, which the browser download
+      // cannot do. Falls back to a plain download everywhere else.
       const blob = new Blob([bytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = suggestedName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 3000);
-      toast(`Downloaded ${suggestedName} (${pages.length} pages)`);
+      if(window.LabCalSave){
+        const how = await LabCalSave.deliver(blob, suggestedName);
+        toast(how === 'bar'
+          ? `${pages.length} pages ready — choose Save / Share below`
+          : `Downloaded ${suggestedName} (${pages.length} pages)`);
+      }else{
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = suggestedName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+        toast(`Downloaded ${suggestedName} (${pages.length} pages)`);
+      }
     }
   }catch(err){
     console.error(err);

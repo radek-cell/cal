@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script src="labcal_save.js"></script>
 <title>LabCal · Data Logger Viewer</title>
 <style>
 :root{
@@ -1978,13 +1979,23 @@ function markCalendar(){
    ============================================================ */
 
 function savePng(){
-  const link=document.createElement('a');
   const tmp=document.createElement('canvas');
   tmp.width=cv.width; tmp.height=cv.height;
   const t=tmp.getContext('2d');
   t.fillStyle='#fff'; t.fillRect(0,0,tmp.width,tmp.height);
   t.drawImage(cv,0,0);
-  link.download = fileStem()+'_chart.png';
+  const name=fileStem()+'_chart.png';
+  // toBlob rather than a data: URL — a blob can go to the iOS share sheet,
+  // so the chart can be filed anywhere instead of landing in Downloads.
+  if(window.LabCalSave && tmp.toBlob){
+    tmp.toBlob(blob=>{
+      if(!blob){ toast('Could not build the image'); return; }
+      LabCalSave.deliver(blob,name).then(how=>toast(how==='bar'?'Chart ready — choose Save / Share below':'Chart saved'));
+    },'image/png');
+    return;
+  }
+  const link=document.createElement('a');
+  link.download = name;
   link.href = tmp.toDataURL('image/png');
   link.click();
   toast('Chart saved');
@@ -2018,10 +2029,16 @@ function exportCsv(){
   v.exc.forEach(e=>L.push([fmtDate(e.date),e.ch,e.side,hhmm(e.start),hhmm(e.end),evLen(e),t1(e.peak)].map(q).join(',')));
 
   const blob=new Blob(['\ufeff'+L.join('\r\n')],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download=fileStem()+'_summary.csv'; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  toast('Summary exported');
+  const name=fileStem()+'_summary.csv';
+  if(window.LabCalSave){
+    // On iPad this opens the iOS share sheet so the folder can be chosen.
+    LabCalSave.deliver(blob,name).then(how=>toast(how==='bar'?'Summary ready — choose Save / Share below':'Summary exported'));
+  }else{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    toast('Summary exported');
+  }
 }
 function fileStem(){
   const v=VIEW;

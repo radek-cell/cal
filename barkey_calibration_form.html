@@ -6,6 +6,7 @@
 <title>Barkey Calibration Worksheet</title>
 <script src="labcal_offsets.js"></script>
 <script src="labcal_jobsheet.js"></script>
+<script src="labcal_save.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -650,23 +651,11 @@ async function generatePDF(){
     restoreSwappedFields(swaps); swaps=[];
     document.body.classList.remove('printMode','pdfBusy');
 
-    if(window.showSaveFilePicker){
-      try{
-        const handle=await window.showSaveFilePicker({
-          suggestedName:filename,
-          types:[{description:'PDF file',accept:{'application/pdf':['.pdf']}}]
-        });
-        const writable=await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      }catch(pickerErr){
-        if(pickerErr && pickerErr.name==='AbortError'){ /* user cancelled the save dialog, nothing to do */ }
-        else{ downloadBlob(blob,filename); }
-      }
-    }else{
-      // Browser doesn't support a native save dialog (e.g. Firefox/Safari) - fall back to a normal download.
-      downloadBlob(blob,filename);
-    }
+    // Desktop save dialog where it exists; on iPad there is no such dialog, so
+    // the file goes to the iOS share sheet where "Save to Files" can pick the
+    // folder. Plain download everywhere else. See labcal_save.js.
+    if(window.LabCalSave){ await LabCalSave.deliver(blob, filename); }
+    else { downloadBlob(blob,filename); }
     markJobsheetDone();
   }catch(err){
     alert('PDF generation failed: '+(err && err.message ? err.message : err));
@@ -1154,22 +1143,11 @@ async function generateExcel(){
     const wb=buildExcelWorkbook();
     const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
     const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    if(window.showSaveFilePicker){
-      try{
-        const handle=await window.showSaveFilePicker({
-          suggestedName:filename,
-          types:[{description:'Excel file',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]
-        });
-        const writable=await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      }catch(pickerErr){
-        if(pickerErr && pickerErr.name==='AbortError'){ /* user cancelled, nothing to do */ }
-        else{ downloadBlob(blob,filename); }
-      }
-    }else{
-      downloadBlob(blob,filename);
-    }
+    // Desktop save dialog where it exists; on iPad there is no such dialog, so
+    // the file goes to the iOS share sheet where "Save to Files" can pick the
+    // folder. Plain download everywhere else. See labcal_save.js.
+    if(window.LabCalSave){ await LabCalSave.deliver(blob, filename); }
+    else { downloadBlob(blob,filename); }
   }catch(err){
     alert('Excel generation failed: '+(err && err.message ? err.message : err));
   }finally{
