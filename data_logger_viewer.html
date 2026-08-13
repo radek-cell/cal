@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script src="labcal_save.js"></script>
 <title>LabCal · Data Logger Viewer</title>
 <style>
 :root{
@@ -78,14 +77,6 @@ button{cursor:pointer}
 
 /* ---------- layout ---------- */
 .wrap{display:grid;grid-template-columns:290px 1fr;gap:16px;padding:16px;align-items:start;max-width:1680px;margin:0 auto}
-@media(max-width:1000px){
-  .wrap{display:flex;flex-direction:column;align-items:stretch}
-  .main,.side{width:100%}
-  body.loaded .main{order:1} body.loaded .side{order:2}
-  #cal,.seg,.quick{max-width:440px}
-  .fields{max-width:520px}
-  .drop{max-width:520px}
-}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);min-width:0}
 .main,.side{min-width:0}
 .tbl-scroll{max-width:100%}
@@ -96,8 +87,72 @@ button{cursor:pointer}
 }
 .card>h2 .tag{margin-left:auto;font-size:10.5px;letter-spacing:.4px;color:var(--txt-3);font-weight:500;text-transform:none}
 .body{padding:14px}
-.side{position:sticky;top:74px}
-@media(max-width:1000px){ .side{position:static} }
+@media(min-width:1101px){ .side{position:sticky;top:74px} }
+
+/* ---------- tablet / phone: controls become a slide-over panel ---------- */
+.panel-btn{display:none}
+.side-head{display:none}
+.scrim{display:none}
+@media(max-width:1100px){
+  .wrap{display:block;padding:12px;padding-bottom:26px}
+  .main{width:100%}
+  /* before a folder is loaded the panel would hide the only useful control, so keep it inline */
+  body:not(.loaded) .side{width:100%;max-width:560px;margin:0 auto 14px}
+  body.loaded .panel-btn{display:inline-flex;align-items:center;gap:7px}
+  body.loaded .side{
+    position:fixed;top:0;left:0;bottom:0;z-index:130;
+    width:min(90vw,370px);background:var(--paper);border-right:1px solid var(--line);
+    padding:8px 12px calc(30px + env(safe-area-inset-bottom));
+    padding-top:calc(10px + env(safe-area-inset-top));
+    overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    transform:translateX(-103%);transition:transform .22s cubic-bezier(.32,.72,0,1);
+  }
+  body.loaded.panel .side{transform:none;box-shadow:0 0 44px rgba(11,31,51,.3)}
+  body.loaded .side-head{
+    display:flex;align-items:center;gap:10px;padding:2px 2px 10px;
+    font-size:11.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--ink-3)
+  }
+  .side-head button{
+    margin-left:auto;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);
+    background:#fff;color:var(--ink-3);font-size:19px;line-height:1;display:grid;place-items:center
+  }
+  body.loaded .scrim{
+    display:block;position:fixed;inset:0;z-index:120;background:rgba(6,24,38,.42);
+    opacity:0;pointer-events:none;transition:opacity .22s
+  }
+  body.loaded.panel .scrim{opacity:1;pointer-events:auto}
+  body.panel{overflow:hidden}
+  #chart{height:clamp(300px,46vh,440px)}
+}
+
+/* ---------- finger-sized targets on touch screens ---------- */
+@media(pointer:coarse){
+  .f input,.f select{padding:10px 11px;font-size:16px}  /* 16px stops iOS zooming the page on focus */
+  .day{height:46px;font-size:12px}
+  .seg button{padding:11px 4px;font-size:13px}
+  .quick button{padding:11px 6px;font-size:12.5px}
+  .mo-nav button{width:38px;height:38px;font-size:18px}
+  .mo-nav select{padding:10px 8px;font-size:13.5px}
+  .chip{padding:8px 13px;font-size:13px}
+  .zbtn{min-width:36px;height:36px}
+  .zbtn.wide{padding:0 14px}
+  .pick label{padding:13px 12px;font-size:14px}
+  .tb-btn{padding:9px 13px}
+  .clear-btn{padding:11px 10px}
+  td{padding:10px 12px}
+  .alert-body .dates button{padding:7px 13px}
+  .lnk{font-size:13px}
+  .daynav button{width:40px;height:40px}
+}
+
+/* ---------- day stepper on the summary strip ---------- */
+.daynav{display:flex;align-items:center;gap:6px;margin-left:auto}
+.daynav button{
+  width:34px;height:34px;flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:9px;
+  font-size:17px;font-weight:700;color:var(--ink-3);line-height:1;display:grid;place-items:center
+}
+.daynav button:hover:not(:disabled){background:var(--ice-soft);border-color:var(--ice)}
+.daynav button:disabled{opacity:.3;cursor:default}
 
 /* ---------- drop zone ---------- */
 .drop{
@@ -305,7 +360,7 @@ tbody tr.click:hover{background:var(--ice-soft)}
 @media print{
   @page{size:A4 landscape;margin:10mm}
   body{background:#fff}
-  .topbar,.side,.chart-top,.noprint,.foot,.toast,.alert-body .dates{display:none!important}
+  .topbar,.side,.scrim,.chart-top,.noprint,.foot,.toast,.alert-body .dates{display:none!important}
   .wrap{display:block;padding:0;max-width:none}
   .card{box-shadow:none;border-color:#bbb;break-inside:avoid;margin-bottom:8px}
   .card+.card{margin-top:8px}
@@ -331,6 +386,7 @@ tbody tr.click:hover{background:var(--ice-soft)}
   </div>
   <span class="range-badge" id="rangeBadge" hidden></span>
   <div class="spacer"></div>
+  <button class="tb-btn panel-btn" id="btnPanel" title="Dates, limits and loading">☰<span class="lg">Controls</span></button>
   <button class="tb-btn" id="btnPng" disabled><span class="lg">Save chart</span><span class="sm">PNG</span></button>
   <button class="tb-btn" id="btnCsv" disabled><span class="lg">Export summary</span><span class="sm">CSV</span></button>
   <button class="tb-btn primary" id="btnPrint" disabled><span class="lg">Print report</span><span class="sm">Print</span></button>
@@ -340,6 +396,8 @@ tbody tr.click:hover{background:var(--ice-soft)}
 
   <!-- ============ SIDEBAR ============ -->
   <div class="side">
+
+    <div class="side-head">Controls<button id="btnPanelClose" title="Close">×</button></div>
 
     <div class="card" id="loadCard">
       <h2>Load data</h2>
@@ -395,7 +453,13 @@ tbody tr.click:hover{background:var(--ice-soft)}
           <div class="f"><label for="hi">High limit °C</label><input id="hi" type="number" step="0.1" value="8"></div>
           <div class="f"><label for="minDur">Ignore under</label><input id="minDur" type="number" step="1" min="0" value="1"></div>
           <div class="f"><label for="chan">Assess</label>
-            <select id="chan"><option value="both">T1 and T2</option><option value="1">T1 only</option><option value="2">T2 only</option><option value="3" hidden>T3 only</option></select>
+            <select id="chan">
+              <option value="both" selected>T1 and T2</option>
+              <option value="all" hidden>T1, T2 and T3</option>
+              <option value="1">T1 only</option>
+              <option value="2">T2 only</option>
+              <option value="3" hidden>T3 only</option>
+            </select>
           </div>
         </div>
         <div class="hint">Excursions shorter than the minutes above are ignored, so a single blip during a defrost cycle doesn't flag the whole day.</div>
@@ -428,6 +492,11 @@ tbody tr.click:hover{background:var(--ice-soft)}
       <div class="alert-body" id="mixedBody"></div>
     </div>
 
+    <div class="card notice" id="clkCard" hidden>
+      <div class="alert-head"><span class="warn-mark amber">!</span><b id="clkTitle"></b></div>
+      <div class="alert-body" id="clkBody"></div>
+    </div>
+
     <div class="card notice" id="pwrCard" hidden>
       <div class="alert-head"><span class="warn-mark amber">!</span><b id="pwrTitle"></b></div>
       <div class="alert-body" id="pwrBody"></div>
@@ -445,6 +514,10 @@ tbody tr.click:hover{background:var(--ice-soft)}
         <span class="range-tag" id="rangeTag" hidden></span>
         <div class="meta" id="rangeLbl"></div>
         <div class="meta" id="cover"></div>
+        <div class="daynav noprint" id="dayNav" hidden>
+          <button id="dPrev" title="Previous day">‹</button>
+          <button id="dNext" title="Next day">›</button>
+        </div>
       </div>
       <div class="verdict" id="verdict"><span class="dot"></span><span id="verdictTxt"></span></div>
       <div class="stats" id="stats"></div>
@@ -510,6 +583,7 @@ tbody tr.click:hover{background:var(--ice-soft)}
   </div>
 </div>
 
+<div class="scrim" id="scrim"></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -625,6 +699,22 @@ function parseCsv(text, fileName){
     });
   }
   if(!rows.length) return null;
+
+  /* A mains failure restarts the controller clock partway through the day, so the file
+     carries on at an earlier time and a block of minutes gets logged twice with two
+     completely different traces. Sorted by time they interleave and the chart looks
+     like it is oscillating every reading. Record the overlap so it can be flagged. */
+  const clockResets=[];
+  for(let i=1;i<rows.length;i++){
+    if(rows[i].m < rows[i-1].m - 2){
+      const end=rows[i-1].m;
+      let j=i, hi=rows[i].m;
+      while(j<rows.length && rows[j].m<=end){ if(rows[j].m>hi) hi=rows[j].m; j++; }
+      clockResets.push({from:rows[i].m, to:hi, n:j-i});
+      i=j;
+    }
+  }
+
   rows.sort((r,s)=>r.m-s.m);
 
   const sp = parseFloat(head['set point']);
@@ -637,6 +727,7 @@ function parseCsv(text, fileName){
     fw: head['firmware issue']||'',
     pn: head['controller pn']||'',
     range: '19',
+    clockResets,
     hasDoor: true,
     hasT3: false,
     fileLimits: null,
@@ -875,7 +966,9 @@ function dayStats(day, lim){
   const W = dayWeights(day);
   let mn=Infinity, mx=-Infinity, sum=0, n=0, mkt=0;
   let out=0, tot=0, comp=0, doors=0, prevDoor=0;
-  const useA = lim.chan==='both'||lim.chan==='1', useB = lim.chan==='both'||lim.chan==='2', useE = lim.chan==='3';
+  const useA = lim.chan==='both'||lim.chan==='all'||lim.chan==='1',
+        useB = lim.chan==='both'||lim.chan==='all'||lim.chan==='2',
+        useE = lim.chan==='all' ||lim.chan==='3';
   for(let i=0;i<day.rows.length;i++){
     const r=day.rows[i], w=W[i];
     const vals=[];
@@ -913,9 +1006,9 @@ function evLen(e){ return (e.end - e.start) + ivOf(e.date); }
 function findExcursions(days, lim){
   const list=[];
   const chans=[];
-  if(lim.chan==='both'||lim.chan==='1') chans.push({k:'a',lbl:'T1'});
-  if(lim.chan==='both'||lim.chan==='2') chans.push({k:'b',lbl:'T2'});
-  if(lim.chan==='3') chans.push({k:'e',lbl:'T3'});
+  if(lim.chan==='both'||lim.chan==='all'||lim.chan==='1') chans.push({k:'a',lbl:'T1'});
+  if(lim.chan==='both'||lim.chan==='all'||lim.chan==='2') chans.push({k:'b',lbl:'T2'});
+  if(lim.chan==='all' ||lim.chan==='3') chans.push({k:'e',lbl:'T3'});
   for(const ch of chans){
     let cur=null;
     for(const day of days){
@@ -1161,7 +1254,9 @@ function render(){
   ].join('');
 
   renderMixed();
+  renderClock();
   renderPower();
+  updateDayNav();
   renderAlert();
   renderFaults();
   renderRtEvents();
@@ -1231,6 +1326,25 @@ function renderMixed(){
 }
 
 /* mains and battery warnings are worth an engineer's attention on their own */
+/* a power cut can restart the controller clock, so part of a day is logged twice */
+function renderClock(){
+  const card=$('#clkCard');
+  const days=[...DAYS.keys()].sort().filter(k=>(DAYS.get(k).clockResets||[]).length);
+  if(!days.length){ card.hidden=true; return; }
+  card.hidden=false;
+  const first=DAYS.get(days[0]).clockResets[0];
+  let n=0; for(const k of days) n+=DAYS.get(k).clockResets.length;
+  $('#clkTitle').textContent = 'Controller clock restarted — part of the day is logged twice';
+  $('#clkBody').innerHTML =
+    'The log jumps backwards in time on <b>'+days.length+'</b> day'+(days.length===1?'':'s')+
+    ' ('+n+' restart'+(n===1?'':'s')+'), so the same clock times carry two different sets of readings — '+
+    'on '+fmtDate(days[0])+' the stretch <b>'+hhmm(first.from)+' to '+hhmm(first.to)+'</b> appears twice. '+
+    'Plotted in time order the two passes interleave and the trace zig-zags on every reading. '+
+    'That spiky section is the clock, not the fridge, and any excursion or fault inside it should be read from the raw file before you report it.'+
+    '<div class="dates">'+days.map(d=>'<button data-d="'+d+'">'+fmtDate(d)+'</button>').join('')+'</div>';
+  card.querySelectorAll('.dates button').forEach(b=>b.onclick=()=>selectDay(b.dataset.d));
+}
+
 function renderPower(){
   const card=$('#pwrCard');
   const evs=[];
@@ -1946,12 +2060,14 @@ function onDayTap(key){
     }
   }
   render();
+  if(SEL.mode==='day' || !SEL.anchor) closePanel();   /* range needs both taps first */
 }
 function selectDay(key){
   SEL.mode='day'; SEL.from=SEL.to=key; SEL.anchor=null;
   $$('#modeSeg button').forEach(b=>b.classList.toggle('on', b.dataset.mode==='day'));
   CAL.ym=key.slice(0,7);
   render();
+  closePanel();
   document.querySelector('#sumCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
@@ -1979,23 +2095,13 @@ function markCalendar(){
    ============================================================ */
 
 function savePng(){
+  const link=document.createElement('a');
   const tmp=document.createElement('canvas');
   tmp.width=cv.width; tmp.height=cv.height;
   const t=tmp.getContext('2d');
   t.fillStyle='#fff'; t.fillRect(0,0,tmp.width,tmp.height);
   t.drawImage(cv,0,0);
-  const name=fileStem()+'_chart.png';
-  // toBlob rather than a data: URL — a blob can go to the iOS share sheet,
-  // so the chart can be filed anywhere instead of landing in Downloads.
-  if(window.LabCalSave && tmp.toBlob){
-    tmp.toBlob(blob=>{
-      if(!blob){ toast('Could not build the image'); return; }
-      LabCalSave.deliver(blob,name).then(how=>toast(how==='bar'?'Chart ready — choose Save / Share below':'Chart saved'));
-    },'image/png');
-    return;
-  }
-  const link=document.createElement('a');
-  link.download = name;
+  link.download = fileStem()+'_chart.png';
   link.href = tmp.toDataURL('image/png');
   link.click();
   toast('Chart saved');
@@ -2029,16 +2135,10 @@ function exportCsv(){
   v.exc.forEach(e=>L.push([fmtDate(e.date),e.ch,e.side,hhmm(e.start),hhmm(e.end),evLen(e),t1(e.peak)].map(q).join(',')));
 
   const blob=new Blob(['\ufeff'+L.join('\r\n')],{type:'text/csv;charset=utf-8'});
-  const name=fileStem()+'_summary.csv';
-  if(window.LabCalSave){
-    // On iPad this opens the iOS share sheet so the folder can be chosen.
-    LabCalSave.deliver(blob,name).then(how=>toast(how==='bar'?'Summary ready — choose Save / Share below':'Summary exported'));
-  }else{
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob); a.download=name; a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-    toast('Summary exported');
-  }
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=fileStem()+'_summary.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast('Summary exported');
 }
 function fileStem(){
   const v=VIEW;
@@ -2065,7 +2165,10 @@ function afterLoad(){
   $('.chip[data-s="t3"]').hidden = !HAS_T3;
   $('#t3Legend').hidden = !HAS_T3;
   $('#chan').querySelector('option[value="3"]').hidden = !HAS_T3;
-  if(!HAS_T3 && LIMITS.chan==='3'){ LIMITS.chan='both'; $('#chan').value='both'; }
+  $('#chan').querySelector('option[value="all"]').hidden = !HAS_T3;
+  if(!HAS_T3 && (LIMITS.chan==='3'||LIMITS.chan==='all')){ LIMITS.chan='both'; $('#chan').value='both'; }
+  /* a 24-range unit with a third probe should assess all three until told otherwise */
+  if(HAS_T3 && !LIMITS._userChan && LIMITS.chan==='both'){ LIMITS.chan='all'; $('#chan').value='all'; }
 
   /* not every controller logs the door */
   const anyDoor=[...DAYS.values()].some(d=>d.hasDoor!==false);
@@ -2081,11 +2184,16 @@ function afterLoad(){
   if(!anyT2){
     SHOW.t2=false; chipT2.classList.remove('on'); chipT2.disabled=true;
     chipT2.title='This controller does not log a T2 probe';
-    if(LIMITS.chan!=='1'){ LIMITS.chan='1'; LIMITS._autoChan=true; $('#chan').value='1'; }
+    /* with a third probe fitted, 'all' already ignores the empty T2 — leave it alone */
+    if(!HAS_T3 && LIMITS.chan!=='1'){ LIMITS.chan='1'; LIMITS._autoChan=true; $('#chan').value='1'; }
   }else{
     chipT2.disabled=false; chipT2.title='';
-    if(LIMITS._autoChan){ LIMITS.chan='both'; LIMITS._autoChan=false; $('#chan').value='both'; }
+    if(LIMITS._autoChan){
+      LIMITS.chan = (HAS_T3 && !LIMITS._userChan) ? 'all' : 'both';
+      LIMITS._autoChan=false; $('#chan').value=LIMITS.chan;
+    }
   }
+  $('#chan').value = LIMITS.chan;   /* keep the dropdown in step with what is actually assessed */
   $('#loadHint').innerHTML = DAYS.size+' day'+(DAYS.size===1?'':'s')+' in memory, '+
     fmtDate(keys[0])+' to '+fmtDate(keys[keys.length-1])+'. Load another folder to add more.';
 
@@ -2190,7 +2298,7 @@ $$('.quick button').forEach(b=>b.onclick=()=>{
   else { SEL.from=keys[0]; SEL.to=last; }
   SEL.mode = SEL.from===SEL.to?'day':'range';
   $$('#modeSeg button').forEach(x=>x.classList.toggle('on', x.dataset.mode===SEL.mode));
-  SEL.anchor=null; render();
+  SEL.anchor=null; render(); closePanel();
 });
 
 /* limits */
@@ -2198,7 +2306,9 @@ function readLimits(){
   const lo=parseFloat($('#lo').value), hi=parseFloat($('#hi').value);
   if(isFinite(lo)&&isFinite(hi)&&hi>lo){ LIMITS.lo=lo; LIMITS.hi=hi; }
   const md=parseInt($('#minDur').value,10); LIMITS.minDur=isFinite(md)?Math.max(0,md):1;
-  LIMITS.chan=$('#chan').value; LIMITS._autoChan=false;
+  const ch=$('#chan').value;
+  if(ch!==LIMITS.chan) LIMITS._userChan=true;
+  LIMITS.chan=ch; LIMITS._autoChan=false;
   store.set('limits',LIMITS);
   if(DAYS.size) render();
 }
@@ -2246,6 +2356,8 @@ $('#btnClear').onclick = ()=>{
   $('#rangeBadge').hidden=true; $('#rangeTag').hidden=true;
   $('.chip[data-s="t3"]').hidden=true; $('#t3Legend').hidden=true;
   $('#chan').querySelector('option[value="3"]').hidden=true;
+  $('#chan').querySelector('option[value="all"]').hidden=true;
+  if(LIMITS.chan==='all'||LIMITS.chan==='3'){ LIMITS.chan='both'; $('#chan').value='both'; }
   HAS_T3=false;
   $$('.chart-top .chip').forEach(b=>{ b.disabled=false; b.title=''; });
   SHOW.t2 = true; $('.chip[data-s="t2"]').classList.add('on');
@@ -2265,6 +2377,55 @@ jobEl.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); j
 jobEl.addEventListener('paste',e=>{
   e.preventDefault();
   document.execCommand('insertText', false, (e.clipboardData||window.clipboardData).getData('text'));
+});
+
+/* ---------- slide-over controls panel (tablet and phone) ---------- */
+/* matchMedia and its addEventListener are missing on older WebKit, so fall back */
+const panelQ = window.matchMedia ? window.matchMedia('(max-width:1100px)') : null;
+function narrowScreen(){ return panelQ ? panelQ.matches : window.innerWidth<=1100; }
+function panelMode(){ return narrowScreen() && document.body.classList.contains('loaded'); }
+function openPanel(){ if(panelMode()) document.body.classList.add('panel'); }
+function closePanel(){ document.body.classList.remove('panel'); }
+function togglePanel(){ document.body.classList.contains('panel') ? closePanel() : openPanel(); }
+$('#btnPanel').onclick = togglePanel;
+$('#btnPanelClose').onclick = closePanel;
+$('#scrim').onclick = closePanel;
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePanel(); });
+const onWide = ()=>{ if(!narrowScreen()) closePanel(); };
+if(panelQ && panelQ.addEventListener) panelQ.addEventListener('change', onWide);
+else if(panelQ && panelQ.addListener) panelQ.addListener(onWide);
+else window.addEventListener('resize', onWide);
+
+/* ---------- step through the loaded days without opening the panel ---------- */
+function updateDayNav(){
+  const nav=$('#dayNav'); if(!nav) return;
+  const keys=[...DAYS.keys()].sort();
+  const single = !!VIEW && VIEW.from===VIEW.to;
+  nav.hidden = keys.length<2;
+  const i = single ? keys.indexOf(VIEW.from) : -1;
+  $('#dPrev').disabled = !single || i<=0;
+  $('#dNext').disabled = !single || i<0 || i>=keys.length-1;
+  $('#dPrev').title = (!single) ? 'Switch to a single day to step' : 'Previous day';
+  $('#dNext').title = (!single) ? 'Switch to a single day to step' : 'Next day';
+}
+function stepDay(step){
+  if(!VIEW || VIEW.from!==VIEW.to) return;
+  const keys=[...DAYS.keys()].sort();
+  const i=keys.indexOf(VIEW.from)+step;
+  if(i<0 || i>=keys.length) return;
+  SEL.mode='day'; SEL.from=SEL.to=keys[i]; SEL.anchor=null;
+  $$('#modeSeg button').forEach(b=>b.classList.toggle('on', b.dataset.mode==='day'));
+  render();
+}
+$('#dPrev').onclick=()=>stepDay(-1);
+$('#dNext').onclick=()=>stepDay(1);
+document.addEventListener('keydown', e=>{
+  if(e.key!=='ArrowLeft' && e.key!=='ArrowRight') return;
+  const a=document.activeElement;
+  if(a && (a.isContentEditable || /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))) return;
+  if(!DAYS.size) return;
+  e.preventDefault();
+  stepDay(e.key==='ArrowLeft' ? -1 : 1);
 });
 
 /* toolbar */
