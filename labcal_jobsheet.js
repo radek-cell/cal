@@ -653,6 +653,19 @@
     return payload;
   }
 
+  // Hand a unit to its worksheet without going through the worklist — used
+  // when reopening from the certificate list to amend a finished unit.
+  function handoffUnit(payload) {
+    var p = {
+      at: new Date().toISOString(),
+      sheet: payload.sheet,
+      device: payload.device || {},
+      jobsheet: payload.jobsheet || {}
+    };
+    writeJson(KEY_HANDOFF, p);
+    return p;
+  }
+
   // Read AND clear — a handoff is consumed exactly once.
   function takeHandoff(expectedSheet) {
     var p = readJson(KEY_HANDOFF, null);
@@ -719,6 +732,7 @@
     modelKey: modelKey,
     // handoff
     handoff: handoff,
+    handoffUnit: handoffUnit,
     takeHandoff: takeHandoff,
     onChange: onChange,
     ddmmyyyyToIso: ddmmyyyyToIso

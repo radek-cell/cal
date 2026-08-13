@@ -1,11 +1,37 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.16)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.17)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
 
+## v1.17 — reopen and amend a unit
+
+Each worksheet used to autosave into a single slot, so starting the next unit
+wiped the previous one's readings. Snapshots are now kept **per unit** — keyed
+by worksheet + job reference + serial — and saved as you type.
+
+**Reopening.** Tap a unit on the worklist (finished units say "Reopen") and the
+worksheet comes back with everything still in it: readings, probe selections,
+comments, certificate number. There is also a **Reopen** button on each row of
+the certificate list, for going back to a unit whose jobsheet you have since
+replaced. A banner at the top of the worksheet says what was restored and when.
+
+**Amendments don't overwrite history.** Generating again for the same job and
+serial marks the earlier certificate **superseded** rather than deleting it —
+it was a real document and may already have been sent. Both stay in the panel,
+the superseded one dimmed and labelled, so it is obvious which is current. You
+can still delete it by hand if it never left the iPad.
+
+The same key includes the job reference, so calibrating the same fridge on a
+later visit starts clean rather than pulling up last time's readings.
+
+Snapshots are pruned after 30 days. **Cloud Temp is not covered yet** — its
+worksheet builds channel rows dynamically and needs its own handling; say the
+word and I will do that one next.
+
 ## Version numbering
 
-Renumbered to **v1.16** and counting up from there (1.17, 1.18 …). Earlier
+Renumbered to the 1.x scheme at v1.16 and counting up from there; this build is
+**v1.17**. Earlier
 releases in these notes were numbered 1.2–1.6; they are the same builds, just
 renumbered so there is plenty of room before 2.0. The `sw.js` CACHE_VERSION is a
 separate counter — it only has to differ from the previous one to force a
@@ -168,7 +194,8 @@ that actually changed:
 | `labcal_offsets.js` | The shared offsets vault. Must sit next to the HTML files. |
 | `labcal_jobsheet.js` | Jobsheet parser, worklist and worksheet routing. |
 | `labcal_save.js` | Save/share routing, including the iOS share sheet. |
-| `labcal_certs.js` | **NEW** — the day's certificate list (IndexedDB) and day merge. |
+| `labcal_certs.js` | The day's certificate list (IndexedDB), job grouping and merge. |
+| `labcal_units.js` | **NEW** — per-unit worksheet snapshots for reopening and amending. |
 | `pdf-lib.min.js` | **NEW** — PDF merge engine, lazy-loaded only when merging. |
 | `index.html` | Offsets panel with countdown + warnings; Calibration section locks until a file is loaded |
 | `calibration.html` | Jobsheet worklist panel; each worksheet card locks unless *its own* ecosystem's file is loaded |
@@ -178,13 +205,13 @@ that actually changed:
 | `calibration_worksheet_SNMD.html` | Auto-loads Fluke & Comark offsets |
 | `calibration_worksheet_19_24.html` | Auto-loads Fluke & Comark offsets |
 | `cloud_temp.html` | Auto-loads Fluke & Comark offsets |
-| `sw.js` | Cache bumped to **v11**, caches all shared modules |
+| `sw.js` | Cache bumped to **v12**, caches all shared modules |
 | `data_logger_viewer.html` | Chart PNG and summary CSV go through the share sheet on iPad |
 | `pdf_merge_reorder.html` | Merged PDF goes through the share sheet on iPad |
 | `tools.html` | Unchanged — included so the folder is complete |
 
 After uploading, open the home page once while online so the service worker
-picks up v11, then hit **Refresh offline copy**.
+picks up v12, then hit **Refresh offline copy**.
 
 ## Which file unlocks what
 

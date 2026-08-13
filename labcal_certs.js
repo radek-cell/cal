@@ -82,7 +82,12 @@
       size: blob && blob.size ? blob.size : 0,
       blob: blob
     };
-    return tx('readwrite')
+    // Generating again for the same job + serial + worksheet is an amendment.
+    // The earlier certificate is NOT deleted — it was a real document that may
+    // already have been sent — it is marked superseded so the panel can show
+    // which one is current.
+    return supersedeEarlier(rec)
+      .then(function () { return tx('readwrite'); })
       .then(function (os) { return wrap(os.add(rec)); })
       .then(function (id) { announce(); return id; })
       .catch(function (e) {
@@ -91,6 +96,27 @@
         console.warn('Could not file this certificate in the day list:', e);
         return null;
       });
+  }
+
+  function sameUnit(a, b) {
+    return (a.sheet || '') === (b.sheet || '')
+        && (a.jobRef || '') === (b.jobRef || '')
+        && (a.serial || '') !== ''
+        && (a.serial || '') === (b.serial || '');
+  }
+
+  function supersedeEarlier(rec) {
+    return all().then(function (list) {
+      var earlier = list.filter(function (r) { return !r.superseded && sameUnit(r, rec); });
+      if (!earlier.length) return;
+      return tx('readwrite').then(function (os) {
+        return Promise.all(earlier.map(function (r) {
+          r.superseded = true;
+          r.supersededAt = new Date().toISOString();
+          return wrap(os.put(r));
+        }));
+      });
+    }).catch(function () { /* never block a certificate over bookkeeping */ });
   }
 
   function remove(id) {

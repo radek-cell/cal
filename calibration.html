@@ -14,6 +14,7 @@
 <script src="labcal_jobsheet.js"></script>
 <script src="labcal_save.js"></script>
 <script src="labcal_certs.js"></script>
+<script src="labcal_units.js"></script>
 <style>
 :root{
   --bg:#dfe6ee;
@@ -173,6 +174,12 @@ h1{font-size:clamp(28px,4vw,42px);line-height:1.1;margin:0 0 14px;font-weight:70
   padding:11px 0;border-top:1px solid var(--border-soft);
 }
 .crow-main{min-width:0}
+.crow.superseded{opacity:.55}
+.crow-tag{
+  display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;padding:2px 6px;border-radius:3px;margin-left:8px;
+  border:1px solid var(--amber);color:var(--amber);
+}
 .crow-name{font-size:13.5px;font-weight:650;letter-spacing:-.1px;word-break:break-all}
 .crow-meta{font-family:var(--mono);font-size:10.5px;color:var(--muted-dim);line-height:1.6;margin-top:2px}
 .crow-ctl{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
@@ -353,7 +360,7 @@ footer{
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.16</span>
+    <span id="footYear">v1.17</span>
   </footer>
 
 </div>
@@ -525,7 +532,7 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.16 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.17 · ' + d.getFullYear();
 }
 
 
@@ -763,12 +770,13 @@ async function renderCertPanel(){
   const jobs = await LabCalCerts.jobsOnDay(day);
 
   const certRow = r => `
-    <div class="crow">
+    <div class="crow${r.superseded?' superseded':''}">
       <div class="crow-main">
-        <div class="crow-name">${jesc(r.filename)}</div>
+        <div class="crow-name">${jesc(r.filename)}${r.superseded?'<span class="crow-tag">superseded</span>':''}</div>
         <div class="crow-meta">${fmtTime(r.savedAt)}${r.model?' · '+jesc(r.model):''}${r.serial?' · '+jesc(r.serial):''}${r.size?' · '+LabCalCerts.formatSize(r.size):''}</div>
       </div>
       <div class="crow-ctl">
+        ${r.serial && r.sheet ? `<button class="cbtn" type="button" data-reopen="${r.id}">Reopen</button>` : ''}
         <button class="cbtn" type="button" data-view="${r.id}">View</button>
         <button class="cbtn" type="button" data-share="${r.id}">Save / Share</button>
         <button class="cbtn danger" type="button" data-del="${r.id}">Delete</button>
@@ -819,6 +827,21 @@ function bindDaySelect(){
 
 function bindCertActions(){
   bindDaySelect();
+
+  certPanel.querySelectorAll('[data-reopen]').forEach(b=>b.addEventListener('click', async ()=>{
+    const rec = await LabCalCerts.get(Number(b.getAttribute('data-reopen')));
+    if(!rec) return;
+    const sheet = LabCalJobsheet.SHEETS[rec.sheet];
+    if(!sheet){ alert('That certificate does not say which worksheet produced it.'); return; }
+    const saved = window.LabCalUnits && LabCalUnits.has(rec.sheet, rec.jobRef, rec.serial);
+    if(!saved && !confirm(`No saved readings were found for ${rec.serial}.\n\nOpen the worksheet with just the header filled in?`)) return;
+    LabCalJobsheet.handoffUnit({
+      sheet: rec.sheet,
+      device: { model: rec.model, serial: rec.serial, location: '' },
+      jobsheet: { customer: rec.site, callNumber: rec.jobRef }
+    });
+    window.location.href = sheet.href;
+  }));
 
   certPanel.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click', async ()=>{
     const rec = await LabCalCerts.get(Number(b.getAttribute('data-view')));
@@ -876,6 +899,7 @@ function bindCertActions(){
   });
 }
 
+if(window.LabCalUnits) LabCalUnits.prune();   // drop unit snapshots older than 30 days
 if(window.LabCalCerts){
   LabCalCerts.prune().then(renderCertPanel);
   LabCalCerts.onChange(renderCertPanel);

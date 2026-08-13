@@ -13,6 +13,7 @@
 <script src="labcal_jobsheet.js"></script>
 <script src="labcal_save.js"></script>
 <script src="labcal_certs.js"></script>
+<script src="labcal_units.js"></script>
 <!-- Swapped from html2pdf.bundle.min.js: its built-in html2canvas can't parse the
      color(display-p3 ...) values Safari/iPadOS reports for some elements, causing
      "Attempting to parse an unsupported color function 'color'". html2canvas-pro
@@ -424,6 +425,9 @@ function applyJobsheetHandoff(){
   fill('department', d.location||j.department||'');
   fill('site', j.customer||'');
   fill('jobRef', j.callNumber||'');
+  // Reopening a unit that was worked before: put its readings back.
+  const restored=restoreUnitSnapshot(j.callNumber||'', d.serial||'');
+  if(restored){ showRestoredBanner(restored); return true; }
   const statusEl=document.getElementById('offsetStatus');
   if(statusEl){
     statusEl.textContent=`${statusEl.textContent} · From jobsheet ${j.callNumber||''}: ${d.model||d.equipment||''} ${d.serial||''}`.trim();
@@ -1255,6 +1259,7 @@ function calculateAll(){
     const adj=document.getElementById('al_adj_made'); if(adj && adj.value==='Adjustment not needed'){ adj.value=''; adj.style.fontSize=''; }
   }
   localStorage.setItem('calibration_autosave', JSON.stringify(Object.fromEntries(ids().map(id=>[id,document.getElementById(id).value]))));
+  queueUnitSnapshot();
   refreshPdfHint();
 }
 
@@ -1626,6 +1631,51 @@ function fileCertificateForToday(blob, filename){
     site:v('site'), jobRef:v('jobRef')
   });
 }
+// ---------------------------------------------------------------------
+// Per-unit snapshot. The worksheet's own autosave holds one unit at a time;
+// this keeps a copy per job + serial so a finished unit can be reopened and
+// amended later without the next one having overwritten it.
+// ---------------------------------------------------------------------
+const UNIT_SHEET='smd';
+let unitSaveTimer=null;
+function unitIdentity(){
+  const v=id=>{ const el=document.getElementById(id); return el?String(el.value||'').trim():''; };
+  return { jobRef:v('jobRef'), serial:v('serial') };
+}
+function saveUnitSnapshot(){
+  if(!window.LabCalUnits) return false;
+  const u=unitIdentity();
+  if(!u.serial) return false;   // nothing to key it on yet
+  return LabCalUnits.save(UNIT_SHEET, u.jobRef, u.serial, LabCalUnits.captureForm(document), {
+    model:(document.getElementById('model')||{}).value||'',
+    site:(document.getElementById('site')||{}).value||''
+  });
+}
+// Debounced so typing doesn't write on every keystroke.
+function queueUnitSnapshot(){
+  if(!window.LabCalUnits) return;
+  clearTimeout(unitSaveTimer);
+  unitSaveTimer=setTimeout(saveUnitSnapshot, 800);
+}
+// Restore whatever was previously entered for this exact job + serial.
+// Only ever called when arriving from the worklist, so it cannot surprise
+// someone working directly in the worksheet.
+function restoreUnitSnapshot(jobRef, serial){
+  if(!window.LabCalUnits) return null;
+  const rec=LabCalUnits.load(UNIT_SHEET, jobRef, serial);
+  if(!rec || !rec.state) return null;
+  LabCalUnits.applyForm(rec.state, document);
+  calculateAll();
+  return rec;
+}
+function showRestoredBanner(rec){
+  const el=document.getElementById('offsetStatus');
+  if(!el || !rec) return;
+  let when='';
+  try{ when=new Date(rec.savedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){}
+  el.textContent=`Reopened ${rec.serial||''} — readings restored from ${when}. Generating again produces an amended certificate; the earlier one is kept and marked superseded.`.trim();
+  el.style.color='#7a4c06';
+}
 function markJobsheetDone(){
   if(!window.LabCalJobsheet) return;
   const serialEl=document.getElementById('serial');
@@ -1668,6 +1718,7 @@ async function generatePDF(){
     // folder. Plain download everywhere else. See labcal_save.js.
     if(window.LabCalSave){ await LabCalSave.deliver(blob, filename); }
     else { downloadBlob(blob,filename); }
+    saveUnitSnapshot();
     fileCertificateForToday(blob, filename);
     markJobsheetDone();
   }catch(err){
