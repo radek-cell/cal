@@ -322,6 +322,7 @@ th{
 }
 td{padding:7px 12px;border-bottom:1px solid var(--line-2);font-family:var(--mono);white-space:nowrap}
 td.txt{font-family:var(--sans)}
+td.approx{color:var(--txt-3)}
 tr:last-child td{border-bottom:0}
 tbody tr.click{cursor:pointer}
 tbody tr.click:hover{background:var(--ice-soft)}
@@ -442,6 +443,7 @@ tbody tr.click:hover{background:var(--ice-soft)}
             <label for="preset">Preset</label>
             <select id="preset">
               <option value="custom">Custom</option>
+              <option value="ibb" hidden>IBB blood bank · air 2 to 8, load 2 to 6 °C</option>
               <option value="2,6">Blood bank fridge · 2 to 6 °C</option>
               <option value="2,8">Pharmacy / vaccine fridge · 2 to 8 °C</option>
               <option value="20,24">Platelet incubator · 20 to 24 °C</option>
@@ -567,7 +569,7 @@ tbody tr.click:hover{background:var(--ice-soft)}
     <div class="card" id="rtCard" hidden>
       <h2>Controller events <span class="tag" id="rtCount"></span></h2>
       <div class="tbl-scroll"><table id="rtTbl"></table></div>
-      <div class="foot noprint">Tap a row to zoom to it. Codes decoded from the table in Labcold's own CSV Viewer.</div>
+      <div class="foot noprint" id="rtFoot">Tap a row to zoom to it. Codes decoded from the table in Labcold's own CSV Viewer.</div>
     </div>
 
     <div class="card" id="excCard" hidden>
@@ -822,6 +824,17 @@ function splitCsvLine(line){
   return out;
 }
 
+function spreadWithinMinute(rows){
+  let i=0;
+  while(i<rows.length){
+    let j=i;
+    while(j+1<rows.length && rows[j+1].m===rows[i].m) j++;
+    const n=j-i+1;
+    if(n>1) for(let k=0;k<n;k++) rows[i+k].m += k/n;
+    i=j+1;
+  }
+}
+
 function parseIBB(text, fileName){
   const lines = stripBom(text).replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
   let hRow=-1;
@@ -851,6 +864,7 @@ function parseIBB(text, fileName){
   }
 
   const byDate=new Map();
+  let noSecs=false;
   for(let i=hRow+1;i<lines.length;i++){
     const L=lines[i];
     if(!L || !L.trim()) continue;
@@ -862,6 +876,7 @@ function parseIBB(text, fileName){
     const dateKey = y+'-'+pad(+dm[2])+'-'+pad(+dm[1]);
     const m = (+dm[4])*60 + (+dm[5]) + (dm[6]? (+dm[6])/60 : 0);
 
+    if(!dm[6]) noSecs=true;
     /* the re-exported variant repeats the timestamp inside the message */
     const msg = (p[1]||'').trim().replace(/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}(?::\d{2})?\s+/,'');
     const av = parseFloat(p[iAir]), bv = iLoad>=0?parseFloat(p[iLoad]):NaN;
@@ -886,6 +901,10 @@ function parseIBB(text, fileName){
   const out=[];
   for(const [date,rows] of byDate){
     rows.sort((r,s)=>r.m-s.m);
+    /* An HMI re-export drops the seconds, so three readings a minute all land on
+       the same timestamp. Left alone they stack on one x and the trace draws as a
+       staircase of vertical risers. Spread them evenly across their own minute. */
+    if(noSecs) spreadWithinMinute(rows);
     out.push({
       date, rows, file:fileName,
       setpoint: null,
@@ -1091,6 +1110,24 @@ function parseFile(text, fileName){
    folded into whichever days actually have readings */
 let EVLOG = {events:[], settings:[], serial:'', fw:''};
 
+/* The controller stamps an audit entry with 0.0 or 60.0 when the sensors have not
+   been read yet — at boot, or as an alarm is raised. Those are placeholders, not
+   measurements, so check them against the trace and drop the ones that disagree. */
+function eventTemps(day, e){
+  if(e.a===null && e.b===null) return {a:null, b:null};
+  const suspect = (e.a===0 && e.b===0) || (e.a===e.b && e.a>=50);
+  if(!suspect) return {a:e.a, b:e.b};
+  let near=null, bd=Infinity;
+  for(const r of day.rows){
+    if(r.a===null || r.ev) continue;
+    const d=Math.abs(r.m-e.m);
+    if(d<bd){ bd=d; near=r; }
+  }
+  if(near && bd<=10 && Math.abs(near.a-e.a)>2) return {a:null, b:null};
+  if(!near) return {a:null, b:null};
+  return {a:e.a, b:e.b};
+}
+
 function mergeEventLog(){
   if(!EVLOG.events.length || !DAYS.size) return;
   for(const e of EVLOG.events){
@@ -1098,9 +1135,10 @@ function mergeEventLog(){
     if(!day) continue;
     if(day.rows.some(r=>r.rt===e.name && Math.abs(r.m-e.m)<0.5)) continue;
     /* a and b stay null so an audit entry never counts as a reading */
+    const rd = eventTemps(day, e);
     day.rows.push({m:e.m, a:null, b:null, e:null, d:0, c:0,
                    x:/alarm/i.test(e.name)?1:0, p:/mains fail|power/i.test(e.name)?1:0,
-                   rt:e.name, ev:1, ra:e.a, rb:e.b});
+                   rt:e.name, ev:1, ra:rd.a, rb:rd.b});
     day._w=null; day._fk=null;
   }
   for(const day of DAYS.values()) day.rows.sort((x,y)=>x.m-y.m);
@@ -1498,6 +1536,7 @@ function render(){
        v.days.some(d=>d.hasComp!==false)? '%' : '', '')
   ].join('');
 
+  renderInstrument();
   renderMixed();
   renderClock();
   renderPower();
@@ -1651,28 +1690,69 @@ function st(k,val,u,c){
 }
 
 /* the 24-range export carries event codes with no key — show them, don't guess */
+/* nearest actual reading either side of a moment, if the trace is close enough */
+function traceAt(day, m){
+  const rows=day.rows, tol=Math.max(2, (day.iv||1)*3);
+  let lo=0, hi=rows.length-1, i=0;
+  while(lo<=hi){ const mid=(lo+hi)>>1; if(rows[mid].m<m){ i=mid; lo=mid+1; } else hi=mid-1; }
+  let best=null, bd=Infinity;
+  for(let j=Math.max(0,i-4); j<Math.min(rows.length,i+5); j++){
+    const r=rows[j];
+    if(r.ev || r.a===null) continue;
+    const d=Math.abs(r.m-m);
+    if(d<bd){ bd=d; best=r; }
+  }
+  return (best && bd<=tol) ? {a:best.a, b:best.b} : null;
+}
+
 function renderRtEvents(){
   const card=$('#rtCard'), t=$('#rtTbl');
   const list=[];
-  for(const d of VIEW.days) for(const r of d.rows) if(r.rt) list.push({date:d.date, m:r.m, code:r.rt,
-    a:(r.a!==null?r.a:(r.ra!==undefined?r.ra:null)), b:(r.b!==null?r.b:(r.rb!==undefined?r.rb:null)), e:r.e});
+  for(const d of VIEW.days) for(const r of d.rows){
+    if(!r.rt) continue;
+    let a = (r.a!==null?r.a:(r.ra!==undefined?r.ra:null));
+    let b = (r.b!==null?r.b:(r.rb!==undefined?r.rb:null));
+    let approx=false;
+    /* An event row carries no reading of its own — the door and power messages sit
+       between samples, and a boot entry is stamped before the probes are read. Where
+       the trace covers that moment, show what the fridge was actually doing, marked
+       so nobody mistakes it for a value the controller logged. */
+    if(a===null && b===null){
+      const near=traceAt(d, r.m);
+      if(near){ a=near.a; b=near.b; approx=true; }
+    }
+    list.push({date:d.date, m:r.m, code:r.rt, a, b, e:r.e, approx});
+  }
   if(!list.length){ card.hidden=true; return; }
   card.hidden=false;
   const counts={};
   list.forEach(x=>counts[x.code]=(counts[x.code]||0)+1);
   const CAP=300;
+  const showCode = list.some(x=>/^\[/.test(x.code));
   $('#rtCount').textContent = list.length+' logged · '+Object.keys(counts).length+' distinct';
   const rows=list.slice(0,CAP).map(x=>{
     const ci=codeInfo(x.code);
     return '<tr class="click" data-d="'+x.date+'" data-m="'+x.m+'">'+
       '<td class="txt">'+fmtDate(x.date)+'</td><td>'+hhmm(x.m)+'</td>'+
       '<td class="txt"><span class="pill ev-'+ci.g+'">'+ci.d+'</span></td>'+
-      '<td>'+x.code+'</td>'+
-      '<td>'+t1(x.a)+'</td><td>'+t1(x.b)+'</td>'+
-      '<td>'+(x.e===null||x.e===undefined?'—':t1(x.e))+'</td></tr>';
+      (showCode? '<td>'+x.code+'</td>' : '')+
+      '<td'+(x.approx?' class="approx"':'')+'>'+(x.approx&&x.a!==null?'≈':'')+t1(x.a)+'</td>'+
+      '<td'+(x.approx?' class="approx"':'')+'>'+(x.approx&&x.b!==null?'≈':'')+t1(x.b)+'</td>'+
+      (HAS_T3? '<td>'+(x.e===null||x.e===undefined?'—':t1(x.e))+'</td>' : '')+'</tr>';
   }).join('');
-  const more = list.length>CAP ? '<tr><td colspan="7" class="txt" style="color:var(--txt-3)">Showing the first '+CAP+' of '+list.length.toLocaleString()+'.</td></tr>' : '';
-  t.innerHTML='<thead><tr><th>Date</th><th>Time</th><th>Event</th><th>Code</th><th>'+CHL.a+' °C</th><th>'+CHL.b+' °C</th><th>'+CHL.e+' °C</th></tr></thead><tbody>'+rows+more+'</tbody>';
+  const cols = 4 + (showCode?1:0) + (HAS_T3?1:0);
+  const more = list.length>CAP ? '<tr><td colspan="'+cols+'" class="txt" style="color:var(--txt-3)">Showing the first '+CAP+' of '+list.length.toLocaleString()+'.</td></tr>' : '';
+  t.innerHTML='<thead><tr><th>Date</th><th>Time</th><th>Event</th>'+
+    (showCode?'<th>Code</th>':'')+
+    '<th>'+CHL.a+' °C</th><th>'+CHL.b+' °C</th>'+
+    (HAS_T3?'<th>'+CHL.e+' °C</th>':'')+'</tr></thead><tbody>'+rows+more+'</tbody>';
+  const anyApprox = list.slice(0,CAP).some(x=>x.approx);
+  $('#rtFoot').innerHTML = showCode
+    ? "Tap a row to zoom to it. Codes decoded from the table in Labcold's own CSV Viewer."
+    : 'Tap a row to zoom to it.'+
+      (anyApprox? ' A <b>≈</b> value was not logged with the entry — the controller records no temperature with a door or power message, '+
+                  'and stamps 0.0 or 60.0 before the probes are read. It is the nearest reading from the trace, so it is what the fridge '+
+                  'was doing at that moment rather than what the controller wrote. A dash means the trace does not cover it.' : '');
   t.querySelectorAll('tr.click').forEach(tr=>tr.onclick=()=>{
     selectDay(tr.dataset.d);
     const m=+tr.dataset.m;
@@ -2422,8 +2502,10 @@ function afterLoad(){
   $('#btnClear').hidden=false;
 
   /* a third probe only exists on some models */
+  /* only the 24 range takes a third probe — never offer it on a 19 range or an IBB */
   HAS_T3=false;
-  for(const d of DAYS.values()){ if(d.rows.some(r=>r.e!==null&&r.e!==undefined)){ HAS_T3=true; break; } }
+  if(META.range==='24')
+    for(const d of DAYS.values()){ if(d.rows.some(r=>r.e!==null&&r.e!==undefined)){ HAS_T3=true; break; } }
   $('.chip[data-s="t3"]').hidden = !HAS_T3;
   $('#t3Legend').hidden = !HAS_T3;
   $('#chan').querySelector('option[value="3"]').hidden = !HAS_T3;
@@ -2475,6 +2557,10 @@ function afterLoad(){
   $('#fLoadHi').hidden = !isIBB;
   $('#labLo').textContent = isIBB ? 'Air low °C'  : 'Low limit °C';
   $('#labHi').textContent = isIBB ? 'Air high °C' : 'High limit °C';
+  const cs=$('#chan');
+  cs.querySelector('option[value="both"]').textContent = isIBB ? 'Air and Load' : 'T1 and T2';
+  cs.querySelector('option[value="1"]').textContent    = isIBB ? 'Air only'     : 'T1 only';
+  cs.querySelector('option[value="2"]').textContent    = isIBB ? 'Load only'    : 'T2 only';
   if(isIBB){
     /* the HMI event log states what the unit is actually configured to */
     if(!afterLoad._ibbCfg){
@@ -2490,9 +2576,9 @@ function afterLoad(){
     if(EVLOG.fw)     META.fw = EVLOG.fw;
     $('#lo').value=LIMITS.lo; $('#hi').value=LIMITS.hi;
     $('#loadLo').value=LIMITS.loadLo; $('#loadHi').value=LIMITS.loadHi;
-    const o=[...$('#preset').options].find(x=>x.value===LIMITS.lo+','+LIMITS.hi);
-    $('#preset').value = o?o.value:'custom';
   }
+  $('#preset').querySelector('option[value="ibb"]').hidden = !isIBB;
+  $('#preset').value = matchPreset();
 
   $('#loadHint').innerHTML = DAYS.size+' day'+(DAYS.size===1?'':'s')+' in memory, '+
     fmtDate(keys[0])+' to '+fmtDate(keys[keys.length-1])+'. Load another folder to add more.';
@@ -2527,27 +2613,35 @@ function afterLoad(){
     tag.hidden=false;   tag.textContent=rangeName;
   }else{ badge.hidden=true; tag.hidden=true; }
 
-  $('#instBody').innerHTML =
+  renderInstrument();
+
+  buildCalendar();
+  if(!SEL.from){ SEL.from=SEL.to=keys[keys.length-1]; }
+  render();
+}
+
+/* redrawn on every refresh so the stated limits always match what is being assessed */
+function renderInstrument(){
+  const body=$('#instBody');
+  if(!body || !DAYS.size) return;
+  const row=(k,v)=>'<div style="display:flex;gap:10px;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line-2)">'+
+      '<span style="font-size:11.5px;color:var(--txt-2)">'+k+'</span>'+
+      '<span class="mono" style="font-size:12px;text-align:right;word-break:break-all">'+v+'</span></div>';
+  const rangeName = META.range==='24' ? '24 Range' : META.range==='19' ? '19 Range'
+                  : META.range==='IBB' ? 'IBB Blood Bank' : '';
+  body.innerHTML =
     row('Customer', META.customer||'—') + row('Job', META.job||'—') +
     row('Controller', rangeName||'—') +
     (META.controller? row('Name', META.controller):'') +
     (META.product? row('Product', META.product):'') +
     row(META.range==='24'?'Fridge type':'Unit type', META.unit||'—') +
-    row(META.range==='24'?'Serial number':META.range==='IBB'?'Serial number':'Controller PN', META.pn||'—') +
-    (META.range==='IBB'? row('Alarm limits','Air '+t1(LIMITS.lo)+' to '+t1(LIMITS.hi)+' °C · Load '+t1(LIMITS.loadLo)+' to '+t1(LIMITS.loadHi)+' °C'):'') +
+    row(META.range==='24'||META.range==='IBB'?'Serial number':'Controller PN', META.pn||'—') +
     (META.fw? row('Firmware', META.fw):'') +
-    row('Set point', META.setpoint===null?'—':t1(META.setpoint)+' °C') +
-    (META.fileLimits? row('Alarm limits', t1(META.fileLimits.lo)+' to '+t1(META.fileLimits.hi)+' °C'):'');
-
-  buildCalendar();
-  if(!SEL.from){ SEL.from=SEL.to=keys[keys.length-1]; }
-  render();
-
-  function row(k,v){
-    return '<div style="display:flex;gap:10px;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line-2)">'+
-      '<span style="font-size:11.5px;color:var(--txt-2)">'+k+'</span>'+
-      '<span class="mono" style="font-size:12px;text-align:right;word-break:break-all">'+v+'</span></div>';
-  }
+    (META.range!=='IBB'? row('Set point', META.setpoint===null?'—':t1(META.setpoint)+' °C'):'') +
+    (LIMITS.dual
+      ? row('Air limits', t1(LIMITS.lo)+' to '+t1(LIMITS.hi)+' °C') +
+        row('Load limits', t1(LIMITS.loadLo)+' to '+t1(LIMITS.loadHi)+' °C')
+      : row('Alarm limits', t1(LIMITS.lo)+' to '+t1(LIMITS.hi)+' °C'));
 }
 
 /* file inputs */
@@ -2616,6 +2710,7 @@ function readLimits(){
   const ch=$('#chan').value;
   if(ch!==LIMITS.chan) LIMITS._userChan=true;
   LIMITS.chan=ch; LIMITS._autoChan=false;
+  $('#preset').value = matchPreset();
   store.set('limits',LIMITS);
   if(DAYS.size) render();
 }
@@ -2626,13 +2721,26 @@ function readLimits(){
 });
 $('#preset').addEventListener('change',e=>{
   if(e.target.value==='custom') return;
+  if(e.target.value==='ibb'){
+    $('#lo').value=2; $('#hi').value=8;
+    $('#loadLo').value=2; $('#loadHi').value=6;
+    readLimits(); return;
+  }
   const [lo,hi]=e.target.value.split(',').map(Number);
   $('#lo').value=lo; $('#hi').value=hi; readLimits();
 });
 ['lo','hi'].forEach(id=>$('#'+id).addEventListener('change',()=>{
-  const opt=[...$('#preset').options].find(o=>o.value===$('#lo').value+','+$('#hi').value);
-  $('#preset').value = opt?opt.value:'custom';
+  $('#preset').value = matchPreset();
 }));
+
+/* which preset, if any, describes the bands currently in force */
+function matchPreset(){
+  if(LIMITS.dual){
+    return (LIMITS.lo===2&&LIMITS.hi===8&&LIMITS.loadLo===2&&LIMITS.loadHi===6) ? 'ibb' : 'custom';
+  }
+  const o=[...$('#preset').options].find(x=>x.value===LIMITS.lo+','+LIMITS.hi);
+  return o?o.value:'custom';
+}
 
 /* series toggles */
 $$('.chart-top .chip').forEach(b=>b.onclick=()=>{
@@ -2649,6 +2757,10 @@ $('#btnClear').onclick = ()=>{
   EVLOG = {events:[], settings:[], serial:'', fw:''};
   CHL  = {a:'T1', b:'T2', e:'T3'};
   LIMITS.dual=false; $('#fLoadLo').hidden=true; $('#fLoadHi').hidden=true;
+  $('#preset').querySelector('option[value="ibb"]').hidden=true;
+  $('#chan').querySelector('option[value="both"]').textContent='T1 and T2';
+  $('#chan').querySelector('option[value="1"]').textContent='T1 only';
+  $('#chan').querySelector('option[value="2"]').textContent='T2 only';
   $('#labLo').textContent='Low limit °C'; $('#labHi').textContent='High limit °C';
   $('#labT1').textContent='T1 air'; $('#labT2').textContent='T2 load';
   $('#legT1').textContent='T1 air sensor'; $('#legT2').textContent='T2 load / bottle sensor';
