@@ -7,12 +7,21 @@
    be saved to Files/iCloud through the normal share sheet, and put back on
    the same device or a new one.
 
-   What goes in:
+   What goes in — ONLY the things that exist nowhere else:
      • probe offsets, both ecosystems, exactly as loaded
      • the learned model -> worksheet routing
      • the current jobsheet worklist and its cross-day progress
      • per-unit worksheet snapshots (part-finished readings)
-     • certificate metadata, and optionally the certificate PDFs themselves
+     • certificate DETAILS (never the PDFs — see below)
+
+   Certificate PDFs are deliberately NOT embedded. An early version did, and
+   13 certificates produced a 23 MB single-line JSON that crashed the Files
+   app on iPad every time it tried to preview it. Base64 also inflates every
+   PDF by a third. Certificates are documents you already save and share from
+   the calibration page; a settings backup is a few tens of KB and opens
+   anywhere. Backups written by that earlier version can still be restored —
+   the reader still understands an embedded PDF, the writer just never
+   produces one.
 
    Restore MERGES. It never deletes anything already on the device:
      • offsets      — taken when the slot is empty or the backup's is newer
@@ -24,7 +33,9 @@
 (function (global) {
   'use strict';
 
-  var SCHEMA = 1;
+  var SCHEMA = 2;
+  // A backup should never get big enough to choke a file previewer.
+  var SIZE_WARN_BYTES = 2 * 1024 * 1024;
   var KEY_LAST_BACKUP = 'labcal.backup.lastAt';
   var OFFSET_PREFIX = 'labcal.offsets.';
   var UNIT_PREFIX = 'labcal.unit.';
@@ -46,19 +57,6 @@
   function nowIso() { return new Date().toISOString(); }
 
   // ---- binary helpers ----------------------------------------------------
-  function blobToBase64(blob) {
-    return new Promise(function (resolve, reject) {
-      var fr = new global.FileReader();
-      fr.onload = function () {
-        var s = String(fr.result);
-        var comma = s.indexOf(',');
-        resolve(comma === -1 ? '' : s.slice(comma + 1));
-      };
-      fr.onerror = function () { reject(fr.error || new Error('Could not read a certificate.')); };
-      fr.readAsDataURL(blob);
-    });
-  }
-
   function base64ToBlob(b64, type) {
     var bin = global.atob(b64);
     var len = bin.length;
@@ -79,7 +77,6 @@
     return out;
   }
 
-  // includeCertificates: pack the PDFs as well as their details.
   function build(options) {
     options = options || {};
     var pack = {
@@ -116,13 +113,8 @@
             site: rec.site, jobRef: rec.jobRef, sheet: rec.sheet,
             size: rec.size, superseded: !!rec.superseded
           };
-          if (!options.includeCertificates) { pack.certificates.push(entry); return; }
-          return blobToBase64(rec.blob).then(function (b64) {
-            entry.pdf = b64;
-            pack.certificates.push(entry);
-          }).catch(function () {
-            pack.certificates.push(entry);   // details without the file beat nothing
-          });
+          // Details only. The PDF itself stays out — see the note at the top.
+          pack.certificates.push(entry);
         });
       });
       return chain.then(function () { return pack; });
@@ -278,6 +270,7 @@
 
   global.LabCalBackup = {
     SCHEMA: SCHEMA,
+    SIZE_WARN_BYTES: SIZE_WARN_BYTES,
     build: build,
     estimate: estimate,
     toBlob: toBlob,

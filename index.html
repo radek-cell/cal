@@ -409,7 +409,7 @@ footer{
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.19</span>
+    <span id="footYear">v1.20</span>
   </footer>
 
 </div>
@@ -515,7 +515,7 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.19 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.20 · ' + d.getFullYear();
 }
 
 // ---- Fullscreen toggle (Android/desktop browsers; on iOS, use
@@ -881,7 +881,6 @@ btn.addEventListener('click', downloadForOffline);
 // ---------------------------------------------------------------------
 const backupPanel = document.getElementById('backupPanel');
 const restoreFileEl = document.getElementById('restoreFile');
-let includeCerts = true;
 let lastRestoreReport = '';
 
 function fmtBytes(n){
@@ -926,8 +925,7 @@ function renderBackupPanel(){
         <button class="sbtn ghost" type="button" id="restoreBtn">Restore…</button>
       </div>
     </div>
-    <label class="inc"><input type="checkbox" id="incCerts" ${includeCerts?'checked':''}> Include the certificate PDFs (bigger file, but a complete copy)</label>
-    <p class="why">Saves your offsets, learned routing, jobsheet progress and part-finished worksheets to one file. Send it to Files or iCloud so it lives off the iPad. Restoring merges — it never deletes anything already here.</p>
+    <p class="why">Saves your offsets, learned routing, jobsheet progress and part-finished worksheets — the things that exist nowhere but this browser. A few tens of KB. Send it to Files or iCloud so it lives off the iPad. Restoring merges; it never deletes anything already here.<br><br><b>Certificates are not in here.</b> They are documents in their own right — save them from the calibration page, where each job merges into one PDF.</p>
     ${lastRestoreReport ? `<div class="restore-report">${lastRestoreReport}</div>` : ''}`);
 
   const inc = document.getElementById('incCerts');
@@ -938,13 +936,17 @@ function renderBackupPanel(){
     const label = b.textContent;
     b.disabled = true; b.textContent = 'Packing…';
     try{
-      const pack = await LabCalBackup.build({ includeCertificates: includeCerts, appVersion: 'v1.19' });
+      const pack = await LabCalBackup.build({ appVersion: 'v1.20' });
       const blob = LabCalBackup.toBlob(pack);
       const name = LabCalBackup.fileName();
       b.textContent = label; b.disabled = false;
+      // A backup that a file previewer cannot open is worse than useless.
+      if(blob.size > LabCalBackup.SIZE_WARN_BYTES){
+        if(!confirm(`This backup is ${fmtBytes(blob.size)}, which is larger than expected.\n\nVery large files can hang the Files app when it tries to preview them. Save it anyway?`)) return;
+      }
       if(window.LabCalSave) await LabCalSave.deliver(blob, name);
       LabCalBackup.markBackedUp();
-      lastRestoreReport = `Backup ready — <b>${fmtBytes(blob.size)}</b>, ${pack.certificates.length} certificate${pack.certificates.length===1?'':'s'}. Save it somewhere off this iPad.`;
+      lastRestoreReport = `Backup ready — <b>${fmtBytes(blob.size)}</b>, covering ${pack.certificates.length} certificate record${pack.certificates.length===1?'':'s'}. Save it somewhere off this iPad.`;
       renderBackupPanel();
     }catch(e){
       alert('Could not build the backup.\n\n' + (e && e.message ? e.message : e));

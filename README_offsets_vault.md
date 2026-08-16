@@ -1,7 +1,36 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.19)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.20)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.20 — backup size fix (important)
+
+v1.19 embedded the certificate PDFs in the backup. With 13 certificates that
+produced a **23 MB single-line JSON**, and the iPad Files app crashed every time
+it tried to preview it. My mistake — base64 also inflates every PDF by a third,
+so the file was worse than the sum of its parts.
+
+**Certificate PDFs are no longer put in the backup.** The same device now
+produces a **41 KB** file instead of 22.6 MB.
+
+The reasoning: a backup should hold what exists *nowhere else* — offsets,
+learned routing, worklist progress, part-finished worksheets. Certificates are
+finished documents you already save and share from the calibration page, where
+each job merges into a single PDF. Their **details** are still in the backup
+(job, serial, certificate number, time), so job progress ticks still rebuild
+after a restore.
+
+Backups written by v1.19 still restore correctly — the reader still understands
+an embedded PDF, the writer just never produces one. There is also now a warning
+if a backup somehow exceeds 2 MB, before it gets saved.
+
+### If a 23 MB backup is stuck on your iPad
+
+Do not tap the file. In Files, tap **Select**, tick it, and delete — selecting
+never opens a preview. If Files crashes on launch, force-quit it first (swipe up
+and hold, swipe the card away), or force-restart the iPad. If the file went to
+iCloud, deleting it from iCloud.com on a computer avoids the iPad opening it at
+all.
 
 ## v1.19 — backup & restore
 
@@ -11,9 +40,8 @@ the lot into one file and sends it through the share sheet — save it to Files 
 iCloud and it lives off the iPad.
 
 What goes in: both offsets files, the learned routing, the current worklist and
-its cross-day progress, part-finished worksheets, and certificate details. The
-certificate PDFs themselves are included by default; untick the box for a small
-settings-only file.
+its cross-day progress, part-finished worksheets, and certificate details.
+(Certificate PDFs are not included — see v1.20 above.)
 
 The panel tracks when you last backed up — plain under 3 days, amber up to a
 week, red past that with a reminder about what iPadOS does.
@@ -273,13 +301,13 @@ that actually changed:
 | `calibration_worksheet_SNMD.html` | Auto-loads Fluke & Comark offsets |
 | `calibration_worksheet_19_24.html` | Auto-loads Fluke & Comark offsets |
 | `cloud_temp.html` | Auto-loads Fluke & Comark offsets |
-| `sw.js` | Cache bumped to **v14**, caches all shared modules |
+| `sw.js` | Cache bumped to **v15**, caches all shared modules |
 | `data_logger_viewer.html` | Chart PNG and summary CSV go through the share sheet on iPad |
 | `pdf_merge_reorder.html` | Merged PDF goes through the share sheet on iPad |
 | `tools.html` | Unchanged — included so the folder is complete |
 
 After uploading, open the home page once while online so the service worker
-picks up v14, then hit **Refresh offline copy**.
+picks up v15, then hit **Refresh offline copy**.
 
 ## Which file unlocks what
 
