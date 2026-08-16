@@ -11,6 +11,11 @@
 <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22LabCal%20Calibration%20Suite%22%2C%22short_name%22%3A%22LabCal%22%2C%22display%22%3A%22fullscreen%22%2C%22start_url%22%3A%22.%2Findex.html%22%2C%22background_color%22%3A%22%23dfe6ee%22%2C%22theme_color%22%3A%22%23dfe6ee%22%7D">
 <title>LabCal — Calibration Suite</title>
 <script src="labcal_offsets.js"></script>
+<script src="labcal_jobsheet.js"></script>
+<script src="labcal_save.js"></script>
+<script src="labcal_certs.js"></script>
+<script src="labcal_units.js"></script>
+<script src="labcal_backup.js"></script>
 <style>
 :root{
   --bg:#dfe6ee;
@@ -207,6 +212,32 @@ h1{font-size:clamp(30px,4.4vw,50px);line-height:1.1;margin:0 0 16px;font-weight:
 .sbtn.ghost:hover{color:#c0392b;border-color:#e0a49c;background:transparent}
 @media (max-width:620px){.sbtn{flex:1;text-align:center}}
 
+/* ---- backup & restore ---- */
+.backup{
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:16px 18px;margin:0 0 38px;box-shadow:0 1px 3px rgba(20,30,40,.06);
+}
+.backup.warn{border-color:var(--amber-dim);background:#fffdf7}
+.backup.stale{border-color:#e0a49c;background:#fffaf9}
+.backup-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.backup h4{font-size:15.5px;margin:0;font-weight:650;letter-spacing:-.2px}
+.backup .when{font-family:var(--mono);font-size:11px;color:var(--muted-dim);margin-top:4px;line-height:1.6}
+.backup .when b{color:var(--ink)}
+.backup .when.due{color:#a9690a}
+.backup .when.overdue{color:#c0392b;font-weight:600}
+.backup p.why{font-size:12.5px;color:var(--muted);line-height:1.55;margin:12px 0 0}
+.backup-actions{display:flex;gap:8px;flex-wrap:wrap}
+.backup label.inc{
+  display:flex;align-items:center;gap:7px;margin-top:12px;
+  font-size:12.5px;color:var(--muted);cursor:pointer;
+}
+.backup label.inc input{width:16px;height:16px}
+.restore-report{
+  margin-top:12px;font-family:var(--mono);font-size:11px;line-height:1.7;
+  background:var(--bg2);border:1px solid var(--border-soft);border-radius:5px;padding:10px 12px;color:var(--muted);
+}
+.restore-report b{color:var(--ink)}
+
 /* locked section card (offsets not loaded yet) */
 .card.locked{opacity:.9;cursor:not-allowed}
 .card.locked .icon{color:var(--muted-dim)}
@@ -369,13 +400,16 @@ footer{
   <div class="vault" id="vault"></div>
   <input id="vaultFile" type="file" accept="application/json,.json" style="display:none">
 
+  <div class="backup" id="backupPanel"></div>
+  <input id="restoreFile" type="file" accept="application/json,.json" style="display:none">
+
   <div class="section-label">Step 2 — choose an area</div>
 
   <div class="grid cats" id="grid"></div>
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.18</span>
+    <span id="footYear">v1.19</span>
   </footer>
 
 </div>
@@ -481,7 +515,7 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.18 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.19 · ' + d.getFullYear();
 }
 
 // ---- Fullscreen toggle (Android/desktop browsers; on iOS, use
@@ -670,6 +704,7 @@ const OFFLINE_PAGES = [
   'labcal_save.js',
   'labcal_certs.js',
   'labcal_units.js',
+  'labcal_backup.js',
   'pdf-lib.min.js',
   // section pages
   'calibration.html',
@@ -837,6 +872,132 @@ btn.addEventListener('click', downloadForOffline);
   await registerSW();
   await refreshStatus();
 })();
+
+
+// ---------------------------------------------------------------------
+// Backup & restore. Everything the suite remembers lives in browser
+// storage, which iPadOS clears after about a week away from the site —
+// this is the only thing that makes that survivable.
+// ---------------------------------------------------------------------
+const backupPanel = document.getElementById('backupPanel');
+const restoreFileEl = document.getElementById('restoreFile');
+let includeCerts = true;
+let lastRestoreReport = '';
+
+function fmtBytes(n){
+  if(n < 1024) return n + ' B';
+  if(n < 1024*1024) return Math.round(n/1024) + ' KB';
+  return (n/(1024*1024)).toFixed(1) + ' MB';
+}
+
+function renderBackupPanel(){
+  if(!backupPanel || !window.LabCalBackup) return;
+  const days = LabCalBackup.daysSinceBackup();
+  const at = LabCalBackup.lastBackupAt();
+
+  let cls = 'backup', whenCls = '', when;
+  if(days === null){
+    cls += ' warn'; whenCls = 'due';
+    when = 'Never backed up on this device.';
+  }else if(days === 0){
+    when = 'Last backup <b>today</b>.';
+  }else if(days <= 3){
+    when = `Last backup <b>${days} day${days===1?'':'s'} ago</b>.`;
+  }else if(days <= 7){
+    cls += ' warn'; whenCls = 'due';
+    when = `Last backup <b>${days} days ago</b> — worth doing again.`;
+  }else{
+    cls += ' stale'; whenCls = 'overdue';
+    when = `Last backup <b>${days} days ago</b>. iPadOS clears browser storage after about a week away from this site.`;
+  }
+  if(at && days !== null){
+    try{ when += ' ' + new Date(at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){}
+  }
+
+  backupPanel.className = cls;
+  setHtml(backupPanel, `
+    <div class="backup-head">
+      <div>
+        <h4>Backup &amp; restore</h4>
+        <div class="when ${whenCls}">${when}</div>
+      </div>
+      <div class="backup-actions">
+        <button class="sbtn" type="button" id="backupBtn">Back up now</button>
+        <button class="sbtn ghost" type="button" id="restoreBtn">Restore…</button>
+      </div>
+    </div>
+    <label class="inc"><input type="checkbox" id="incCerts" ${includeCerts?'checked':''}> Include the certificate PDFs (bigger file, but a complete copy)</label>
+    <p class="why">Saves your offsets, learned routing, jobsheet progress and part-finished worksheets to one file. Send it to Files or iCloud so it lives off the iPad. Restoring merges — it never deletes anything already here.</p>
+    ${lastRestoreReport ? `<div class="restore-report">${lastRestoreReport}</div>` : ''}`);
+
+  const inc = document.getElementById('incCerts');
+  if(inc) inc.addEventListener('change', ()=>{ includeCerts = inc.checked; });
+
+  const b = document.getElementById('backupBtn');
+  if(b) b.addEventListener('click', async ()=>{
+    const label = b.textContent;
+    b.disabled = true; b.textContent = 'Packing…';
+    try{
+      const pack = await LabCalBackup.build({ includeCertificates: includeCerts, appVersion: 'v1.19' });
+      const blob = LabCalBackup.toBlob(pack);
+      const name = LabCalBackup.fileName();
+      b.textContent = label; b.disabled = false;
+      if(window.LabCalSave) await LabCalSave.deliver(blob, name);
+      LabCalBackup.markBackedUp();
+      lastRestoreReport = `Backup ready — <b>${fmtBytes(blob.size)}</b>, ${pack.certificates.length} certificate${pack.certificates.length===1?'':'s'}. Save it somewhere off this iPad.`;
+      renderBackupPanel();
+    }catch(e){
+      alert('Could not build the backup.\n\n' + (e && e.message ? e.message : e));
+    }finally{
+      b.disabled = false; b.textContent = label;
+    }
+  });
+
+  const r = document.getElementById('restoreBtn');
+  if(r) r.addEventListener('click', ()=>restoreFileEl.click());
+}
+
+if(restoreFileEl){
+  restoreFileEl.addEventListener('change', async (ev)=>{
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if(!file) return;
+    let pack, info;
+    try{
+      pack = JSON.parse(await file.text());
+      info = LabCalBackup.inspect(pack);
+    }catch(e){
+      alert('That file cannot be restored.\n\n' + (e && e.message ? e.message : e));
+      return;
+    }
+    // Say exactly what is in the file before touching anything.
+    const lines = [
+      `Backup from ${info.exportedAt ? new Date(info.exportedAt).toLocaleString('en-GB') : 'unknown date'}`,
+      '',
+      info.offsets.length ? 'Offsets: ' + info.offsets.map(o=>`${o.device} (valid to ${o.validUntil||'?'})`).join(', ') : 'Offsets: none',
+      `Learned routing: ${info.routes} model${info.routes===1?'':'s'}`,
+      info.jobsheet ? `Worklist: ${info.jobsheet.callNumber||'(no job ref)'} — ${info.jobsheet.devices} unit(s)` : 'Worklist: none',
+      `Job progress records: ${info.progressJobs}`,
+      `Part-finished worksheets: ${info.units}`,
+      `Certificates: ${info.certificates}${info.certificatesWithPdf?` (${info.certificatesWithPdf} with the PDF)`:' (details only)'}`,
+      '',
+      'Restoring MERGES into what is already on this device. Nothing here is deleted.',
+      '',
+      'Go ahead?'
+    ];
+    if(!confirm(lines.join('\n'))) return;
+    try{
+      const rep = await LabCalBackup.restore(pack);
+      lastRestoreReport = `Restored — offsets <b>${rep.offsets}</b>, routes <b>${rep.routes}</b>, progress <b>${rep.progress}</b>, worksheets <b>${rep.units}</b>, certificates <b>${rep.certificates}</b>. Skipped <b>${rep.skipped}</b> already present or newer here.`;
+      renderVault();
+      renderBackupPanel();
+    }catch(e){
+      alert('The restore did not finish.\n\n' + (e && e.message ? e.message : e));
+    }
+  });
+}
+
+renderBackupPanel();
 
 renderVault();
 renderCards();

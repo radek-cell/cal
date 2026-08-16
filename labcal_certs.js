@@ -119,6 +119,27 @@
     }).catch(function () { /* never block a certificate over bookkeeping */ });
   }
 
+  // Put a certificate back from a backup, keeping its original day and time.
+  // Deliberately skips the supersede pass: the backup already records which
+  // ones were superseded, and re-running it would rewrite that history.
+  function addRestored(blob, meta) {
+    meta = meta || {};
+    var rec = {
+      day: meta.day || todayIso(),
+      savedAt: meta.savedAt || new Date().toISOString(),
+      filename: meta.filename || 'certificate.pdf',
+      certRef: meta.certRef || '', serial: meta.serial || '', model: meta.model || '',
+      site: meta.site || '', jobRef: meta.jobRef || '', sheet: meta.sheet || '',
+      size: blob && blob.size ? blob.size : (meta.size || 0),
+      superseded: !!meta.superseded,
+      restored: true,
+      blob: blob
+    };
+    return tx('readwrite')
+      .then(function (os) { return wrap(os.add(rec)); })
+      .then(function (id) { announce(); return id; });
+  }
+
   function remove(id) {
     return tx('readwrite')
       .then(function (os) { return wrap(os.delete(id)); })
@@ -286,6 +307,7 @@
     supported: supported,
     todayIso: todayIso,
     add: add,
+    addRestored: addRestored,
     get: get,
     remove: remove,
     clearDay: clearDay,

@@ -1,7 +1,44 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.18)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.19)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.19 — backup & restore
+
+Everything this suite remembers lives in browser storage, which iPadOS clears
+after about a week away from the site. **Back up now** on the home page packs
+the lot into one file and sends it through the share sheet — save it to Files or
+iCloud and it lives off the iPad.
+
+What goes in: both offsets files, the learned routing, the current worklist and
+its cross-day progress, part-finished worksheets, and certificate details. The
+certificate PDFs themselves are included by default; untick the box for a small
+settings-only file.
+
+The panel tracks when you last backed up — plain under 3 days, amber up to a
+week, red past that with a reminder about what iPadOS does.
+
+**Restore merges. It never deletes anything already on the device.**
+
+| | |
+|---|---|
+| Offsets | taken when the slot is empty or the backup's copy is newer |
+| Learned routing | merged, newer entry wins |
+| Job progress | union — a unit ticked in either place stays ticked |
+| Worklist | only loaded when none is open, so a job in hand is never swapped out |
+| Worksheet snapshots | taken when absent or newer |
+| Certificates | added when not already present, matched on filename and time |
+
+Before anything is written, it shows exactly what the file contains — offsets
+and their validity, how many routes, which job, how many part-finished
+worksheets and certificates — and asks. Restoring the same file twice changes
+nothing the second time. Files that are not LabCal backups, or come from a newer
+version, are refused rather than half-applied.
+
+Tested by filling a device, backing it up, wiping it completely, and restoring:
+offsets, worklist, progress, routing, part-finished readings and the certificate
+PDF all came back byte-for-byte, and the calibration section unlocked itself
+again.
 
 ## v1.18 — jobs that run over several days
 
@@ -225,7 +262,8 @@ that actually changed:
 | `labcal_jobsheet.js` | Jobsheet parser, worklist and worksheet routing. |
 | `labcal_save.js` | Save/share routing, including the iOS share sheet. |
 | `labcal_certs.js` | The day's certificate list (IndexedDB), job grouping and merge. |
-| `labcal_units.js` | **NEW** — per-unit worksheet snapshots for reopening and amending. |
+| `labcal_units.js` | Per-unit worksheet snapshots for reopening and amending. |
+| `labcal_backup.js` | **NEW** — one-file backup and merging restore. |
 | `pdf-lib.min.js` | **NEW** — PDF merge engine, lazy-loaded only when merging. |
 | `index.html` | Offsets panel with countdown + warnings; Calibration section locks until a file is loaded |
 | `calibration.html` | Jobsheet worklist panel; each worksheet card locks unless *its own* ecosystem's file is loaded |
@@ -235,13 +273,13 @@ that actually changed:
 | `calibration_worksheet_SNMD.html` | Auto-loads Fluke & Comark offsets |
 | `calibration_worksheet_19_24.html` | Auto-loads Fluke & Comark offsets |
 | `cloud_temp.html` | Auto-loads Fluke & Comark offsets |
-| `sw.js` | Cache bumped to **v13**, caches all shared modules |
+| `sw.js` | Cache bumped to **v14**, caches all shared modules |
 | `data_logger_viewer.html` | Chart PNG and summary CSV go through the share sheet on iPad |
 | `pdf_merge_reorder.html` | Merged PDF goes through the share sheet on iPad |
 | `tools.html` | Unchanged — included so the folder is complete |
 
 After uploading, open the home page once while online so the service worker
-picks up v13, then hit **Refresh offline copy**.
+picks up v14, then hit **Refresh offline copy**.
 
 ## Which file unlocks what
 
@@ -267,7 +305,8 @@ The vault counts down to the **last day of the "valid until" month**.
 
 - Storage is the browser's `localStorage` for this site, so it is per-device and
   per-browser. iPad Safari clears it after about 7 days with no visits to the
-  site — if that happens, just load the files again on the home page.
+  site — **this is what Backup & restore is for.** Back up at the end of a job
+  and the offsets, progress and part-finished work all survive.
 - The "Load offsets" button on each worksheet still works and now **writes back
   to the vault**, so loading a file on any worksheet updates all the others.
 - If `labcal_offsets.js` is ever missing, nothing locks up: the pages fall back
