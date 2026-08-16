@@ -22,6 +22,7 @@
   var KEY_CURRENT = 'labcal.jobsheet.current';
   var KEY_HANDOFF = 'labcal.jobsheet.handoff';
   var KEY_ROUTES  = 'labcal.jobsheet.routes';
+  var KEY_PROGRESS = 'labcal.jobsheet.progress';
   var CHANGE_EVENT = 'labcal-jobsheet-changed';
 
   // ===================================================================
@@ -424,7 +425,14 @@
 
     // The 19 range and the 24 range: 0119, 0219, 0519, 1019, 1519 and the
     // matching 24s. Anchored to the end of the model code.
-    { modelMatch: /(?:19|24)$/,                    sheet: 'ws19_24' }
+    { modelMatch: /(?:19|24)$/,                    sheet: 'ws19_24' },
+
+    // The 10 range — FO110, FO210, FO310 and anything else ending in 10 —
+    // takes the standard non-medical form. Checked after the MD rule, so an
+    // "…10MD" code still goes to Medical.
+    // NOTE: this also catches RLDG1010 (the model on ENQ139969). Confirm that
+    // is right, or tell me to narrow this to the FO family only.
+    { modelMatch: /10$/,                           sheet: 'snmd' }
   ];
 
   var SHEETS = {
@@ -556,6 +564,87 @@
   // ===================================================================
   // THE DAY'S WORKLIST
   // ===================================================================
+  // ===================================================================
+  // PROGRESS THAT SURVIVES ACROSS DAYS
+  // ===================================================================
+  // A job can run over several days. Reloading the same jobsheet tomorrow
+  // must not wipe out yesterday's ticks, so what has been certified is kept
+  // against the JOB (not against the loaded worklist) and merged back in
+  // whenever that jobsheet is loaded again.
+  function progressStore() { return readJson(KEY_PROGRESS, {}) || {}; }
+
+  function serialKey(serial) {
+    return String(serial || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
+  function progressFor(jobRef) {
+    var all = progressStore();
+    return all[String(jobRef || '')] || {};
+  }
+
+  function recordProgress(jobRef, serial, info) {
+    var k = serialKey(serial);
+    if (!k) return;
+    var all = progressStore();
+    var job = all[String(jobRef || '')] || {};
+    var prev = job[k] || {};
+    job[k] = {
+      done: true,
+      doneAt: info && info.doneAt ? info.doneAt : (prev.doneAt || new Date().toISOString()),
+      certRef: (info && info.certRef) || prev.certRef || ''
+    };
+    all[String(jobRef || '')] = job;
+    writeJson(KEY_PROGRESS, all);
+  }
+
+  function clearProgress(jobRef) {
+    var all = progressStore();
+    delete all[String(jobRef || '')];
+    writeJson(KEY_PROGRESS, all);
+    announce();
+  }
+
+  // Certificates are the real evidence a unit was done. If the progress store
+  // has been cleared but certificates for this job still exist, put the ticks
+  // back from those.
+  function reconcileFromCertificates(jobRef, certificates) {
+    var changed = false;
+    (certificates || []).forEach(function (c) {
+      if ((c.jobRef || '') !== String(jobRef || '')) return;
+      if (!c.serial) return;
+      var existing = progressFor(jobRef)[serialKey(c.serial)];
+      if (existing && existing.done) return;
+      recordProgress(jobRef, c.serial, { doneAt: c.savedAt, certRef: c.certRef });
+      changed = true;
+    });
+    var js = current();
+    if (js && String(js.callNumber || '') === String(jobRef || '')) {
+      if (applyProgressToCurrent()) changed = true;
+    }
+    if (changed) announce();
+    return changed;
+  }
+
+  // Fold the stored progress into the loaded worklist.
+  function applyProgressToCurrent() {
+    var js = current();
+    if (!js) return false;
+    var prog = progressFor(js.callNumber);
+    var changed = false;
+    js.devices.forEach(function (d) {
+      var p = prog[serialKey(d.serial)];
+      if (p && p.done && !d.done) {
+        d.done = true;
+        d.doneAt = p.doneAt || '';
+        d.certRef = d.certRef || p.certRef || '';
+        d.carriedOver = true;   // certified before this worklist was loaded
+        changed = true;
+      }
+    });
+    if (changed) writeJson(KEY_CURRENT, js);
+    return changed;
+  }
+
   function todayIso() {
     var d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -597,8 +686,10 @@
       })
     };
     writeJson(KEY_CURRENT, js);
+    // Same job, later day: bring yesterday's ticks back.
+    applyProgressToCurrent();
     announce();
-    return js;
+    return current();
   }
 
   function clearCurrent() { writeJson(KEY_CURRENT, null); writeJson(KEY_HANDOFF, null); announce(); }
@@ -621,13 +712,32 @@
     hit.doneAt = new Date().toISOString();
     if (certRef) hit.certRef = certRef;
     writeJson(KEY_CURRENT, js);
+    recordProgress(js.callNumber, serial, { doneAt: hit.doneAt, certRef: certRef });
     announce();
+  }
+
+  // A unit counts as "started" when a worksheet snapshot exists for it but no
+  // certificate has been produced — i.e. readings were entered and not
+  // finished. Only available when the units module is loaded.
+  function isStarted(jobRef, device) {
+    if (!global.LabCalUnits || !device.sheet || !device.serial) return false;
+    return global.LabCalUnits.has(device.sheet, jobRef, device.serial);
   }
 
   function progress() {
     var js = current();
-    if (!js) return { total: 0, done: 0 };
-    return { total: js.devices.length, done: js.devices.filter(function (d) { return d.done; }).length };
+    if (!js) return { total: 0, done: 0, today: 0, earlier: 0, started: 0 };
+    var today = todayIso(), out = { total: js.devices.length, done: 0, today: 0, earlier: 0, started: 0 };
+    js.devices.forEach(function (d) {
+      if (d.done) {
+        out.done++;
+        if (String(d.doneAt || '').slice(0, 10) === today) out.today++;
+        else out.earlier++;
+      } else if (isStarted(js.callNumber, d)) {
+        out.started++;
+      }
+    });
+    return out;
   }
 
   // ===================================================================
@@ -720,6 +830,12 @@
     updateDevice: updateDevice,
     markDone: markDone,
     progress: progress,
+    isStarted: isStarted,
+    progressFor: progressFor,
+    recordProgress: recordProgress,
+    clearProgress: clearProgress,
+    reconcileFromCertificates: reconcileFromCertificates,
+    applyProgressToCurrent: applyProgressToCurrent,
     // routing
     suggestSheet: suggestSheet,
     learnRoute: learnRoute,

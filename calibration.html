@@ -238,6 +238,16 @@ h1{font-size:clamp(28px,4vw,42px);line-height:1.1;margin:0 0 14px;font-weight:70
   padding:12px 0;border-top:1px solid var(--border-soft);
 }
 .jdev.done{opacity:.6}
+.jdev-tag{
+  display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;padding:2px 6px;border-radius:3px;margin-left:8px;
+}
+.jdev-tag.earlier{border:1px solid var(--cyan);color:var(--cyan)}
+.jdev-tag.started{border:1px solid var(--amber);color:var(--amber)}
+.prog .split{color:var(--muted-dim)}
+.prog .ptrack i.started{background:var(--amber)}
+.ptrack{position:relative}
+.ptrack .layer{position:absolute;top:0;left:0;height:100%}
 .jdev-main{min-width:0}
 .jdev-model{font-size:14px;font-weight:650;letter-spacing:-.1px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .jdev-model .tick{color:var(--green);font-weight:700}
@@ -360,7 +370,7 @@ footer{
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.17</span>
+    <span id="footYear">v1.18</span>
   </footer>
 
 </div>
@@ -532,7 +542,7 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.17 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.18 · ' + d.getFullYear();
 }
 
 
@@ -542,6 +552,16 @@ function renderDate(){
 // ---------------------------------------------------------------------
 const jobPanel = document.getElementById('jobPanel');
 const jobFile  = document.getElementById('jobFile');
+
+function shortDay(iso){
+  if(!iso) return '';
+  try{
+    const d=new Date(iso);
+    const today=new Date();
+    const same=d.toDateString()===today.toDateString();
+    return same ? 'today' : d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+  }catch(e){ return ''; }
+}
 
 function jesc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -621,6 +641,14 @@ function renderJobPanel(){
 
   const p = LabCalJobsheet.progress();
   const pct = p.total ? Math.round((p.done/p.total)*100) : 0;
+  const startedPct = p.total ? Math.round(((p.done+p.started)/p.total)*100) : 0;
+  // A job can run over several days: say how much of the tally is from
+  // earlier visits so there is no guessing about what is left.
+  const split = [
+    p.today ? `${p.today} today` : '',
+    p.earlier ? `${p.earlier} on earlier days` : '',
+    p.started ? `${p.started} started` : ''
+  ].filter(Boolean).join(' · ');
   const meta = [
     js.customer ? `<b>${jesc(js.customer)}</b>` : '',
     js.callNumber ? `Job ${jesc(js.callNumber)}` : '',
@@ -634,8 +662,11 @@ function renderJobPanel(){
     return `
     <div class="jdev${d.done?' done':''}">
       <div class="jdev-main">
-        <div class="jdev-model">${d.done?'<span class="tick">✓</span>':''}${jesc(d.model||d.equipment||'(no model)')}</div>
-        <div class="jdev-meta">${jesc(d.serial||'no serial')}${d.location?' · '+jesc(d.location):''}${d.done&&d.certRef?' · cert '+jesc(d.certRef):''}</div>
+        <div class="jdev-model">${d.done?'<span class="tick">✓</span>':''}${jesc(d.model||d.equipment||'(no model)')}${
+          d.done && d.carriedOver ? '<span class="jdev-tag earlier">'+jesc(shortDay(d.doneAt))+'</span>' :
+          (!d.done && LabCalJobsheet.isStarted(js.callNumber, d) ? '<span class="jdev-tag started">started</span>' : '')
+        }</div>
+        <div class="jdev-meta">${jesc(d.serial||'no serial')}${d.location?' · '+jesc(d.location):''}${d.done&&d.certRef?' · cert '+jesc(d.certRef):''}${d.done&&d.doneAt?' · '+jesc(shortDay(d.doneAt)):''}</div>
       </div>
       <div class="jdev-ctl">
         ${whyText?`<span class="why">${whyText}</span>`:''}
@@ -649,7 +680,7 @@ function renderJobPanel(){
   const html = `
     <div class="job-head">
       <div>
-        <p class="job-title">Today's worklist — ${js.devices.length} unit${js.devices.length===1?'':'s'}</p>
+        <p class="job-title">Worklist — ${js.devices.length} unit${js.devices.length===1?'':'s'}${p.earlier?' · continued':''}</p>
         <div class="job-sub">${meta}</div>
       </div>
       <div class="job-actions">
@@ -658,8 +689,11 @@ function renderJobPanel(){
       </div>
     </div>
     <div class="prog">
-      <span>${p.done} of ${p.total} done</span>
-      <span class="ptrack"><i style="width:${pct}%"></i></span>
+      <span>${p.done} of ${p.total} done${split?` <span class="split">· ${split}</span>`:''}</span>
+      <span class="ptrack">
+        <i class="layer started" style="width:${startedPct}%"></i>
+        <i class="layer" style="width:${pct}%"></i>
+      </span>
     </div>
     ${rows}
     ${routingFooter()}`;
@@ -900,8 +934,22 @@ function bindCertActions(){
 }
 
 if(window.LabCalUnits) LabCalUnits.prune();   // drop unit snapshots older than 30 days
+// The certificates are the evidence a unit was done. If the progress record
+// was ever lost, put the ticks back from them.
+async function reconcileWorklistFromCertificates(){
+  if(!window.LabCalCerts || !window.LabCalJobsheet) return;
+  const js = LabCalJobsheet.current();
+  if(!js || !js.callNumber) return;
+  try{
+    const all = [];
+    const days = await LabCalCerts.days();
+    for(const d of days) all.push(...await LabCalCerts.listDay(d.day));
+    if(LabCalJobsheet.reconcileFromCertificates(js.callNumber, all)) renderJobPanel();
+  }catch(e){ /* the worklist is still usable without this */ }
+}
+
 if(window.LabCalCerts){
-  LabCalCerts.prune().then(renderCertPanel);
+  LabCalCerts.prune().then(renderCertPanel).then(reconcileWorklistFromCertificates);
   LabCalCerts.onChange(renderCertPanel);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) renderCertPanel(); });
 }
