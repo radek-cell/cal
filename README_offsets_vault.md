@@ -1,7 +1,34 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.21)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.22)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.22 — telling you when something didn't load
+
+Every shared module was written to degrade gracefully if it is missing. That is
+right in principle, but it meant a file that never got uploaded failed silently
+— and a missing `labcal_pdf.js` quietly restores the old ~1 MB certificates with
+nothing on screen to say so.
+
+Now:
+
+- The home page shows a **red banner listing any shared file that did not
+  load**, what it breaks, and what to do about it.
+- Each worksheet's PDF hint states the setting in force —
+  *"quality: Standard (1.7×, q0.82)"* — or warns outright that `labcal_pdf.js`
+  is not loaded.
+- After generating, the hint shows the **actual size of the file just created**,
+  so there is no guessing.
+
+### If certificates are still ~1 MB
+
+1. Check the footer of the home page reads **v1.22**. If it shows an older
+   version, the browser is serving a cached copy: open the page online, tap
+   **Refresh offline copy**, then close every tab of the site and reopen.
+2. Check the home page shows a **Certificate PDF size** panel. If it is missing,
+   `labcal_pdf.js` was not uploaded — the red banner will say so.
+3. Open a worksheet and look at the hint next to the buttons. It names the
+   quality in force.
 
 ## v1.21 — smaller certificate PDFs
 
@@ -331,13 +358,13 @@ that actually changed:
 | `calibration_worksheet_SNMD.html` | Auto-loads Fluke & Comark offsets |
 | `calibration_worksheet_19_24.html` | Auto-loads Fluke & Comark offsets |
 | `cloud_temp.html` | Auto-loads Fluke & Comark offsets |
-| `sw.js` | Cache bumped to **v16**, caches all shared modules |
+| `sw.js` | Cache bumped to **v17**, caches all shared modules |
 | `data_logger_viewer.html` | Chart PNG and summary CSV go through the share sheet on iPad |
 | `pdf_merge_reorder.html` | Merged PDF goes through the share sheet on iPad |
 | `tools.html` | Unchanged — included so the folder is complete |
 
 After uploading, open the home page once while online so the service worker
-picks up v16, then hit **Refresh offline copy**.
+picks up v17, then hit **Refresh offline copy**.
 
 ## Which file unlocks what
 

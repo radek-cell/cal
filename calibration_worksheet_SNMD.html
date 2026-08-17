@@ -1652,7 +1652,20 @@ function pdfFileName(){
   return `${certPart}_${cleanFilePart(dateForFile(dateVal))}_${cleanFilePart(serial)}_${cleanFilePart(jobRef)}.pdf`;
 }
 function excelFileName(){ return pdfFileName().replace(/\.pdf$/,'.xlsx'); }
-function refreshPdfHint(){ const el=document.getElementById('pdfNameHint'); if(el) el.textContent='PDF name: '+pdfFileName(); }
+// Says which render setting is in force, and shouts if labcal_pdf.js failed
+// to load — otherwise the old ~1 MB settings come back silently.
+function pdfQualityLabel(){
+  if(!window.LabCalPdf) return ' · ⚠ labcal_pdf.js not loaded — using old large-file settings';
+  const p=LabCalPdf.current();
+  return ` · quality: ${p.name} (${p.scale}×, q${p.quality})`;
+}
+function reportPdfSize(bytes){
+  const el=document.getElementById('pdfNameHint');
+  if(!el || !bytes) return;
+  const kb = bytes<1024*1024 ? Math.round(bytes/1024)+' KB' : (bytes/1024/1024).toFixed(1)+' MB';
+  el.textContent = `PDF created: ${kb}${pdfQualityLabel()}`;
+}
+function refreshPdfHint(){ const el=document.getElementById('pdfNameHint'); if(el) el.textContent='PDF name: '+pdfFileName()+pdfQualityLabel(); }
 function downloadBlob(blob,filename){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -1845,6 +1858,7 @@ async function generatePDF(){
     // Desktop save dialog where it exists; on iPad there is no such dialog, so
     // the file goes to the iOS share sheet where "Save to Files" can pick the
     // folder. Plain download everywhere else. See labcal_save.js.
+    reportPdfSize(blob.size);
     if(window.LabCalSave){ await LabCalSave.deliver(blob, filename); }
     else { downloadBlob(blob,filename); }
     saveUnitSnapshot();

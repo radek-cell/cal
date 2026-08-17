@@ -502,7 +502,20 @@ function cleanFilePart(v){return String(v||'').trim().replace(/[^a-z0-9\-_.]+/gi
 function sheetNoFilePart(){const digits=(document.getElementById('sheetNo')?.value||'').replace(/[^0-9]/g,'').padStart(5,'0').slice(-5); return 'B'+digits;}
 function pdfFileName(){return `${sheetNoFilePart()}_${cleanFilePart(dateForFile(date.value)||dateForFile(isoToday()))}_${cleanFilePart(serial.value||'Serial')}_${cleanFilePart(jobRef.value||'JobRef')}.pdf`}
 function excelFileName(){return `${sheetNoFilePart()}_${cleanFilePart(dateForFile(date.value)||dateForFile(isoToday()))}_${cleanFilePart(serial.value||'Serial')}_${cleanFilePart(jobRef.value||'JobRef')}.xlsx`}
-function refreshPdfHint(){pdfNameHint.textContent='PDF name: '+pdfFileName()}
+// Says which render setting is in force, and shouts if labcal_pdf.js failed
+// to load — otherwise the old ~1 MB settings come back silently.
+function pdfQualityLabel(){
+  if(!window.LabCalPdf) return ' · ⚠ labcal_pdf.js not loaded — using old large-file settings';
+  const p=LabCalPdf.current();
+  return ` · quality: ${p.name} (${p.scale}×, q${p.quality})`;
+}
+function reportPdfSize(bytes){
+  const el=document.getElementById('pdfNameHint');
+  if(!el || !bytes) return;
+  const kb = bytes<1024*1024 ? Math.round(bytes/1024)+' KB' : (bytes/1024/1024).toFixed(1)+' MB';
+  el.textContent = `PDF created: ${kb}${pdfQualityLabel()}`;
+}
+function refreshPdfHint(){pdfNameHint.textContent='PDF name: '+pdfFileName()+pdfQualityLabel()}
 const requiredFieldIds=['sheetNo','jobRef','date','site','dept','model','serial','refTherm'];
 function collectRequiredIds(){
   const ids=[...requiredFieldIds,'rtMax','rtMin','rtRef','found_probe','found_ref','found_cal','found_heat','found_inlet','found_sw','found_hw','swSerial','unitMin','unitSec','swMin','swSec'];
@@ -720,6 +733,7 @@ async function generatePDF(){
     // Desktop save dialog where it exists; on iPad there is no such dialog, so
     // the file goes to the iOS share sheet where "Save to Files" can pick the
     // folder. Plain download everywhere else. See labcal_save.js.
+    reportPdfSize(blob.size);
     if(window.LabCalSave){ await LabCalSave.deliver(blob, filename); }
     else { downloadBlob(blob,filename); }
     saveUnitSnapshot();
