@@ -16,6 +16,7 @@
 <script src="labcal_certs.js"></script>
 <script src="labcal_units.js"></script>
 <script src="labcal_backup.js"></script>
+<script src="labcal_pdf.js"></script>
 <style>
 :root{
   --bg:#dfe6ee;
@@ -238,6 +239,20 @@ h1{font-size:clamp(30px,4.4vw,50px);line-height:1.1;margin:0 0 16px;font-weight:
 }
 .restore-report b{color:var(--ink)}
 
+/* ---- PDF quality ---- */
+.pdfq{
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:14px 18px;margin:0 0 38px;box-shadow:0 1px 3px rgba(20,30,40,.06);
+  display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.pdfq h4{font-size:14.5px;margin:0;font-weight:650;letter-spacing:-.2px}
+.pdfq .note{font-family:var(--mono);font-size:10.5px;color:var(--muted-dim);margin-top:4px;line-height:1.6}
+.pdfq select{
+  font-family:var(--sans);font-size:13px;padding:9px 12px;border:1px solid var(--border);
+  border-radius:6px;background:#fff;color:var(--ink);
+}
+@media (max-width:620px){.pdfq select{flex:1}}
+
 /* locked section card (offsets not loaded yet) */
 .card.locked{opacity:.9;cursor:not-allowed}
 .card.locked .icon{color:var(--muted-dim)}
@@ -403,13 +418,15 @@ footer{
   <div class="backup" id="backupPanel"></div>
   <input id="restoreFile" type="file" accept="application/json,.json" style="display:none">
 
+  <div class="pdfq" id="pdfQualityPanel"></div>
+
   <div class="section-label">Step 2 — choose an area</div>
 
   <div class="grid cats" id="grid"></div>
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.20</span>
+    <span id="footYear">v1.21</span>
   </footer>
 
 </div>
@@ -515,7 +532,7 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.20 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.21 · ' + d.getFullYear();
 }
 
 // ---- Fullscreen toggle (Android/desktop browsers; on iOS, use
@@ -705,6 +722,7 @@ const OFFLINE_PAGES = [
   'labcal_certs.js',
   'labcal_units.js',
   'labcal_backup.js',
+  'labcal_pdf.js',
   'pdf-lib.min.js',
   // section pages
   'calibration.html',
@@ -948,6 +966,29 @@ function renderBackupPanel(){
       LabCalBackup.markBackedUp();
       lastRestoreReport = `Backup ready — <b>${fmtBytes(blob.size)}</b>, covering ${pack.certificates.length} certificate record${pack.certificates.length===1?'':'s'}. Save it somewhere off this iPad.`;
       renderBackupPanel();
+
+// ---------------------------------------------------------------------
+// Certificate PDF size. The worksheets are captured as an image, so scale
+// and JPEG quality decide the file size — see labcal_pdf.js.
+// ---------------------------------------------------------------------
+function renderPdfQuality(){
+  const el = document.getElementById('pdfQualityPanel');
+  if(!el || !window.LabCalPdf) return;
+  const cur = LabCalPdf.current();
+  const opts = Object.keys(LabCalPdf.PRESETS).map(k=>{
+    const p = LabCalPdf.PRESETS[k];
+    return `<option value="${p.id}"${p.id===cur.id?' selected':''}>${p.name}</option>`;
+  }).join('');
+  setHtml(el, `
+    <div>
+      <h4>Certificate PDF size</h4>
+      <div class="note">${cur.note} Each certificate's actual size is shown in the day panel on the calibration page.</div>
+    </div>
+    <select id="pdfQualitySel">${opts}</select>`);
+  const sel = document.getElementById('pdfQualitySel');
+  if(sel) sel.addEventListener('change', ()=>{ LabCalPdf.setPreset(sel.value); renderPdfQuality(); });
+}
+renderPdfQuality();
     }catch(e){
       alert('Could not build the backup.\n\n' + (e && e.message ? e.message : e));
     }finally{
@@ -993,6 +1034,29 @@ if(restoreFileEl){
       lastRestoreReport = `Restored — offsets <b>${rep.offsets}</b>, routes <b>${rep.routes}</b>, progress <b>${rep.progress}</b>, worksheets <b>${rep.units}</b>, certificates <b>${rep.certificates}</b>. Skipped <b>${rep.skipped}</b> already present or newer here.`;
       renderVault();
       renderBackupPanel();
+
+// ---------------------------------------------------------------------
+// Certificate PDF size. The worksheets are captured as an image, so scale
+// and JPEG quality decide the file size — see labcal_pdf.js.
+// ---------------------------------------------------------------------
+function renderPdfQuality(){
+  const el = document.getElementById('pdfQualityPanel');
+  if(!el || !window.LabCalPdf) return;
+  const cur = LabCalPdf.current();
+  const opts = Object.keys(LabCalPdf.PRESETS).map(k=>{
+    const p = LabCalPdf.PRESETS[k];
+    return `<option value="${p.id}"${p.id===cur.id?' selected':''}>${p.name}</option>`;
+  }).join('');
+  setHtml(el, `
+    <div>
+      <h4>Certificate PDF size</h4>
+      <div class="note">${cur.note} Each certificate's actual size is shown in the day panel on the calibration page.</div>
+    </div>
+    <select id="pdfQualitySel">${opts}</select>`);
+  const sel = document.getElementById('pdfQualitySel');
+  if(sel) sel.addEventListener('change', ()=>{ LabCalPdf.setPreset(sel.value); renderPdfQuality(); });
+}
+renderPdfQuality();
     }catch(e){
       alert('The restore did not finish.\n\n' + (e && e.message ? e.message : e));
     }
@@ -1000,6 +1064,29 @@ if(restoreFileEl){
 }
 
 renderBackupPanel();
+
+// ---------------------------------------------------------------------
+// Certificate PDF size. The worksheets are captured as an image, so scale
+// and JPEG quality decide the file size — see labcal_pdf.js.
+// ---------------------------------------------------------------------
+function renderPdfQuality(){
+  const el = document.getElementById('pdfQualityPanel');
+  if(!el || !window.LabCalPdf) return;
+  const cur = LabCalPdf.current();
+  const opts = Object.keys(LabCalPdf.PRESETS).map(k=>{
+    const p = LabCalPdf.PRESETS[k];
+    return `<option value="${p.id}"${p.id===cur.id?' selected':''}>${p.name}</option>`;
+  }).join('');
+  setHtml(el, `
+    <div>
+      <h4>Certificate PDF size</h4>
+      <div class="note">${cur.note} Each certificate's actual size is shown in the day panel on the calibration page.</div>
+    </div>
+    <select id="pdfQualitySel">${opts}</select>`);
+  const sel = document.getElementById('pdfQualitySel');
+  if(sel) sel.addEventListener('change', ()=>{ LabCalPdf.setPreset(sel.value); renderPdfQuality(); });
+}
+renderPdfQuality();
 
 renderVault();
 renderCards();

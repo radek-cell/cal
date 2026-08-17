@@ -14,6 +14,7 @@
 <script src="labcal_save.js"></script>
 <script src="labcal_certs.js"></script>
 <script src="labcal_units.js"></script>
+<script src="labcal_pdf.js"></script>
 <!-- Swapped from html2pdf.bundle.min.js: its built-in html2canvas can't parse the
      color(display-p3 ...) values Safari/iPadOS reports for some elements, causing
      "Attempting to parse an unsupported color function 'color'". html2canvas-pro
@@ -1705,8 +1706,10 @@ async function generatePDF(){
     const opt={
       margin:0,
       filename,
-      image:{type:'jpeg',quality:0.98},
-      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+      // Render quality comes from the shared setting (see labcal_pdf.js).
+      // Falls back to the original values if that module is missing.
+      image: window.LabCalPdf ? LabCalPdf.imageOpts() : {type:'jpeg',quality:0.98},
+      html2canvas: window.LabCalPdf ? LabCalPdf.canvasOpts() : {scale:2,useCORS:true,backgroundColor:'#ffffff'},
       jsPDF:{unit:'mm',format:[210,pageHeightMM],orientation:'portrait'},
       pagebreak:{mode:['avoid-all']}
     };

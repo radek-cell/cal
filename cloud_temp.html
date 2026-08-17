@@ -13,6 +13,7 @@
 <script src="labcal_jobsheet.js"></script>
 <script src="labcal_save.js"></script>
 <script src="labcal_certs.js"></script>
+<script src="labcal_pdf.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1332,7 +1333,7 @@ async function capturePageFrame(frame, scale){
   }).from(frame);
   await worker.toCanvas();
   const canvas=worker.prop.canvas;
-  const dataUrl=canvas.toDataURL('image/jpeg',0.98);
+  const dataUrl=canvas.toDataURL('image/jpeg', window.LabCalPdf ? LabCalPdf.quality() : 0.98);
   return {dataUrl, width:canvas.width, height:canvas.height};
 }
 async function buildPaginatedPdfBlob(pageEl, scale, headerInfo){
@@ -1438,7 +1439,7 @@ async function buildPaginatedPdfBlob(pageEl, scale, headerInfo){
       });
     } else {
       // Fall back to html2pdf's own internal jsPDF instance if the standalone constructor isn't exposed globally
-      const firstWorker=html2pdf().set({jsPDF:{unit:'mm',format:[297,210],orientation:'landscape'},image:{type:'jpeg',quality:0.98}}).from(buildPageFrame(frameWidthPx));
+      const firstWorker=html2pdf().set({jsPDF:{unit:'mm',format:[297,210],orientation:'landscape'},image: window.LabCalPdf ? LabCalPdf.imageOpts() : {type:'jpeg',quality:0.98}}).from(buildPageFrame(frameWidthPx));
       await firstWorker.toPdf();
       pdf=firstWorker.prop.pdf;
       images.forEach((img,i)=>{
@@ -1500,7 +1501,10 @@ async function generatePDF(){
     // resolution budget only needs to cover a single page — keeping every canvas small and
     // safely away from the size/memory limit that was corrupting the old single giant page.
     const maxSafeCanvasPx=3200;
-    const scale=Math.min(2, maxSafeCanvasPx/(pageEl.getBoundingClientRect().width*(210/297)));
+    // Capped both by what the canvas can safely handle AND by the shared
+    // render-quality setting (see labcal_pdf.js).
+    const qualityScale = window.LabCalPdf ? LabCalPdf.scale() : 2;
+    const scale=Math.min(qualityScale, maxSafeCanvasPx/(pageEl.getBoundingClientRect().width*(210/297)));
     const blob=await buildPaginatedPdfBlob(pageEl, Math.max(1, scale), headerInfo);
     restoreSwappedFields(swaps); swaps=[];
     document.body.classList.remove('printMode');

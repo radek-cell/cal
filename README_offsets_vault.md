@@ -1,7 +1,36 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.20)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.21)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.21 — smaller certificate PDFs
+
+The worksheets are captured as an image and wrapped in a PDF, so file size
+comes down to two numbers: capture scale and JPEG quality. Every worksheet
+shipped with **scale 2 and quality 0.98**, which is where the ~1 MB came from.
+JPEG quality above about 0.90 spends a lot of bytes on detail that simply is not
+there in flat black text and table rules.
+
+Measured on a rendered certificate page — dense small text, table rules, shaded
+pass/fail cells, cursive signature:
+
+| Setting | Scale | Quality | Resolution | Size |
+|---|---|---|---|---|
+| Maximum (the old setting) | 2 | 0.98 | ~192 dpi | 605 KB |
+| High | 2 | 0.92 | ~192 dpi | 425 KB (30% smaller) |
+| **Standard (new default)** | 1.7 | 0.82 | ~163 dpi | **273 KB (55% smaller)** |
+
+163 dpi still prints cleanly — 150 dpi is the usual floor for text. On your real
+certificates, expect roughly 1 MB to become **400–450 KB**, and a 13-unit job to
+drop from about 13 MB to 5–6 MB.
+
+**Certificate PDF size** on the home page switches between the three. Maximum is
+the old behaviour exactly, so nothing is lost if a customer wants a crisper
+copy. The setting applies to all five worksheets, including the Cloud Temp
+multi-page capture.
+
+Don't take my word for the numbers — the day panel shows the actual size of
+every certificate, so generate one before and after and compare.
 
 ## v1.20 — backup size fix (important)
 
@@ -291,7 +320,8 @@ that actually changed:
 | `labcal_save.js` | Save/share routing, including the iOS share sheet. |
 | `labcal_certs.js` | The day's certificate list (IndexedDB), job grouping and merge. |
 | `labcal_units.js` | Per-unit worksheet snapshots for reopening and amending. |
-| `labcal_backup.js` | **NEW** — one-file backup and merging restore. |
+| `labcal_backup.js` | One-file backup and merging restore. |
+| `labcal_pdf.js` | **NEW** — certificate PDF render quality (Standard/High/Maximum). |
 | `pdf-lib.min.js` | **NEW** — PDF merge engine, lazy-loaded only when merging. |
 | `index.html` | Offsets panel with countdown + warnings; Calibration section locks until a file is loaded |
 | `calibration.html` | Jobsheet worklist panel; each worksheet card locks unless *its own* ecosystem's file is loaded |
@@ -301,13 +331,13 @@ that actually changed:
 | `calibration_worksheet_SNMD.html` | Auto-loads Fluke & Comark offsets |
 | `calibration_worksheet_19_24.html` | Auto-loads Fluke & Comark offsets |
 | `cloud_temp.html` | Auto-loads Fluke & Comark offsets |
-| `sw.js` | Cache bumped to **v15**, caches all shared modules |
+| `sw.js` | Cache bumped to **v16**, caches all shared modules |
 | `data_logger_viewer.html` | Chart PNG and summary CSV go through the share sheet on iPad |
 | `pdf_merge_reorder.html` | Merged PDF goes through the share sheet on iPad |
 | `tools.html` | Unchanged — included so the folder is complete |
 
 After uploading, open the home page once while online so the service worker
-picks up v15, then hit **Refresh offline copy**.
+picks up v16, then hit **Refresh offline copy**.
 
 ## Which file unlocks what
 
