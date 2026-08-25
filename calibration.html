@@ -14,6 +14,8 @@
 <script src="labcal_jobsheet.js"></script>
 <script src="labcal_save.js"></script>
 <script src="labcal_certs.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="labcal_vector_pdf.js"></script>
 <script src="labcal_units.js"></script>
 <style>
 :root{
@@ -193,6 +195,18 @@ h1{font-size:clamp(28px,4vw,42px);line-height:1.1;margin:0 0 14px;font-weight:70
 .cbtn.solid:hover{background:#0c7a70;color:#fff}
 .cbtn.danger:hover{color:#c0392b;border-color:#e0a49c}
 .cbtn:disabled{opacity:.45;cursor:not-allowed}
+.certbar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin:10px 0 2px;padding-top:10px;border-top:1px solid var(--border-soft);
+}
+.certbar .spacer{flex:1}
+.certbar .daypick{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;color:var(--muted-dim)}
+.certbar .daypick input{
+  font-family:var(--sans);font-size:12.5px;padding:7px 9px;border:1px solid var(--border);
+  border-radius:6px;background:#fff;color:var(--ink);
+}
+.certbar .certcount{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.cbtn.mini{padding:6px 10px;font-size:11.5px}
 .daysel{
   font-family:var(--mono);font-size:11.5px;padding:7px 9px;border:1px solid var(--border);
   border-radius:6px;background:#fff;color:var(--ink);
@@ -244,6 +258,171 @@ h1{font-size:clamp(28px,4vw,42px);line-height:1.1;margin:0 0 14px;font-weight:70
 }
 .jdev-tag.earlier{border:1px solid var(--cyan);color:var(--cyan)}
 .jdev-tag.started{border:1px solid var(--amber);color:var(--amber)}
+.jdev-tag.added{border:1px solid var(--cyan);color:var(--cyan)}
+.jdev-tag.notreq{border:1px solid #c0392b;color:#c0392b}
+.jdev-tag.edited{border:1px solid #7a5cc4;color:#5f45a3}
+.unitcerts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ucert{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#eef7f1;border:1px solid var(--green);border-radius:6px;padding:4px 6px 4px 9px;
+}
+.ucert.sup{background:var(--bg2);border-color:var(--border);opacity:.7}
+.ucert.missing{background:#fdf3e3;border-color:var(--amber-dim)}
+.findbox{
+  grid-column:1/-1;margin-top:8px;padding:10px 12px;
+  background:var(--bg2);border:1px solid var(--border-soft);border-radius:7px;
+}
+.findnote{font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:6px}
+.findrow{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:6px 0;border-top:1px solid var(--border-soft);
+}
+.fr-name{font-family:var(--mono);font-size:11.5px;font-weight:650}
+.fr-meta{font-family:var(--mono);font-size:10px;color:var(--muted-dim);flex:1}
+.ucert.missing .uc-name{color:#7a4c06;font-weight:600}
+.certnote{
+  margin-top:10px;padding:8px 11px;border-radius:6px;font-size:12px;
+  background:#fdecea;border:1px solid #c0392b;color:#8a3222;
+}
+.uc-name{font-family:var(--mono);font-size:11px;font-weight:650;color:#20603a}
+.ucert.sup .uc-name{color:var(--muted-dim);text-decoration:line-through}
+.uc-tag{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--amber)}
+.othercerts{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.othercerts h5{margin:0 0 6px;font-size:12px;font-weight:650;letter-spacing:-.1px}
+.jdev.notreq{opacity:.55}
+.jdev.notreq .jdev-model{text-decoration:line-through}
+.jbtn.mini{padding:7px 10px;font-size:11.5px}
+.jbtn.cross{background:transparent;color:#b3392b;border:1px solid #e0a49c}
+.jbtn.cross:hover{background:#fdecea}
+.jobtools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0 2px}
+.jobtools input.search{
+  flex:1;min-width:150px;font-family:var(--sans);font-size:12.5px;
+  padding:8px 11px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--ink);
+}
+.jobtools .count{font-family:var(--mono);font-size:10.5px;color:var(--muted-dim)}
+.addform{
+  display:none;gap:8px;flex-wrap:wrap;align-items:center;
+  margin-top:10px;padding:10px 12px;background:var(--bg2);
+  border:1px solid var(--border-soft);border-radius:7px;
+}
+.addform.open{display:flex}
+.addform input{
+  font-family:var(--sans);font-size:12.5px;padding:8px 10px;
+  border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--ink);
+}
+.addform input.model{width:130px}
+.addform input.serial{width:150px}
+.addform input.loc{flex:1;min-width:120px}
+.prog .ptrack i.notreq{background:var(--muted-dim)}
+
+/* ---- job bar ---- */
+/* ---- day view: calendar, then the jobs worked that day ---- */
+.calbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.calbar .arrow{
+  font-family:var(--mono);font-size:14px;line-height:1;color:var(--muted);
+  background:transparent;border:1px solid var(--border);border-radius:6px;
+  padding:7px 11px;cursor:pointer;
+}
+.calbar .arrow:hover{border-color:var(--cyan-dim);color:var(--cyan)}
+.calbar .label{font-size:14.5px;font-weight:650;letter-spacing:-.2px;min-width:132px}
+.calbar .spacer{flex:1}
+.calbar input[type=date]{
+  font-family:var(--mono);font-size:11.5px;padding:7px 9px;border:1px solid var(--border);
+  border-radius:6px;background:#fff;color:var(--ink);
+}
+.strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:6px}
+.strip.month{gap:4px}
+.strip .dow{
+  font-family:var(--mono);font-size:9px;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--muted-dim);text-align:center;padding-bottom:2px;
+}
+.cell{
+  position:relative;border:1px solid var(--border);border-radius:7px;background:var(--panel);
+  padding:7px 4px 9px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.cell:hover{border-color:var(--cyan-dim)}
+.cell.other{opacity:.38}
+.cell.today{border-color:var(--cyan)}
+.cell.sel{background:var(--cyan);border-color:var(--cyan)}
+.cell.sel .num,.cell.sel .dot{color:#fff}
+.cell .num{font-family:var(--mono);font-size:13px;font-weight:650;line-height:1}
+.cell .dot{
+  position:absolute;left:0;right:0;bottom:2.5px;font-family:var(--mono);
+  font-size:8.5px;color:var(--cyan);letter-spacing:-.5px;
+}
+.cell.sel .dot{color:#fff}
+.jobcard{
+  display:grid;grid-template-columns:1fr auto;gap:8px 14px;align-items:center;
+  padding:12px 0;border-top:1px solid var(--border-soft);cursor:pointer;
+}
+.jobcard:hover .jc-ref{color:var(--cyan)}
+.jc-ref{font-family:var(--mono);font-size:13.5px;font-weight:700;letter-spacing:.4px}
+.jc-sub{font-size:12px;color:var(--muted);line-height:1.6;margin-top:2px}
+.jc-counts{font-family:var(--mono);font-size:10.5px;color:var(--muted-dim);margin-top:3px}
+.jc-open{font-family:var(--mono);font-size:11px;font-weight:650;color:var(--cyan);white-space:nowrap}
+.jc-bar{grid-column:1/-1;height:4px;border-radius:3px;background:var(--bg2);border:1px solid var(--border-soft);overflow:hidden;position:relative}
+.jc-bar i{position:absolute;top:0;left:0;height:100%}
+.jc-bar i.done{background:var(--green)}
+.jc-bar i.settled{background:var(--muted-dim)}
+.backbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.backbtn{
+  font-family:var(--mono);font-size:11.5px;font-weight:650;color:var(--muted);
+  background:var(--panel);border:1px solid var(--border);border-radius:7px;
+  padding:8px 13px;cursor:pointer;
+}
+.backbtn:hover{border-color:var(--cyan-dim);color:var(--cyan)}
+
+.jobbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.jobbar select{
+  font-family:var(--sans);font-size:12.5px;padding:8px 10px;border:1px solid var(--border);
+  border-radius:7px;background:#fff;color:var(--ink);max-width:100%;flex:1;min-width:170px;
+}
+.jobbar .spacer{flex:1}
+.newjob{
+  display:none;gap:8px;flex-wrap:wrap;align-items:center;
+  margin-bottom:10px;padding:10px 12px;background:var(--bg2);
+  border:1px solid var(--border-soft);border-radius:7px;
+}
+.newjob.open{display:flex}
+.newjob input{
+  font-family:var(--sans);font-size:12.5px;padding:8px 10px;
+  border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--ink);
+}
+.newjob input.ref{width:140px}
+.newjob input.cust{flex:1;min-width:140px}
+.newjob input.day{width:150px}
+/* inline confirm, so nothing depends on a native dialog — iOS suppresses
+   prompt() in an installed web app, which made these buttons look dead */
+.inline-ask{
+  grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  margin-top:8px;padding:8px 10px;background:#fdf3e3;border:1px solid var(--amber-dim);border-radius:6px;
+}
+.inline-ask .q{font-size:12px;color:#7a4c06;font-weight:600}
+.inline-ask.edit{flex-direction:column;align-items:stretch;gap:6px}
+.inline-ask .flab{
+  display:flex;flex-direction:column;gap:3px;
+  font-family:var(--mono);font-size:9px;letter-spacing:.4px;text-transform:uppercase;color:#7a4c06;
+}
+.inline-ask .flab.grow{flex:1}
+.inline-ask .flab input{width:100%}
+.inline-ask .editrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.inline-ask .editrow{gap:10px}
+.inline-ask .editrow .flab{flex:0 1 auto}
+.inline-ask .editrow .m{width:140px}
+.inline-ask .editrow .s{width:190px}
+.inline-ask .editrow .l{width:100%;min-width:180px}
+.inline-ask input{
+  flex:1;min-width:120px;font-family:var(--sans);font-size:12.5px;
+  padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;
+}
+.inline-ask .editrow .m,
+.inline-ask .editrow .s,
+.inline-ask .editrow .l{max-width:100%}
+.toast{
+  margin:10px 0 0;padding:8px 11px;border-radius:6px;font-size:12.5px;
+  background:#e9f5ea;border:1px solid var(--green);color:#20603a;
+}
+.toast.bad{background:#fdecea;border-color:#c0392b;color:#8a3222}
 .prog .split{color:var(--muted-dim)}
 .prog .ptrack i.started{background:var(--amber)}
 .ptrack{position:relative}
@@ -359,18 +538,22 @@ footer{
 
   <div class="offsets" id="offsetStrip"></div>
 
+  <div class="job" id="dayPanel"></div>
   <div class="job" id="jobPanel"></div>
   <input id="jobFile" type="file" accept="application/pdf,.pdf" style="display:none">
 
   <div class="certs" id="certPanel"></div>
 
-  <div class="section-label">WS · 01–06 — select a worksheet</div>
+  <div class="section-label" id="wsLabel" style="cursor:pointer">
+    <span id="wsToggleText">WS · 01–06 — worksheets</span>
+    <button class="cbtn mini" type="button" id="wsToggle" style="margin-left:auto">Show</button>
+  </div>
 
-  <div class="grid" id="grid"></div>
+  <div class="grid" id="grid" style="display:none"></div>
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.22</span>
+    <span id="footYear">v1.513</span>
   </footer>
 
 </div>
@@ -542,7 +725,7 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.22 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.513 · ' + d.getFullYear();
 }
 
 
@@ -601,6 +784,26 @@ function routingFooter(){
     </div>`;
 }
 
+// What is actually in storage, so a certificate that did not attach itself can
+// be found and put on the right unit rather than argued about.
+function findPickerHtml(d){
+  const taken = {};
+  Object.keys(jobCerts).forEach(k=>jobCerts[k].forEach(c=>{ taken[c.id]=true; }));
+  const list = allCertsCache.filter(c=>!taken[c.id]).slice(0, 40);
+  if(!list.length){
+    return `<div class="findbox"><div class="findnote">Nothing else is in certificate storage on this device — ${allCertsCache.length} certificate${allCertsCache.length===1?'':'s'} in total. The PDF was saved out, but no record of it was kept here.</div></div>`;
+  }
+  return `<div class="findbox">
+    <div class="findnote">${allCertsCache.length} certificate${allCertsCache.length===1?'':'s'} in storage. Pick the one for ${jesc(d.serial || d.model)} and it will be filed against this unit.</div>
+    ${list.map(c=>`
+      <div class="findrow">
+        <span class="fr-name">${jesc(c.certRef || c.filename)}</span>
+        <span class="fr-meta">${jesc(c.serial||'no serial')} · ${jesc(c.jobRef||'no job ref')} · ${jesc(fmtDay(c.day))}</span>
+        <button class="cbtn mini" type="button" data-attach="${c.id}">Use this</button>
+      </div>`).join('')}
+  </div>`;
+}
+
 function bindRoutingFooter(){
   const ex = document.getElementById('routeExportBtn');
   if(ex) ex.addEventListener('click', async ()=>{
@@ -618,28 +821,457 @@ function bindRoutingFooter(){
   });
 }
 
+
+// ---------------------------------------------------------------------
+// The calibration page has two levels: a day, showing the jobs worked on
+// it, and a job, showing that job's units and certificates. One thing on
+// screen at a time — the old layout showed one job's units above every
+// job's certificates, which is what made it easy to mix up.
+// ---------------------------------------------------------------------
+const dayPanel = document.getElementById('dayPanel');
+let viewMode = 'day';                 // 'day' | 'job'
+let selDay = null;                    // YYYY-MM-DD
+let calMonth = null;                  // first of the month shown
+let calExpanded = true;               // full month by default; Two weeks folds it
+
+function isoDay(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fromIso(s){ const p=String(s).split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+function monthLabel(d){ return d.toLocaleDateString('en-GB',{month:'long', year:'numeric'}); }
+function dayLabel(iso){
+  const d=fromIso(iso), t=isoDay(new Date());
+  if(iso===t) return 'Today';
+  const y=new Date(); y.setDate(y.getDate()-1);
+  if(iso===isoDay(y)) return 'Yesterday';
+  return d.toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long'});
+}
+
+function calendarHtml(){
+  const marks = LabCalJobsheet.allActiveDays ? LabCalJobsheet.allActiveDays() : {};
+  const today = isoDay(new Date());
+  const sel = selDay || today;
+  const base = calMonth ? fromIso(calMonth) : fromIso(sel);
+
+  let cells = [];
+  if(calExpanded){
+    const first = new Date(base.getFullYear(), base.getMonth(), 1);
+    const start = new Date(first);
+    start.setDate(1 - ((first.getDay()+6) % 7));          // weeks start Monday
+    for(let i=0;i<42;i++){
+      const d=new Date(start); d.setDate(start.getDate()+i);
+      cells.push({d, other: d.getMonth()!==base.getMonth()});
+    }
+  }else{
+    // two weeks, ending on the selected day's week
+    const s=fromIso(sel);
+    const start=new Date(s); start.setDate(s.getDate() - ((s.getDay()+6)%7) - 7);
+    for(let i=0;i<14;i++){
+      const d=new Date(start); d.setDate(start.getDate()+i);
+      cells.push({d, other:false});
+    }
+  }
+  const dows = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+    .map(x=>`<div class="dow">${x}</div>`).join('');
+  const grid = cells.map(c=>{
+    const iso=isoDay(c.d), n=marks[iso]||0;
+    return `<div class="cell${c.other?' other':''}${iso===today?' today':''}${iso===sel?' sel':''}" data-day="${iso}">
+      <div class="num">${c.d.getDate()}</div>
+      ${n?`<div class="dot">${'•'.repeat(Math.min(n,3))}</div>`:''}
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="calbar">
+      <button class="arrow" type="button" id="calPrev" title="Previous">‹</button>
+      <span class="label">${calExpanded ? monthLabel(base) : dayLabel(sel)}</span>
+      <button class="arrow" type="button" id="calNext" title="Next">›</button>
+      <span class="spacer"></span>
+      <input type="date" id="calPick" value="${sel}">
+      <button class="cbtn mini" type="button" id="calToday">Today</button>
+      <button class="cbtn mini" type="button" id="calToggle">${calExpanded?'Two weeks':'Month'}</button>
+    </div>
+    <div class="strip${calExpanded?' month':''}">${dows}${grid}</div>`;
+}
+
+async function renderDayView(){
+  if(!dayPanel || !window.LabCalJobsheet) return;
+  const today = isoDay(new Date());
+  if(!selDay) selDay = today;
+  const jobs = LabCalJobsheet.jobsActiveOn ? LabCalJobsheet.jobsActiveOn(selDay) : [];
+
+  // certificates on this day that belong to no job get their own card
+  let orphan = 0;
+  try{
+    if(window.LabCalCerts && LabCalCerts.supported()){
+      const list = await LabCalCerts.listDay(selDay);
+      orphan = list.filter(c=>!c.jobRef).length;
+    }
+  }catch(e){ /* the day view still works without it */ }
+
+  const cards = jobs.map(j=>{
+    const donePct = j.total ? Math.round((j.done/j.total)*100) : 0;
+    const settledPct = j.total ? Math.round(((j.done+j.notRequired)/j.total)*100) : 0;
+    const bits = [
+      `${j.done} of ${j.total} done`,
+      j.outstanding ? `<b>${j.outstanding} left</b>` : 'all settled',
+      j.notRequired ? `${j.notRequired} not required` : '',
+      j.started ? `${j.started} started` : '',
+      j.multiDay ? `spans ${j.days.length} days` : ''
+    ].filter(Boolean).join(' · ');
+    return `
+      <div class="jobcard" data-job="${jesc(j.key)}">
+        <div>
+          <div class="jc-ref">${jesc(j.callNumber || '(no job reference)')}</div>
+          <div class="jc-sub">${jesc(j.customer || 'No site recorded')}${j.department?' · '+jesc(j.department):''}</div>
+          <div class="jc-counts">${bits}</div>
+        </div>
+        <div class="jc-open">Open →</div>
+        <span class="jc-bar"><i class="settled" style="width:${settledPct}%"></i><i class="done" style="width:${donePct}%"></i></span>
+      </div>`;
+  }).join('');
+
+  const orphanCard = orphan ? `
+      <div class="jobcard" data-job="__none__">
+        <div>
+          <div class="jc-ref">No job reference</div>
+          <div class="jc-sub">${orphan} certificate${orphan===1?'':'s'} on this day not tied to a job</div>
+        </div>
+        <div class="jc-open">Open →</div>
+      </div>` : '';
+
+  const empty = (!jobs.length && !orphan) ? `
+      <div class="jobcard" style="cursor:default">
+        <div>
+          <div class="jc-sub">Nothing worked on ${jesc(dayLabel(selDay).toLowerCase())}. Start a job, or load a jobsheet.</div>
+        </div>
+      </div>` : '';
+
+  const dayChanged = setHtml(dayPanel, `
+    ${calendarHtml()}
+    <div class="job-head">
+      <div>
+        <p class="job-title">${jesc(dayLabel(selDay))}${jobs.length?` — ${jobs.length} job${jobs.length===1?'':'s'}`:''}</p>
+        <div class="job-sub">${jesc(fromIso(selDay).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}))}</div>
+      </div>
+      <div class="job-actions">
+        <button class="jbtn ghost mini" type="button" id="dayNewJob">+ New job</button>
+        <button class="jbtn ghost mini" type="button" id="dayLoadSheet">Load jobsheet</button>
+      </div>
+    </div>
+    <div class="newjob" id="newJobForm">
+      <input class="ref" id="newJobRef" placeholder="Job ref (ENQ…)">
+      <input class="cust" id="newJobCust" placeholder="Site / customer">
+      <input class="day" id="newJobDay" type="date" value="${selDay}">
+      <button class="jbtn mini" type="button" id="newJobConfirm">Start job</button>
+      <button class="jbtn ghost mini" type="button" id="newJobCancel">Cancel</button>
+    </div>
+    ${toastHtml()}
+    ${cards}${orphanCard}${empty}`);
+  dayPanel.className = 'job';
+  // Binding on every render would attach a second copy of each handler to the
+  // same buttons — that is what made one tap on "‹" jump five months.
+  if(dayChanged) bindDayView();
+}
+
+function bindDayView(){
+  const go = iso => { selDay = iso; calMonth = iso; jobToast = null; renderCalibrationPage(); };
+  const pick = document.getElementById('calPick');
+  if(pick) pick.addEventListener('change', ()=>{ if(pick.value) go(pick.value); });
+  const today = document.getElementById('calToday');
+  if(today) today.addEventListener('click', ()=>go(isoDay(new Date())));
+  const tog = document.getElementById('calToggle');
+  if(tog) tog.addEventListener('click', ()=>{ calExpanded = !calExpanded; renderCalibrationPage(); });
+  const prev = document.getElementById('calPrev');
+  if(prev) prev.addEventListener('click', ()=>{
+    const d = fromIso(selDay);
+    if(calExpanded) d.setMonth(d.getMonth()-1); else d.setDate(d.getDate()-1);
+    go(isoDay(d));
+  });
+  const next = document.getElementById('calNext');
+  if(next) next.addEventListener('click', ()=>{
+    const d = fromIso(selDay);
+    if(calExpanded) d.setMonth(d.getMonth()+1); else d.setDate(d.getDate()+1);
+    go(isoDay(d));
+  });
+  dayPanel.querySelectorAll('.cell').forEach(c=>c.addEventListener('click',()=>go(c.getAttribute('data-day'))));
+  dayPanel.querySelectorAll('[data-job]').forEach(card=>card.addEventListener('click',()=>{
+    const key = card.getAttribute('data-job');
+    if(key === '__none__'){ viewMode='job'; certJobFilter=''; LabCalJobsheet.setActiveJob(''); renderCalibrationPage(); return; }
+    LabCalJobsheet.setActiveJob(key);
+    viewMode = 'job'; certJobFilter = null; jobFilter=''; jobToast=null;
+    renderCalibrationPage();
+  }));
+  const nb = document.getElementById('dayNewJob');
+  if(nb) nb.addEventListener('click', ()=>{
+    const f=document.getElementById('newJobForm');
+    f.classList.toggle('open');
+    if(f.classList.contains('open')) document.getElementById('newJobRef').focus();
+  });
+  const nc = document.getElementById('newJobConfirm');
+  if(nc) nc.addEventListener('click', ()=>{
+    const f=document.getElementById('newJobForm');
+    if(f && !f.classList.contains('open')) return;
+    const ref=document.getElementById('newJobRef').value.trim();
+    if(!ref){ jobToast={text:'Give the job a reference (the ENQ number) so certificates can be grouped by it.',bad:true}; renderCalibrationPage(); return; }
+    LabCalJobsheet.createJob({callNumber:ref, customer:document.getElementById('newJobCust').value.trim(), day:document.getElementById('newJobDay').value||selDay});
+    viewMode='job'; jobFilter=''; jobToast={text:`Job ${ref} started.`};
+    renderCalibrationPage();
+  });
+  const nx = document.getElementById('newJobCancel');
+  if(nx) nx.addEventListener('click', ()=>document.getElementById('newJobForm').classList.remove('open'));
+  const ls = document.getElementById('dayLoadSheet');
+  if(ls) ls.addEventListener('click', ()=>jobFile.click());
+}
+
+// Which panel is on screen.
+let certJobFilter = null;   // null = the active job; '' = certificates with no job
+async function renderCalibrationPage(){
+  // Look these up each time: this runs during page setup, before the consts
+  // further down the file have been initialised.
+  const dp = document.getElementById('dayPanel');
+  const jp = document.getElementById('jobPanel');
+  const cp = document.getElementById('certPanel');
+  if(viewMode === 'day'){
+    if(jp) jp.style.display='none';
+    if(cp) cp.style.display='none';
+    if(dp) dp.style.display='';
+    await renderDayView();
+  }else{
+    if(dp) dp.style.display='none';
+    if(jp) jp.style.display='';
+    // Certificates now sit on their unit's row inside the worklist. The old
+    // panel is only used for the "no job reference" case.
+    const orphanView = certJobFilter === '';
+    if(cp) cp.style.display = orphanView ? '' : 'none';
+    if(orphanView){
+      if(jp) jp.style.display='none';
+      await renderCertPanel();
+    }else{
+      await loadJobCerts();
+      renderJobPanel();
+    }
+  }
+}
+
+let jobFilter = '';
+let jobCerts = {};        // serialKey -> [certificate records] for the open job
+let jobCertsOther = [];   // certificates for this job that match no unit
+
+function serialKeyOf(v){ return String(v||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,''); }
+
+// The certificates live in IndexedDB, so they have to be fetched before the
+// worklist is drawn — each unit shows its own certificate on its own row.
+let earlierOpen = {};    // units showing their superseded certificates
+let findingIdx = null;   // unit whose 'find certificate' picker is open
+let allCertsCache = [];  // everything in storage, for that picker
+let certLoadNote = '';   // why the certificates could not be read, if they could not
+let certLoadToken = 0;
+async function loadJobCerts(){
+  // Two of these can be in flight at once — filing a certificate triggers a
+  // refresh while the handler is already reloading — and both were writing
+  // into the same object, so a certificate appeared twice. Build a fresh
+  // result and only publish it if this is still the most recent load.
+  const token = ++certLoadToken;
+  const certs = {}, other = [];
+  let note = '';
+  const publish = () => {
+    if(token !== certLoadToken) return;
+    jobCerts = certs; jobCertsOther = other; certLoadNote = note;
+  };
+  const js = LabCalJobsheet.current();
+  if(!js){ publish(); return; }
+  if(!window.LabCalCerts){ note = 'labcal_certs.js did not load on this device, so certificates cannot be shown.'; publish(); return; }
+  if(!LabCalCerts.supported()){ note = 'This browser will not store certificates, so none can be shown here. Private browsing does this.'; publish(); return; }
+  try{
+    const days = await LabCalCerts.days();
+    let all = [];
+    for(const d of days) all.push(...await LabCalCerts.listDay(d.day));
+    allCertsCache = all;
+    const ref = js.callNumber || '';
+
+    // First choice: the unit id recorded on the certificate. That link cannot
+    // be broken by correcting a serial, reusing a certificate number or
+    // mistyping a job reference.
+    const uidToUnit = {};
+    (js.devices||[]).forEach(d=>{ if(d.uid) uidToUnit[d.uid] = serialKeyOf(d.serial) || d.uid; });
+
+    // Fallback for certificates issued before unit ids existed:
+    // a unit answers to every serial it has ever had: the one on the jobsheet,
+    // any it was corrected from, and its current one. A certificate issued
+    // before a correction still belongs to that unit — matching only on the
+    // current serial left it stranded, showing as "not stored on this device".
+    const aliasToUnit = {};
+    (js.devices||[]).forEach(d=>{
+      const cur = serialKeyOf(d.serial);
+      if(!cur) return;
+      [d.serial, d.sheetSerial, d.serialWas].forEach(v=>{
+        const a = serialKeyOf(v);
+        if(a) aliasToUnit[a] = cur;
+      });
+    });
+
+    // Belt and braces: a certificate belongs to this job if it carries the job
+    // reference OR its serial matches one of this job's units under any of
+    // that unit's serials.
+    // Last resort: the filename. It is built from the serial and job number,
+    // so when a certificate was filed with an empty serial field the filename
+    // often still carries it. Weaker than the unit id — a filename is made of
+    // the very things that get corrected — so it is only consulted when
+    // nothing better matches.
+    const byFilename = c => {
+      const name = serialKeyOf(c.filename);
+      if(!name) return '';
+      let hit = '';
+      Object.keys(aliasToUnit).forEach(alias=>{
+        if(alias.length >= 4 && name.indexOf(alias) !== -1) hit = aliasToUnit[alias];
+      });
+      return hit;
+    };
+
+    const mine = all.filter(c=>{
+      if(c.unitUid && uidToUnit[c.unitUid]) return true;
+      const k = serialKeyOf(c.serial);
+      if((c.jobRef||'') === ref || (k && aliasToUnit[k])) return true;
+      return !!byFilename(c);
+    });
+    const seen = {};
+    mine.forEach(c=>{
+      if(seen[c.id]) return;      // one row per certificate, whichever serial matched
+      seen[c.id] = true;
+      const k = serialKeyOf(c.serial);
+      const unitKey = (c.unitUid && uidToUnit[c.unitUid]) || (k && aliasToUnit[k]) || byFilename(c);
+      if(unitKey){
+        c.__refMismatch = (c.jobRef||'') !== ref;
+        c.__serialWas = (k !== unitKey) ? c.serial : '';
+        (certs[unitKey] = certs[unitKey] || []).push(c);
+      }else{
+        other.push(c);
+      }
+    });
+    Object.keys(certs).forEach(k=>certs[k].sort((a,b)=>a.savedAt<b.savedAt?1:-1));
+    other.sort((a,b)=>a.savedAt<b.savedAt?1:-1);
+    publish();
+  }catch(e){
+    note = 'Certificates could not be read: ' + (e && e.message ? e.message : e);
+    publish();
+  }
+}
+let askingIdx = null;
+let editingIdx = null;    // which row is being corrected      // which row is showing its inline "not required?" ask
+let removingIdx = null;    // which row is showing its inline remove confirm
+let jobToast = null;       // { text, bad }
+
+// If a shared module is older than this page — which is what a stale cache
+// looks like — say so instead of throwing a developer error at the engineer.
+function moduleReady(obj, fn, file){
+  if(obj && typeof obj[fn] === 'function') return true;
+  jobToast = {
+    text: `${file} is out of date on this device, so that action is unavailable. Open the LabCal home page while online, tap "Refresh offline copy", then close every tab of this site and reopen.`,
+    bad: true
+  };
+  renderJobPanel();
+  return false;
+}
+
+function toastHtml(){
+  if(!jobToast) return '';
+  const t = `<div class="toast${jobToast.bad?' bad':''}">${jesc(jobToast.text)}</div>`;
+  return t;
+}
+
+// The job bar: which job is open, and how to start another.
+function backBarHtml(){
+  return `
+    <div class="backbar">
+      <button class="backbtn" type="button" id="backToDay">← ${jesc(dayLabel(selDay || isoDay(new Date())))}</button>
+      <span class="job-sub" id="backSub"></span>
+    </div>`;
+}
+
+function jobBarHtml(){
+  return backBarHtml() + `
+    <div class="jobbar">
+      <button class="jbtn ghost mini" type="button" id="jobLoadBtn2">Replace jobsheet</button>
+    </div>
+    <div class="newjob" id="newJobForm">
+      <input class="ref" id="newJobRef" placeholder="Job ref (ENQ…)">
+      <input class="cust" id="newJobCust" placeholder="Site / customer">
+      <input class="day" id="newJobDay" type="date">
+      <button class="jbtn mini" type="button" id="newJobConfirm">Start job</button>
+      <button class="jbtn ghost mini" type="button" id="newJobCancel">Cancel</button>
+    </div>`;
+}
+
+function bindJobBar(){
+  const back = document.getElementById('backToDay');
+  if(back) back.addEventListener('click', ()=>{
+    viewMode = 'day'; jobFilter=''; askingIdx=null; removingIdx=null; editingIdx=null;
+    renderCalibrationPage();
+  });
+  const nb = document.getElementById('jobNewBtn');
+  if(nb) nb.addEventListener('click', ()=>{
+    const f = document.getElementById('newJobForm');
+    f.classList.toggle('open');
+    if(f.classList.contains('open')){
+      const day = document.getElementById('newJobDay');
+      if(day && !day.value) day.value = new Date().toISOString().slice(0,10);
+      document.getElementById('newJobRef').focus();
+    }
+  });
+  const nc = document.getElementById('newJobConfirm');
+  if(nc) nc.addEventListener('click', ()=>{
+    // A re-render can leave a detached copy of this button behind; ignore a
+    // click that arrives once the form has already been closed rather than
+    // reporting an empty reference the engineer never typed.
+    const form = document.getElementById('newJobForm');
+    if(form && !form.classList.contains('open')) return;
+    const ref = document.getElementById('newJobRef').value.trim();
+    const cust = document.getElementById('newJobCust').value.trim();
+    const day = document.getElementById('newJobDay').value;
+    if(!ref){ jobToast={text:'Give the job a reference (the ENQ number) so certificates can be grouped by it.',bad:true}; renderJobPanel(); return; }
+    if(form) form.classList.remove('open');
+    LabCalJobsheet.createJob({callNumber:ref, customer:cust, day});
+    jobToast={text:`Job ${ref} started. Add units, or load its jobsheet.`};
+    jobFilter=''; renderJobPanel();
+  });
+  const nx = document.getElementById('newJobCancel');
+  if(nx) nx.addEventListener('click', ()=>{ document.getElementById('newJobForm').classList.remove('open'); });
+  const lb = document.getElementById('jobLoadBtn2');
+  if(lb) lb.addEventListener('click', ()=>jobFile.click());
+}
+
 function renderJobPanel(){
   if(!jobPanel || !window.LabCalJobsheet) return;
   const js = LabCalJobsheet.current();
 
   if(!js){
-    setHtml(jobPanel, `
+    const emptyChanged = setHtml(jobPanel, `
+      ${jobBarHtml()}
+      ${toastHtml()}
       <div class="job-head">
         <div>
-          <p class="job-title">No jobsheet loaded</p>
+          <p class="job-title">No job open</p>
           <div class="job-sub">Optional — load the jobsheet PDF and each unit on it opens the right worksheet with the customer, job reference, model and serial already filled in. Or just pick a worksheet below and work as usual.</div>
         </div>
         <div class="job-actions"><button class="jbtn" type="button" id="jobLoadBtn">Load jobsheet PDF</button></div>
       </div>
       ${routingFooter()}`);
     jobPanel.className = 'job empty';
-    const b = document.getElementById('jobLoadBtn');
-    if(b) b.addEventListener('click', ()=>jobFile.click());
-    bindRoutingFooter();
+    // Only bind when the markup was actually replaced. Binding on every
+    // render attached a second copy of each handler to the same buttons, so
+    // "+ New job" toggled the form open and straight back closed again.
+    if(emptyChanged){
+      const b = document.getElementById('jobLoadBtn');
+      if(b) b.addEventListener('click', ()=>jobFile.click());
+      bindJobBar();
+      bindRoutingFooter();
+    }
     return;
   }
 
   const p = LabCalJobsheet.progress();
+  const filter = jobFilter.trim().toLowerCase();
+  const matches = d => !filter || [d.model, d.equipment, d.serial, d.location]
+    .filter(Boolean).some(v => String(v).toLowerCase().includes(filter));
   const pct = p.total ? Math.round((p.done/p.total)*100) : 0;
   const startedPct = p.total ? Math.round(((p.done+p.started)/p.total)*100) : 0;
   // A job can run over several days: say how much of the tally is from
@@ -647,8 +1279,10 @@ function renderJobPanel(){
   const split = [
     p.today ? `${p.today} today` : '',
     p.earlier ? `${p.earlier} on earlier days` : '',
-    p.started ? `${p.started} started` : ''
+    p.started ? `${p.started} started` : '',
+    p.notRequired ? `${p.notRequired} not required` : ''
   ].filter(Boolean).join(' · ');
+  const settledPct = p.total ? Math.round(((p.done + p.notRequired)/p.total)*100) : 0;
   const meta = [
     js.customer ? `<b>${jesc(js.customer)}</b>` : '',
     js.callNumber ? `Job ${jesc(js.callNumber)}` : '',
@@ -656,46 +1290,144 @@ function renderJobPanel(){
     js.fileName ? jesc(js.fileName) : ''
   ].filter(Boolean).join(' · ');
 
+  const shown = js.devices.filter(matches);
   const rows = js.devices.map((d,i)=>{
+    if(!matches(d)) return '';
     const blocked = d.sheet ? sheetBlockedReason(d.sheet) : '';
     const whyText = d.sheetWhy==='learned' ? 'remembered' : (d.sheetWhy==='rule' ? 'matched' : '');
     return `
-    <div class="jdev${d.done?' done':''}">
+    <div class="jdev${d.done?' done':''}${d.notRequired&&!d.done?' notreq':''}">
       <div class="jdev-main">
         <div class="jdev-model">${d.done?'<span class="tick">✓</span>':''}${jesc(d.model||d.equipment||'(no model)')}${
           d.done && d.carriedOver ? '<span class="jdev-tag earlier">'+jesc(shortDay(d.doneAt))+'</span>' :
-          (!d.done && LabCalJobsheet.isStarted(js.callNumber, d) ? '<span class="jdev-tag started">started</span>' : '')
+          (d.notRequired && !d.done ? '<span class="jdev-tag notreq">not required</span>' :
+          (!d.done && LabCalJobsheet.isStarted(js.callNumber, d) ? '<span class="jdev-tag started">started</span>' : ''))
+        }${d.addedManually ? '<span class="jdev-tag added">added on site</span>' : ''}${
+          d.edited ? `<span class="jdev-tag edited" title="${jesc((d.editedFields||[]).join(', '))}${d.editedAt?' · '+jesc(shortDay(d.editedAt)):''}">edited</span>` : ''
         }</div>
-        <div class="jdev-meta">${jesc(d.serial||'no serial')}${d.location?' · '+jesc(d.location):''}${d.done&&d.certRef?' · cert '+jesc(d.certRef):''}${d.done&&d.doneAt?' · '+jesc(shortDay(d.doneAt)):''}</div>
+        <div class="jdev-meta">${jesc(d.serial||'no serial')}${d.location?' · '+jesc(d.location):''}${d.done&&d.certRef?' · cert '+jesc(d.certRef):''}${d.done&&d.doneAt?' · '+jesc(shortDay(d.doneAt)):''}${d.notRequired&&!d.done&&d.notRequiredReason?' · '+jesc(d.notRequiredReason):''}${
+          d.sheetSerial && d.sheetSerial !== d.serial ? ` · <span style="color:#5f45a3">jobsheet read ${jesc(d.sheetSerial)}</span>` : ''
+        }</div>
       </div>
       <div class="jdev-ctl">
         ${whyText?`<span class="why">${whyText}</span>`:''}
-        <select data-route="${i}" class="${d.sheet?'':'ask'}">${sheetOptions(d.sheet)}</select>
-        <button class="jbtn" type="button" data-open="${i}" ${(!d.sheet||blocked)?'disabled':''}>${d.done?'Reopen':'Open'}</button>
+        ${d.notRequired && !d.done ? '' : `<select data-route="${i}" class="${d.sheet?'':'ask'}">${sheetOptions(d.sheet)}</select>`}
+        ${d.notRequired && !d.done
+          ? `<button class="jbtn ghost mini" type="button" data-restore="${i}">Put back</button>`
+          : `<button class="jbtn" type="button" data-open="${i}" ${(!d.sheet||blocked)?'disabled':''}>${d.done?'Reopen':'Open'}</button>
+             ${d.done ? '' : `<button class="jbtn cross mini" type="button" data-skip="${i}" title="Not required — not on site, or customer declined">✕</button>`}`}
+        <button class="jbtn ghost mini" type="button" data-edit="${i}" title="Correct the serial number or location">Edit</button>
+        ${d.addedManually && !d.done ? `<button class="jbtn ghost mini" type="button" data-remove="${i}" title="Remove this added unit">Remove</button>` : ''}
       </div>
+      ${editingIdx === i ? `
+      <div class="inline-ask edit">
+        <span class="q">Correct ${jesc(d.serial || d.model || 'this unit')}</span>
+        <div class="editrow">
+          <label class="flab">Model<input id="editModel" class="m" value="${jesc(d.model||'')}"></label>
+          <label class="flab">Serial number<input id="editSerial" class="s" value="${jesc(d.serial||'')}"></label>
+        </div>
+        <div class="editrow">
+          <label class="flab grow">Location / department<input id="editLoc" class="l" value="${jesc(d.location||'')}"></label>
+          <button class="jbtn mini" type="button" data-edit-ok="${i}">Save</button>
+          <button class="jbtn ghost mini" type="button" data-ask-cancel="1">Cancel</button>
+        </div>
+      </div>` : ''}
+      ${(function(){
+        const list = jobCerts[serialKeyOf(d.serial)] || [];
+        if(!list.length){
+          // Certified, but nothing on file — say so rather than showing a
+          // blank row that looks like the page is broken.
+          if(d.done && !certLoadNote){
+            return `<div class="unitcerts"><span class="ucert missing">
+              <span class="uc-name">${jesc(d.certRef || 'certificate')} not on file for this unit</span>
+              <button class="cbtn mini" type="button" data-find="${i}">Find…</button>
+            </span></div>`
+            + (findingIdx === i ? findPickerHtml(d) : '');
+          }
+          return '';
+        }
+        const current = list[0];
+        const earlier = list.slice(1);
+        const showAll = earlierOpen[serialKeyOf(d.serial)];
+        const visible = showAll ? list : [current];
+        return `<div class="unitcerts">` + visible.map(c=>`
+          <span class="ucert${c.superseded?' sup':''}">
+            <span class="uc-name">${jesc(c.certRef || c.filename)}</span>
+            ${c.superseded?'<span class="uc-tag">superseded</span>':''}
+            ${c.__refMismatch?`<span class="uc-tag" title="Filed under ${jesc(c.jobRef||'no job reference')}">other job ref</span>`:''}
+            ${c.__serialWas?`<span class="uc-tag" title="Issued before the serial was corrected">as ${jesc(c.__serialWas)}</span>`:''}
+            <button class="cbtn mini" type="button" data-cview="${c.id}">View</button>
+            <button class="cbtn mini" type="button" data-cshare="${c.id}">Share</button>
+          </span>`).join('')
+          + (earlier.length ? `<button class="cbtn mini" type="button" data-earlier="${serialKeyOf(d.serial)}">${showAll?'Hide':'+'+earlier.length} earlier</button>` : '')
+          + `</div>`;
+      })()}
+      ${askingIdx === i ? `
+      <div class="inline-ask">
+        <span class="q">Not required —</span>
+        <input id="skipReason" placeholder="Reason (not on site, customer declined…) — optional">
+        <button class="jbtn mini" type="button" data-skip-ok="${i}">Confirm</button>
+        <button class="jbtn ghost mini" type="button" data-ask-cancel="1">Cancel</button>
+      </div>` : ''}
+      ${removingIdx === i ? `
+      <div class="inline-ask">
+        <span class="q">Remove ${jesc(d.serial || d.model)} from this job?</span>
+        <button class="jbtn mini" type="button" data-remove-ok="${i}">Remove</button>
+        <button class="jbtn ghost mini" type="button" data-ask-cancel="1">Cancel</button>
+      </div>` : ''}
       ${blocked?`<div class="jdev-warn">${jesc(blocked)}</div>`:''}
     </div>`;
   }).join('');
 
   const html = `
+    ${jobBarHtml()}
+    ${toastHtml()}
     <div class="job-head">
       <div>
         <p class="job-title">Worklist — ${js.devices.length} unit${js.devices.length===1?'':'s'}${p.earlier?' · continued':''}</p>
         <div class="job-sub">${meta}</div>
       </div>
       <div class="job-actions">
+        <button class="jbtn" type="button" id="jobMergeBtn">Merge job &amp; share</button>
+        <button class="jbtn ghost" type="button" id="jobSummaryBtn">Job summary PDF</button>
         <button class="jbtn ghost" type="button" id="jobReplaceBtn">Replace</button>
         <button class="jbtn ghost" type="button" id="jobClearBtn">Clear</button>
       </div>
     </div>
     <div class="prog">
-      <span>${p.done} of ${p.total} done${split?` <span class="split">· ${split}</span>`:''}</span>
+      <span>${p.done} of ${p.total} done${p.outstanding?` · <b>${p.outstanding} left</b>`:' · all settled'}${split?` <span class="split">· ${split}</span>`:''}</span>
       <span class="ptrack">
+        <i class="layer notreq" style="width:${settledPct}%"></i>
         <i class="layer started" style="width:${startedPct}%"></i>
         <i class="layer" style="width:${pct}%"></i>
       </span>
     </div>
+    <div class="jobtools">
+      <input class="search" id="jobSearch" type="search" placeholder="Search serial, model or location…" value="${jesc(jobFilter)}">
+      <span class="count">${filter?`${shown.length} of ${js.devices.length}`:`${js.devices.length} unit${js.devices.length===1?'':'s'}`}</span>
+      <button class="jbtn ghost mini" type="button" id="jobAddBtn">+ Add unit</button>
+    </div>
+    <div class="addform" id="jobAddForm">
+      <input class="model" id="addModel" placeholder="Model">
+      <input class="serial" id="addSerial" placeholder="Serial number">
+      <input class="loc" id="addLoc" placeholder="Location / department">
+      <button class="jbtn mini" type="button" id="addConfirm">Add to job</button>
+      <button class="jbtn ghost mini" type="button" id="addCancel">Cancel</button>
+    </div>
     ${rows}
+    ${filter && !shown.length ? '<div class="jdev"><div class="jdev-main"><div class="jdev-meta">No unit matches that search.</div></div></div>' : ''}
+    ${certLoadNote ? `<div class="certnote">${jesc(certLoadNote)}</div>` : ''}
+    ${jobCertsOther.length ? `
+    <div class="othercerts">
+      <h5>Other certificates for this job — ${jobCertsOther.length}</h5>
+      <div class="unitcerts">${jobCertsOther.map(c=>`
+        <span class="ucert${c.superseded?' sup':''}">
+          <span class="uc-name">${jesc(c.certRef || c.filename)}</span>
+          <span class="uc-tag">${jesc(c.serial||'no serial')}</span>
+          <button class="cbtn mini" type="button" data-cview="${c.id}">View</button>
+          <button class="cbtn mini" type="button" data-cshare="${c.id}">Share</button>
+        </span>`).join('')}</div>
+    </div>` : ''}
     ${routingFooter()}`;
 
   if(setHtml(jobPanel, html)){
@@ -713,12 +1445,222 @@ function renderJobPanel(){
     }));
     const rb = document.getElementById('jobReplaceBtn');
     if(rb) rb.addEventListener('click', ()=>jobFile.click());
+    // --- search ---
+    const search = document.getElementById('jobSearch');
+    if(search) search.addEventListener('input', ()=>{
+      jobFilter = search.value;
+      const at = search.selectionStart;
+      renderJobPanel();
+      const again = document.getElementById('jobSearch');
+      if(again){ again.focus(); try{ again.setSelectionRange(at, at); }catch(e){} }
+    });
+
+    // --- not required / put back (inline, no native dialogs) ---
+    jobPanel.querySelectorAll('[data-skip]').forEach(btn=>btn.addEventListener('click',()=>{
+      if(!moduleReady(window.LabCalJobsheet, 'setNotRequired', 'labcal_jobsheet.js')) return;
+      askingIdx = Number(btn.getAttribute('data-skip'));
+      removingIdx = null; jobToast = null;
+      renderJobPanel();
+      const r = document.getElementById('skipReason');
+      if(r) r.focus();
+    }));
+    jobPanel.querySelectorAll('[data-skip-ok]').forEach(btn=>btn.addEventListener('click',()=>{
+      const i = Number(btn.getAttribute('data-skip-ok'));
+      const d = LabCalJobsheet.current().devices[i];
+      const reason = (document.getElementById('skipReason')||{value:''}).value.trim();
+      LabCalJobsheet.setNotRequired(LabCalJobsheet.current().callNumber, d.serial, true, reason);
+      askingIdx = null;
+      jobToast = {text:`${d.serial || d.model} marked not required.`};
+      renderJobPanel();
+    }));
+    jobPanel.querySelectorAll('[data-ask-cancel]').forEach(btn=>btn.addEventListener('click',()=>{
+      askingIdx = null; removingIdx = null; editingIdx = null; renderJobPanel();
+    }));
+    jobPanel.querySelectorAll('[data-restore]').forEach(btn=>btn.addEventListener('click',()=>{
+      const d = LabCalJobsheet.current().devices[Number(btn.getAttribute('data-restore'))];
+      LabCalJobsheet.setNotRequired(LabCalJobsheet.current().callNumber, d.serial, false);
+      jobToast = {text:`${d.serial || d.model} put back on the list.`};
+      renderJobPanel();
+    }));
+
+    // --- units added on site ---
+    const addBtn = document.getElementById('jobAddBtn');
+    const addForm = document.getElementById('jobAddForm');
+    if(addBtn && addForm) addBtn.addEventListener('click', ()=>{
+      addForm.classList.toggle('open');
+      if(addForm.classList.contains('open')) document.getElementById('addModel').focus();
+    });
+    const addConfirm = document.getElementById('addConfirm');
+    if(addConfirm) addConfirm.addEventListener('click', ()=>{
+      const form = document.getElementById('jobAddForm');
+      if(form && !form.classList.contains('open')) return;
+      if(!moduleReady(window.LabCalJobsheet, 'addDevice', 'labcal_jobsheet.js')) return;
+      const model = document.getElementById('addModel').value.trim();
+      const serial = document.getElementById('addSerial').value.trim();
+      const loc = document.getElementById('addLoc').value.trim();
+      if(!model && !serial){
+        jobToast = {text:'Enter at least a model or a serial number.', bad:true};
+        renderJobPanel();
+        return;
+      }
+      const added = LabCalJobsheet.addDevice({model, serial, location: loc});
+      jobToast = added
+        ? {text:`${serial || model} added to this job.`}
+        : {text:'That unit could not be added.', bad:true};
+      jobFilter = '';
+      renderJobPanel();
+    });
+    const addCancel = document.getElementById('addCancel');
+    if(addCancel) addCancel.addEventListener('click', ()=>{
+      document.getElementById('jobAddForm').classList.remove('open');
+    });
+    // --- correcting a unit ---
+    jobPanel.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click',()=>{
+      editingIdx = Number(btn.getAttribute('data-edit'));
+      askingIdx = null; removingIdx = null; jobToast = null;
+      renderJobPanel();
+      const f = document.getElementById('editSerial');
+      if(f) f.focus();
+    }));
+    jobPanel.querySelectorAll('[data-edit-ok]').forEach(btn=>btn.addEventListener('click',()=>{
+      if(!moduleReady(window.LabCalJobsheet, 'editDevice', 'labcal_jobsheet.js')) return;
+      const i = Number(btn.getAttribute('data-edit-ok'));
+      const before = LabCalJobsheet.current().devices[i];
+      const wasSerial = before.serial;
+      const d = LabCalJobsheet.editDevice(i, {
+        model: document.getElementById('editModel').value,
+        serial: document.getElementById('editSerial').value,
+        location: document.getElementById('editLoc').value
+      });
+      editingIdx = null;
+      jobToast = d
+        ? { text: (wasSerial && wasSerial !== d.serial)
+              ? `Serial corrected from ${wasSerial} to ${d.serial}${d.done?' — the certificate already issued still shows the old serial.':'.'}`
+              : `${d.serial || d.model} updated.` }
+        : { text: 'That unit could not be updated.', bad: true };
+      renderJobPanel();
+    }));
+
+    jobPanel.querySelectorAll('[data-remove]').forEach(btn=>btn.addEventListener('click',()=>{
+      removingIdx = Number(btn.getAttribute('data-remove'));
+      askingIdx = null; jobToast = null;
+      renderJobPanel();
+    }));
+    jobPanel.querySelectorAll('[data-remove-ok]').forEach(btn=>btn.addEventListener('click',()=>{
+      const i = Number(btn.getAttribute('data-remove-ok'));
+      const d = LabCalJobsheet.current().devices[i];
+      const label = d.serial || d.model;
+      LabCalJobsheet.removeDevice(i);
+      removingIdx = null;
+      jobToast = {text:`${label} removed from this job.`};
+      renderJobPanel();
+    }));
+
+    jobPanel.querySelectorAll('[data-earlier]').forEach(b=>b.addEventListener('click',()=>{
+      const k=b.getAttribute('data-earlier');
+      earlierOpen[k] = !earlierOpen[k];
+      renderJobPanel();
+    }));
+    jobPanel.querySelectorAll('[data-find]').forEach(b=>b.addEventListener('click',()=>{
+      const i = Number(b.getAttribute('data-find'));
+      findingIdx = (findingIdx === i) ? null : i;
+      renderJobPanel();
+    }));
+    jobPanel.querySelectorAll('[data-attach]').forEach(b=>b.addEventListener('click', async ()=>{
+      const id = Number(b.getAttribute('data-attach'));
+      const js2 = LabCalJobsheet.current();
+      const d2 = js2.devices[findingIdx];
+      if(!d2) return;
+      try{
+        await LabCalCerts.refile(id, { serial: d2.serial, jobRef: js2.callNumber || '', sheet: d2.sheet || '', unitUid: d2.uid || '' });
+        findingIdx = null;
+        jobToast = {text:`Certificate filed against ${d2.serial || d2.model}.`};
+      }catch(e){
+        jobToast = {text:'Could not re-file that certificate: '+(e&&e.message?e.message:e), bad:true};
+      }
+      await loadJobCerts();
+      renderJobPanel();
+    }));
+
+    jobPanel.querySelectorAll('[data-cview]').forEach(b=>b.addEventListener('click', async ()=>{
+      const rec = await LabCalCerts.get(Number(b.getAttribute('data-cview')));
+      if(!rec) return;
+      const url = URL.createObjectURL(rec.blob);
+      window.open(url, '_blank');
+      setTimeout(()=>URL.revokeObjectURL(url), 60000);
+    }));
+    jobPanel.querySelectorAll('[data-cshare]').forEach(b=>b.addEventListener('click', async ()=>{
+      const rec = await LabCalCerts.get(Number(b.getAttribute('data-cshare')));
+      if(rec && window.LabCalSave) await LabCalSave.deliver(rec.blob, rec.filename);
+    }));
+
+    const mergeBtn = document.getElementById('jobMergeBtn');
+    if(mergeBtn) mergeBtn.addEventListener('click', async ()=>{
+      const js2 = LabCalJobsheet.current();
+      const ref = js2 ? (js2.callNumber||'') : '';
+      const label = mergeBtn.textContent;
+      mergeBtn.disabled = true;
+      try{
+        // one file per job: the summary first, then every certificate behind it
+        let cover = null;
+        try{
+          if(window.LabCalVectorPdf && window.jspdf && js2 && js2.devices.length){
+            cover = LabCalVectorPdf.blobJobSummary(js2, LabCalJobsheet.progressOf(js2));
+          }
+        }catch(e){ console.warn('Summary cover not built:', e); }
+
+        const days = await LabCalCerts.days();
+        let merged = null;
+        for(const dd of days){
+          const list = await LabCalCerts.listDay(dd.day, ref);
+          if(!list.length) continue;
+          // one certificate per unit, the current one
+          merged = await LabCalCerts.mergeDay(dd.day, (n,t)=>{ mergeBtn.textContent = `Merging ${n}/${t}…`; }, ref, cover, {latestOnly:true});
+          cover = null;   // only on the first day's file
+          break;          // certificates for a job are merged per day
+        }
+        if(!merged){ jobToast={text:'No certificates on this job yet.', bad:true}; renderJobPanel(); return; }
+        const name = LabCalCerts.mergedFileName(LabCalCerts.todayIso(), ref);
+        if(window.LabCalSave) await LabCalSave.deliver(merged.blob, name);
+        jobToast = {text:`Merged ${merged.count} certificate${merged.count===1?'':'s'}${merged.cover?' behind the job summary':''}.`};
+      }catch(err){
+        jobToast = {text:'Could not merge: '+(err&&err.message?err.message:err), bad:true};
+      }finally{
+        mergeBtn.disabled = false; mergeBtn.textContent = label;
+        renderJobPanel();
+      }
+    });
+
+    const sumBtn = document.getElementById('jobSummaryBtn');
+    if(sumBtn) sumBtn.addEventListener('click', async ()=>{
+      if(!window.jspdf){
+        jobToast = {text:'The PDF library did not load, so the summary cannot be produced.', bad:true};
+        renderJobPanel(); return;
+      }
+      if(!moduleReady(window.LabCalVectorPdf, 'blobJobSummary', 'labcal_vector_pdf.js')) return;
+      const label = sumBtn.textContent;
+      sumBtn.disabled = true; sumBtn.textContent = 'Building…';
+      try{
+        const job = LabCalJobsheet.current();
+        const blob = LabCalVectorPdf.blobJobSummary(job, LabCalJobsheet.progress());
+        const name = `${(job.callNumber||'job').replace(/[^A-Za-z0-9_-]/g,'')}_summary_${LabCalCerts ? LabCalCerts.todayIso() : ''}.pdf`;
+        if(window.LabCalSave) await LabCalSave.deliver(blob, name);
+        jobToast = {text:`Summary ready — ${Math.round(blob.size/1024)} KB.`};
+      }catch(err){
+        jobToast = {text:'Could not build the summary: '+(err&&err.message?err.message:err), bad:true};
+      }finally{
+        sumBtn.disabled = false; sumBtn.textContent = label;
+        renderJobPanel();
+      }
+    });
+
     const cb = document.getElementById('jobClearBtn');
     if(cb) cb.addEventListener('click', ()=>{
       if(confirm('Clear the jobsheet worklist?\n\nProgress ticks are lost. Certificates already generated are not affected.')){
         LabCalJobsheet.clearCurrent();
       }
     });
+    bindJobBar();
     bindRoutingFooter();
   }
   jobPanel.className = 'job';
@@ -732,7 +1674,8 @@ if(jobFile){
     try{
       const parsed = await LabCalJobsheet.parseFile(file);
       LabCalJobsheet.setCurrent(parsed, file.name);
-      renderJobPanel();
+      viewMode = 'job'; jobFilter=''; certJobFilter=null;
+      renderCalibrationPage();
     }catch(e){
       alert('Cannot read this jobsheet PDF: ' + (e && e.message ? e.message : e));
     }
@@ -740,10 +1683,28 @@ if(jobFile){
 }
 
 if(window.LabCalJobsheet){
-  LabCalJobsheet.onChange(renderJobPanel);
+  LabCalJobsheet.onChange(()=>renderCalibrationPage());
 }
 
-renderJobPanel();
+
+// The worksheets are reached through a job now, so the tiles start folded.
+// They stay available for opening a sheet on its own.
+(function worksheetFold(){
+  const grid=document.getElementById('grid');
+  const btn=document.getElementById('wsToggle');
+  if(!grid||!btn) return;
+  const apply=open=>{
+    grid.style.display = open ? '' : 'none';
+    btn.textContent = open ? 'Hide' : 'Show';
+    try{ localStorage.setItem('labcal.ui.worksheets', open?'1':'0'); }catch(e){}
+  };
+  let open=false;
+  try{ open = localStorage.getItem('labcal.ui.worksheets')==='1'; }catch(e){}
+  apply(open);
+  btn.addEventListener('click', ()=>apply(grid.style.display==='none'));
+})();
+
+renderCalibrationPage();
 
 
 // ---------------------------------------------------------------------
@@ -771,10 +1732,15 @@ async function renderCertPanel(){
     return;
   }
 
-  const day = certDay || LabCalCerts.todayIso();
+  const day = certDay || selDay || LabCalCerts.todayIso();
   let list = [], allDays = [];
   try{
     list = await LabCalCerts.listDay(day);
+    // inside a job, show only that job's certificates
+    if(viewMode === 'job'){
+      const ref = certJobFilter === '' ? '' : ((LabCalJobsheet.current()||{}).callNumber || '');
+      list = list.filter(c => (c.jobRef || '') === ref);
+    }
     allDays = await LabCalCerts.days();
   }catch(e){
     setHtml(certPanel, '<div class="job-head"><div><p class="job-title">Certificate list unavailable</p><div class="cert-sub">'+jesc(e.message||e)+'</div></div></div>');
@@ -782,21 +1748,39 @@ async function renderCertPanel(){
     return;
   }
 
-  const daySelect = allDays.length > 1
-    ? `<select class="daysel" id="certDaySel">${allDays.map(d=>`<option value="${d.day}"${d.day===day?' selected':''}>${jesc(fmtDay(d.day))} — ${d.count}</option>`).join('')}</select>`
-    : '';
+  // A date picker that is always there, so any day can be looked at — including
+  // one with nothing on it, which should read as a clear zero rather than the
+  // control vanishing.
+  const dayCounts = {};
+  allDays.forEach(d=>{ dayCounts[d.day] = d.count; });
+  const jobsToday = await LabCalCerts.jobsOnDay(day);
+  const totalToday = list.length;
+  const quick = allDays.slice(0, 4).map(d=>
+    `<button class="cbtn mini${d.day===day?' solid':''}" type="button" data-day="${d.day}">${jesc(fmtDay(d.day))} · ${d.count}</button>`
+  ).join('');
+  const dayBar = `
+    <div class="certbar">
+      <label class="daypick">
+        <span>Day</span>
+        <input type="date" id="certDayInput" value="${day}" max="${LabCalCerts.todayIso()}">
+      </label>
+      ${day !== LabCalCerts.todayIso() ? '<button class="cbtn mini" type="button" id="certTodayBtn">Today</button>' : ''}
+      <span class="certcount">${totalToday} certificate${totalToday===1?'':'s'}${jobsToday.length?` · ${jobsToday.length} job${jobsToday.length===1?'':'s'}`:''}</span>
+      <span class="spacer"></span>
+      ${quick}
+    </div>`;
 
   if(!list.length){
     setHtml(certPanel, `
       <div class="job-head">
         <div>
-          <p class="job-title">No certificates ${day===LabCalCerts.todayIso()?'yet today':'on '+jesc(fmtDay(day))}</p>
-          <div class="cert-sub">Every PDF you generate appears here, ready to re-open, share again, or merge into one file.</div>
+          <p class="job-title">Certificates — ${day===LabCalCerts.todayIso()?'today':jesc(fmtDay(day))} · 0</p>
+          <div class="cert-sub">Every PDF you generate appears here, ready to re-open, share again, or merge into one file per job.</div>
         </div>
-        <div class="job-actions">${daySelect}</div>
-      </div>`);
+      </div>
+      ${dayBar}`);
     certPanel.className = 'certs empty';
-    bindDaySelect();
+    bindCertBar();
     return;
   }
 
@@ -839,14 +1823,14 @@ async function renderCertPanel(){
   const html = `
     <div class="job-head">
       <div>
-        <p class="job-title">Certificates ${day===LabCalCerts.todayIso()?'today':'on '+jesc(fmtDay(day))} — ${list.length} across ${jobs.length} job${jobs.length===1?'':'s'}</p>
-        <div class="cert-sub">${LabCalCerts.formatSize(totalBytes)} in total</div>
+        <p class="job-title">Certificates — ${day===LabCalCerts.todayIso()?'today':jesc(fmtDay(day))} · ${list.length}</p>
+        <div class="cert-sub">${list.length} certificate${list.length===1?'':'s'} across ${jobs.length} job${jobs.length===1?'':'s'} · ${LabCalCerts.formatSize(totalBytes)}</div>
       </div>
       <div class="job-actions">
-        ${daySelect}
         <button class="cbtn danger" type="button" id="certClearBtn">Clear day</button>
       </div>
     </div>
+    ${dayBar}
     ${groups}
     <div class="cert-note"><b>Keep your own copy.</b> This list is a convenience buffer held by the browser, not an archive — iPadOS clears it after about a week away from the site. Save each certificate properly the same day.</div>`;
 
@@ -854,13 +1838,22 @@ async function renderCertPanel(){
   certPanel.className = 'certs';
 }
 
-function bindDaySelect(){
-  const sel = document.getElementById('certDaySel');
-  if(sel) sel.addEventListener('change', ()=>{ certDay = sel.value; renderCertPanel(); });
+function bindCertBar(){
+  const input = document.getElementById('certDayInput');
+  if(input) input.addEventListener('change', ()=>{
+    certDay = input.value || LabCalCerts.todayIso();
+    renderCertPanel();
+  });
+  const today = document.getElementById('certTodayBtn');
+  if(today) today.addEventListener('click', ()=>{ certDay = null; renderCertPanel(); });
+  certPanel.querySelectorAll('[data-day]').forEach(b=>b.addEventListener('click', ()=>{
+    certDay = b.getAttribute('data-day');
+    renderCertPanel();
+  }));
 }
 
 function bindCertActions(){
-  bindDaySelect();
+  bindCertBar();
 
   certPanel.querySelectorAll('[data-reopen]').forEach(b=>b.addEventListener('click', async ()=>{
     const rec = await LabCalCerts.get(Number(b.getAttribute('data-reopen')));
@@ -909,9 +1902,19 @@ function bindCertActions(){
     const label = btn.textContent;
     btn.disabled = true;
     try{
+      // Put the job summary in front of the certificates, so a merged job
+      // opens on what was done rather than on the first unit.
+      let cover = null;
+      try{
+        const job = LabCalJobsheet.jobByRef ? LabCalJobsheet.jobByRef(jobRef) : null;
+        if(job && job.devices && job.devices.length && window.LabCalVectorPdf && window.jspdf){
+          cover = LabCalVectorPdf.blobJobSummary(job, LabCalJobsheet.progressOf(job));
+        }
+      }catch(e){ console.warn('Summary cover not built:', e); }
+
       const res = await LabCalCerts.mergeDay(day, (n,total)=>{
         btn.textContent = `Merging ${n}/${total}…`;
-      }, jobRef);
+      }, jobRef, cover);
       const name = LabCalCerts.mergedFileName(day, jobRef);
       btn.textContent = label;
       if(window.LabCalSave) await LabCalSave.deliver(res.blob, name);
@@ -950,16 +1953,21 @@ async function reconcileWorklistFromCertificates(){
 
 if(window.LabCalCerts){
   LabCalCerts.prune().then(renderCertPanel).then(reconcileWorklistFromCertificates);
-  LabCalCerts.onChange(renderCertPanel);
-  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) renderCertPanel(); });
+  LabCalCerts.onChange(()=>renderCalibrationPage());
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) renderCalibrationPage(); });
+  // Safari restores a page from its back-forward cache without re-running any
+  // script, so coming back from a worksheet could show the page exactly as it
+  // was — without the certificate just generated. Re-render on restore.
+  window.addEventListener('pageshow', (e)=>{ if(e && e.persisted) renderCalibrationPage(); });
+  window.addEventListener('focus', ()=>renderCalibrationPage());
 }
 
 renderOffsetStrip();
 renderCards();
 renderDate();
 if(window.LabCalOffsets){
-  LabCalOffsets.onChange(()=>{ renderOffsetStrip(); renderCards(); renderJobPanel(); });
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ renderOffsetStrip(); renderCards(); renderJobPanel(); } });
+  LabCalOffsets.onChange(()=>{ renderOffsetStrip(); renderCards(); renderCalibrationPage(); });
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ renderOffsetStrip(); renderCards(); renderCalibrationPage(); } });
 }
 </script>
 

@@ -1,7 +1,952 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.22)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.513)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.44 — text by default, and the certificates panel sorted
+
+**Text certificates are now the default** on a fresh device. Image is still
+selectable, and Cloud Temp continues to produce image certificates because it
+has no text version yet.
+
+**The job bar had leaked into the certificates panel.** That is why *+ New job*
+and *Load jobsheet* appeared down there — an earlier edit matched the header
+markup of both panels and inserted the bar into each. Removed; the certificates
+section now has only its own controls.
+
+**A day picker that is always present.** Previously the day selector only
+appeared once more than one day had certificates, so on a quiet day there was no
+way to look at anything. Now there is a date field, a **Today** button when you
+have navigated away, and shortcut buttons for the most recent days with counts.
+A day with nothing on it reads plainly: *"Certificates — none on 01 Aug ·
+0 certificates"*.
+
+**Clearer header.** *"Certificates — today"* with *"3 certificates across 2 jobs
+· 412 KB"* beneath, then the day bar, then one group per job with its own
+**Merge job & share**.
+
+## Version numbering
+
+From here versions run **v1.500, v1.501, v1.502 …** — three digits, so there is
+room for a lot of small releases before anything needs a bigger number.
+
+## v1.513 — load a whole memory card on an iPad
+
+Nothing was broken. **iOS Safari does not support folder upload at all** — the
+"Choose folder" button relies on a feature Apple has never implemented, so on an
+iPad it falls back to picking files, one folder at a time. On a laptop the same
+button works normally.
+
+**The way round it: zip the card.** In the Files app, long-press the card's
+folder and choose **Compress**, then load the single `.zip`. Subfolders and all,
+in one go.
+
+The viewer unzips it itself using the browser's own decompression, so there is
+no library to fetch and it still works with no signal. Both stored and deflated
+entries are handled; `__MACOSX` and dot-files are skipped.
+
+Tested on a real card zipped with two month subfolders and both compression
+methods: **36 days loaded in one action**, with the incomplete-reading count
+reported as usual. Loading plain CSVs is unchanged.
+
+If the zip is very large, give it a few seconds — it is decompressing a few
+hundred files on the iPad itself.
+
+## v1.512 — the filename as a last resort
+
+A certificate is matched to its unit in this order:
+
+1. **Unit id** — assigned once, never changes. Nothing typed afterwards breaks it.
+2. **Serial** — including every serial that unit has had.
+3. **Job reference**.
+4. **Filename** — new. The name is built from the serial and job number, so a
+   certificate filed with an empty serial field often still carries it there.
+
+The filename is deliberately last. It is made of exactly the things that get
+corrected, so it is the weakest of the four — but it costs nothing and it
+rescues records that would otherwise have nothing to match on. A match needs at
+least four characters, so a short or blank serial cannot sweep up another unit's
+certificate.
+
+Tested with the worst case — no unit id, no serial, no job reference, only a
+filename — and the certificate found its unit while a second unit on the same
+job did not claim it.
+
+### What is not possible
+
+Remembering **where the PDF was saved** cannot be done on iPad. When a file goes
+through the iOS share sheet, Safari never tells the page where it went — no
+path, and no permission to read it back later. Desktop Chrome does have an API
+that returns a durable handle, but iOS Safari does not support it, so it would
+work on the laptop and not on the device the work actually happens on.
+
+## v1.511 — the current certificate leads
+
+**Merge job & share now takes one certificate per unit — the newest.** A pack
+going to a customer should carry the current certificate for each unit, not the
+superseded ones alongside it.
+
+**On the unit's row**, only the current certificate is shown. Earlier ones fold
+behind a small **+2 earlier** button and appear struck through when expanded.
+
+They are still kept, not deleted. A superseded certificate may already have been
+emailed to a customer, and a version that once left the building is worth being
+able to look at. But it is out of the way, and out of the pack.
+
+## v1.510 — storage can never block the PDF
+
+v1.509 made the PDF wait for the certificate to be filed. That was right in
+principle and wrong in practice: on iPad the storage request can hang
+indefinitely — another tab holding the database, or Safari simply not
+answering — and the PDF then never appeared at all. Generate went grey and
+nothing happened. My fault, and a worse failure than the one it fixed.
+
+Two limits now:
+
+- **Opening the database gives up after 2.5 seconds**, and reports it, instead
+  of leaving everything waiting on it. A locked database says which problem it
+  is: *"Certificate storage is locked by another tab of this site."*
+- **Filing gives up after 2.5 seconds** and the PDF carries on regardless. The
+  hint says *"PDF saved, but certificate storage did not respond… use Find… on
+  the unit if it is missing."*
+
+Healthy storage is unaffected — the write takes milliseconds, so filing still
+happens before the share sheet opens, which is the whole point of v1.509. The
+timeout only matters when something is wrong, and then the PDF wins.
+
+Tested both ways: with working storage the certificate is filed and the PDF
+delivered in about a second; with storage that never answers at all the PDF is
+still delivered and the button comes back.
+
+## v1.509 — file the certificate before sharing it
+
+**This is the one that was losing certificates.** The order was:
+
+    generate → share (iOS share sheet) → file it → mark the unit done
+
+The share sheet waits for the engineer. If you saved the PDF and then left the
+page — tapped Back, switched tabs, went to the next unit — the storage write was
+still pending and iOS abandoned it. The PDF was safely saved; the record of it
+was not. That is why 27 certificates were in storage but the one just made was
+missing, and why it failed *sometimes* rather than always: it depended entirely
+on what you did next.
+
+The order is now:
+
+    generate → file it and WAIT for the write → mark done → share
+
+By the time the share sheet opens, the certificate is already on the job. Leaving
+the page at any point after that cannot lose it.
+
+Applied to all five worksheets, on both the text and image paths.
+
+Tested with a share sheet that never returns at all: the certificate is still
+filed, still carries its unit id, and still appears on the unit's row.
+
+## v1.508 — certificates linked by unit, not by serial
+
+The redesign. Every one of the "certificate not showing" faults came from the
+same weakness: certificates were matched to units by **serial number**, which is
+precisely the thing that gets corrected, mistyped or repeated.
+
+**Every unit now gets a permanent id** the moment it joins a job — read from a
+jobsheet or added on site. Opening it hands that id to the worksheet, and the
+certificate is filed against it.
+
+The id never changes. So the link survives:
+
+- correcting the serial, model or location afterwards
+- a certificate number that repeats — `S 00000` on a verification sheet
+- a mistyped or missing job reference
+- reloading the same jobsheet the next day
+
+Tested by breaking every old link at once: a certificate issued as `S 00000`,
+then the unit's serial, model **and** location all changed to something
+completely different. The certificate stayed on its unit. A second unit added
+afterwards did not pick it up.
+
+Serial matching is still there as a fallback for certificates issued before this
+release, and **Find…** remains for anything that still needs attaching by hand —
+attaching now writes the unit id, so it stays attached from then on.
+
+## v1.507 — find a certificate and put it on its unit
+
+A certificate that does not attach itself now has a **Find…** button on the
+unit's amber chip. It lists everything actually in certificate storage — number,
+serial, job reference and date — so you can see whether the record exists at all,
+and **Use this** files it against that unit.
+
+That answers the question the screen could not before. If the list is empty it
+says so plainly: *"Nothing else is in certificate storage on this device — the
+PDF was saved out, but no record of it was kept here."* If the record is there
+with details that do not match, one tap fixes it.
+
+Re-filing keeps what the certificate was originally filed under, so nothing is
+lost by correcting it.
+
+### A bug found while testing this
+
+Attaching a certificate showed it **twice**. Filing it triggers a refresh while
+the handler is already reloading, and both loads were writing into the same
+object. The load now builds its result separately and only publishes it if it is
+still the most recent — the last write wins instead of two interleaving.
+
+## v1.506 — a corrected serial no longer strands its certificate
+
+The diagnostic added in v1.505 found it on the first try: the unit showed
+*"S 12345 not stored on this device"* — and, beside it, the **edited** tag.
+
+The certificate had been issued, then the serial was corrected. Certificates
+were matched to units on the **current** serial only, so one issued beforehand
+matched nothing and appeared to be missing.
+
+A unit now answers to every serial it has had: the one printed on the jobsheet,
+any it was corrected from, and its current one. The certificate reattaches and
+carries a small **as OLD-123** tag, so the serial it was issued under stays
+visible rather than being quietly rewritten — the certificate itself still says
+the old number, and the page should not pretend otherwise.
+
+Reproduced from the screenshot before fixing: certificate issued under one
+serial, serial corrected, certificate stranded. It now shows on the unit's row.
+
+## v1.505 — say why a certificate is missing
+
+A certificate not appearing on its job has had three different causes so far,
+and every one of them looked identical on screen: an empty row. This release
+makes the app say which it is.
+
+**On the worksheet.** If a certificate cannot be filed, the hint beside the
+buttons now says so — *"PDF saved, but this browser will not store it, so it
+will not appear on the job list."* The PDF itself is unaffected; it has already
+been saved or shared by that point. Previously this failed to a console warning
+nobody sees.
+
+**On the job page.** If certificate storage is unavailable, or reading fails, a
+red note explains it rather than the page simply looking empty. And a unit that
+is certified but has no certificate on file shows an amber chip —
+*"S 51430 not stored on this device"* — instead of a blank row.
+
+Neither of these fixes a cause. They turn a silent failure into a message that
+says what to do, which is the difference between a five-minute check and a long
+guess at whose fault it is.
+
+## v1.504 — the certificate was filed under the wrong job
+
+Not the page failing to refresh this time — the certificate really was being
+filed against the **previous** job.
+
+Opening a unit filled the worksheet's header only where a field was **empty**.
+But the worksheet's own autosave had already restored the last unit worked, so
+the job reference box still held the earlier job's ENQ number, and the fill left
+it alone. The certificate was then filed under that old reference and never
+appeared on the new job.
+
+Arriving from a job list, that list is authoritative: model, serial, location,
+site and job reference are now **overwritten**, not just filled when blank.
+Applied to all four converted worksheets.
+
+Reproduced first — first job ENQ111 left in the autosave, second job ENQ222
+opened — and confirmed the worksheet now reads ENQ222 and the certificate lands
+on the right job.
+
+**Safety net.** A certificate now counts as belonging to a job if it carries the
+job reference **or** its serial matches one of that job's units. Anything that
+arrives under a different reference still shows on its unit's row, tagged
+*other job ref* with the reference it was filed under. A certificate that
+exists should never be invisible.
+
+**Smaller correction boxes.** The Edit fields were far too large on a tablet —
+now sized to their content: model 140 px, serial 190 px, location filling the
+line beneath.
+
+## v1.503 — a new certificate shows up without being chased
+
+A certificate generated on a worksheet did not appear on the job page when you
+came back. The certificate was filed correctly — the page simply never learned
+about it. Two causes, both fixed:
+
+**Safari's back-forward cache.** Going back restores the page exactly as it
+was, without re-running any script, so the job page showed what it showed
+before you left. It now re-renders on `pageshow` when the page was restored
+from cache, and on regaining focus.
+
+**No cross-tab signal.** Certificates live in IndexedDB, which fires no event
+other tabs can hear — so a calibration page open in a second tab never found
+out. Filing a certificate now also writes a `localStorage` ping, which does
+travel between tabs, and the calibration page redraws when it sees one.
+
+Tested with two pages sharing one storage: with the job page open and
+untouched, generating a certificate in the other tab made it appear on the
+unit's row on its own. Same after a simulated back-forward restore.
+
+## v1.502 — a job is one page
+
+The certificates panel is gone from the job view. **Each unit now carries its own
+certificate on its own row** — a green chip with the certificate number and
+**View** and **Share**. A superseded one sits beside it, struck through and
+labelled, so an amended unit shows both.
+
+Everything else about the row is unchanged: Open, Reopen, ✕ not required, Edit,
+the tags and the search all work as before.
+
+**One file from one place.** **Merge job & share** is now in the job header
+beside **Job summary PDF**. It produces the summary followed by every
+certificate on the job.
+
+Certificates belonging to the job but matching no unit — usually a serial
+corrected after the certificate was issued — are listed under **Other
+certificates for this job** rather than disappearing.
+
+**The calendar opens on the month**, with **Two weeks** to fold it down.
+
+## v1.501 — tidier calibration page
+
+**Worksheet tiles fold away.** Work now starts from a job, so the six worksheet
+cards are collapsed behind **Show** at the top of the page. They stay available
+for opening a sheet on its own, and the page remembers whether you left them out.
+
+**The correction form says what each box is.** Model, Serial number and Location
+are labelled, and the heading names the unit — *"Correct X-99"*. Before, the
+fields were only distinguishable by their placeholder text, which disappears as
+soon as there is a value in them, so on an existing unit it was three unlabelled
+boxes.
+
+**The job dropdown is gone.** Switching jobs is what the day view is for, and
+having a second way to do it invited exactly the mix-ups the redesign was meant
+to remove. The job view now has a back button and **Replace jobsheet**, nothing
+else.
+
+## v1.500 — the calibration page is now a day, then a job
+
+Two levels, one thing on screen at a time. The old layout showed one job's units
+above *every* job's certificates, which is what made it easy to mix up.
+
+**The day.** A calendar — two weeks by default, **Month** for the full grid —
+with a dot under any day that has work on it. Under it, the jobs worked that
+day as cards: reference, site, and `1 of 3 done · 1 left · 1 not required`, with
+a progress bar. Arrows step a day at a time, or a month at a time in month view.
+There is a date picker and a **Today** button.
+
+A job appears on **every day it was actually touched** — opened, certified,
+marked not required, corrected — so a job running Monday to Wednesday shows on
+all three, and Wednesday shows what you really did that day.
+
+Certificates on a day that belong to no job get their own **No job reference**
+card rather than being hidden.
+
+**The job.** Tap a card and you get that job: the unit list exactly as before,
+and **only that job's certificates** beneath it. A back button returns to the
+day. Loading a jobsheet drops you straight into its job.
+
+### Fixed on the way
+
+- **The data logger viewer would not load anything.** Merging the two copies in
+  v1.46 left two variables undeclared in the newer file's `ingest`, so it threw
+  on the first file. Declared, and empty log files are now reported as *empty*
+  rather than *skipped* — only a genuine read failure counts as skipped.
+- One tap on the calendar's back arrow jumped five months, because the day view
+  re-bound its handlers on every render. Same fault as the earlier "+ Add unit"
+  bug: bind only when the markup was actually replaced.
+
+## v1.47 — merged job PDF opens on its summary
+
+**Merge job & share** now puts the job summary in front of the certificates.
+One file that opens on the list of every unit — model, serial, location,
+worksheet, status, certificate number — with the totals across the top, then
+each certificate behind it in order.
+
+If the summary cannot be built for any reason the merge still runs; the cover
+is skipped rather than the whole file failing.
+
+Verified that the cover lands first. The certificate pages after it use the
+same merge path as before, which was verified separately — the test harness
+cannot exercise both together because it clones stored files in a way pdf-lib
+rejects.
+
+## v1.46 — one data logger viewer, not two
+
+The copy of the viewer bundled in the suite was an older build: 19 range, 24
+range and T3, but none of the IBB Blood Bank work — no Eurotherm parser, no HMI
+audit trail, no clock-reset detection, no dual per-channel alarm limits. The
+good version had been developed separately and never folded back in.
+
+They are now one file. The newer viewer is the base, with two things carried
+across into it:
+
+- **the 10 range parser** added in v1.45
+- **the iPad share sheet** for the chart PNG and summary CSV, which the newer
+  standalone build predated
+
+The four existing parsers — `parseCsv`, `parseIBB`, `parseIBBEventLog` and
+`parse24` — were checked byte-for-byte against the uploaded file and are
+**identical**. Only three lines were removed anywhere in the merge, all of them
+in the two places the change belongs.
+
+Two copies of the same tool drifting apart is the pattern that caused several
+bugs earlier in this suite. Worth keeping to the one file from here.
+
+## v1.45 — 10 range logs in the data logger viewer
+
+The older pharmacy fridges are now readable alongside the 19 and 24 ranges.
+
+**The format.** One file per day named `YYMMDD.csv`, no header row, carriage
+returns instead of newlines, eleven fields per line:
+
+    time, T1, T2, D, C, F, I, H, L, B, P
+
+`T2` reads `-273.1` when no second probe is fitted. The eight flags are the
+ones Labcold's own Internet-Explorer-only viewer used, which identifies them by
+letter: **D**oor, **C**ompressor, **F**an, **I**?, **H**igh alarm, **L**ow
+alarm, **B**attery, **P**ower. Older cards write those letters (or blanks)
+instead of 1 and 0, and both encodings are accepted.
+
+**I have not labelled flag I** — the original viewer only gives the letter and
+I would be guessing. It is parsed and carried through, so naming it later is a
+one-line change. Worth confirming what that channel is on the controller.
+
+**Readings written without their leading digit.** Some files contain values
+like `  .8` where `3.8` was meant. These are **left out rather than read as
+0.8**: plotting them would invent a low-temperature excursion that never
+happened, which on a fridge review is worse than a gap. The load message says
+how many were dropped.
+
+Checked against a full card: 191 files, 186 parsed, 5 genuinely empty, none
+unreadable, 647 incomplete readings identified and excluded.
+
+## v1.44 — text certificates by default
+
+**Text is now the default certificate style** on a device that has not chosen
+otherwise. It applies to Barkey, Standard Medical, Standard Non-Medical and the
+19/24 Range; Cloud Temp still produces the image version on its own, so nothing
+breaks there. Image remains selectable on the home page if a particular customer
+ever wants it.
+
+**Certificate panel.** The day now reads as an explicit count — *"Certificates —
+today · 0"* — rather than "none yet today", so a day with nothing on it is a
+state you can see. The date picker and Today button were already there and are
+unchanged. The panel carries no job controls: new job and load jobsheet belong
+to the worklist above and appear only there.
+
+## v1.43 — edits carry both ways, and a simpler worksheet toolbar
+
+**The remaining sync fault.** Correcting a serial on the job list did not reach a
+worksheet that had **already been started**. The cause: the worksheet restores
+its saved readings after filling in the header, and that snapshot was saved with
+whatever serial the unit had at the time — so an old snapshot quietly reinstated
+the old serial.
+
+The job list is now treated as the source of truth for identity: after the
+readings are restored, the model, serial, location, site and job reference are
+re-applied from the list over the top. Tested on the exact sequence — start a
+calibration, correct the serial on the main page, reopen the unit: the corrected
+serial appears **and the readings are still there**.
+
+**Simpler toolbar.** Worksheets now show **Save to job list** and **Generate
+PDF**, with everything else — Excel export and import, print, start new
+calibration, load offsets, load jobsheet, load saved — folded behind **More…**.
+Nothing is removed; the fold just remembers whether you left it open.
+
+## v1.42 — worksheet and job list kept in sync
+
+Opening a unit from the job list now **links** the worksheet to that unit, and
+the link is stored rather than held in memory, so it survives moving between
+the two pages.
+
+**Save to job list** — a new button beside *Generate PDF* on every worksheet.
+Correct the serial, model or location on the worksheet, press it, and the job
+list is updated: the row shows the corrected details, carries the **edited**
+tag, and keeps *"jobsheet read …"* underneath. It also runs automatically when a
+certificate is generated, so the certificate can never be filed against a serial
+the list does not have.
+
+Both directions were tested:
+
+- correct on the **worksheet** → back to the list, the row is updated and tagged
+- correct on the **list** → open the unit, the worksheet opens with the
+  corrected serial and location, and the certificate ties to it
+
+If a worksheet is opened directly rather than from a job, the button says so
+instead of failing quietly.
+
+## v1.41 — an "edited" marker
+
+A unit you have corrected now carries a purple **edited** tag, and its line
+shows what the jobsheet originally said: *"jobsheet read 20800627_4000029"*.
+Holding the tag shows which fields changed and when.
+
+It is stored on the unit and on the job, so it survives:
+
+- opening a worksheet and coming back to the list
+- switching to another job and back
+- re-uploading the same (still wrong) jobsheet the next day
+
+The job summary PDF already showed the original serial beneath a corrected one,
+so a customer or an assessor can see the discrepancy rather than having it
+quietly overwritten.
+
+## v1.40 — the stale-script fault (important)
+
+**"LabCalVectorPdf.blobJobSummary is not a function"**, and Save doing nothing,
+were the same fault: the service worker served **our own JavaScript cache-first**
+while serving the HTML network-first. So an up-to-date page could load against
+last week's copy of its own modules, and any newly added function simply did not
+exist. Nothing on screen suggested anything was wrong.
+
+Same-origin files are now fetched **network-first**, exactly like the pages, and
+fall back to cache only when there is no signal. The page and the scripts it
+depends on move together.
+
+This was not a one-off: every feature added since text certificates was exposed
+to it. If anything else has behaved oddly on the iPad while looking fine on the
+laptop, this was probably why.
+
+**Belt and braces:** each action now checks that the function it needs actually
+exists, and if not says so in plain language — *"labcal_jobsheet.js is out of
+date on this device… tap Refresh offline copy"* — rather than throwing a
+developer error or silently doing nothing.
+
+**Edit form relaid out.** Model and serial on the first line, location on a full
+width line beneath with Save and Cancel, instead of three fields squeezed onto
+one row. Saving returns to the normal view.
+
+## v1.39 — correcting a jobsheet, and the end-of-day summary
+
+**Correcting a unit.** Every row has **Edit**, which opens an inline editor for
+model, serial and location. Jobsheets carry wrong serials often enough that this
+had to be fixable on site.
+
+Changing a serial is not just a label change, because progress is keyed by
+serial. The correction carries with it:
+
+- the unit's **certified / not required** state
+- any **part-finished worksheet** saved against the old serial
+- its entry if it was **added on site**
+- and the correction is **remembered against the job**, so re-uploading the same
+  (still wrong) jobsheet tomorrow keeps your version instead of re-adding the
+  unit under its typo
+
+The serial as printed on the jobsheet is kept alongside, and shown on the
+summary as *"jobsheet read SN-88211"*. If the unit was already certified, the
+message says plainly that the certificate already issued still carries the old
+serial — that is a document that has left the building, and the app should not
+pretend otherwise.
+
+**Job summary PDF.** A **Job summary PDF** button on the job panel produces an
+end-of-day sheet: every unit numbered, with model, serial, location, which
+worksheet it took, its status and its certificate number. Totals across the top
+— *14 units · 8 certified · 2 not required · 4 outstanding* — amber while
+anything is outstanding, green when the job is finished. Certified rows are
+green, not-required rows greyed, started rows amber. It paginates for long jobs
+and each page carries the job reference and site.
+
+About 6 KB, and it reads the job straight from the worklist, so it cannot
+disagree with the panel on screen.
+
+## v1.38 — why those buttons did nothing, and proper multiple jobs
+
+### The bugs
+
+**The red ✕ did nothing** because it used a native `prompt()` to ask for a
+reason. iOS suppresses `prompt()` in an installed web app, so the dialog never
+appeared, the call returned nothing, and the code treated that as "cancelled".
+No dialogs are used in the job panel at all now — pressing ✕ opens a small
+amber strip in the row with a reason box and Confirm/Cancel, and removing a unit
+asks in the same way.
+
+**Adding a unit did nothing** for a different reason. In the empty state the
+button handlers were re-attached on every render instead of only when the markup
+changed, so a second render left two copies on each button — and "+ Add unit"
+toggled the form open and immediately closed again. Both branches now bind only
+when the markup was actually replaced.
+
+Both were tested with `prompt()` and `confirm()` deliberately throwing, which is
+how an installed iOS web app behaves.
+
+### Multiple jobs
+
+The page now holds as many jobs as you like, each with its own unit list and
+progress:
+
+- **A job selector** at the top of the panel: `ENQ139969 — Optegra Eye Hospital ·
+  1/4 · 2 left`. Switching is instant and each job remembers its own state.
+- **+ New job** starts one by hand with a reference, site and date — for work
+  with no jobsheet.
+- **Load jobsheet** creates a job, or merges into the one already there.
+
+**Merging by job reference.** Upload the same jobsheet tomorrow and it merges
+into the existing job rather than starting a second copy: certified units keep
+their ticks and certificate numbers, units marked not required stay marked,
+units added on site stay on the list, and anything new on the sheet is appended.
+Tested with a revised sheet carrying an extra unit — the extra appeared, nothing
+else moved.
+
+## v1.37 — the worklist becomes a job control panel
+
+**Not required.** Every outstanding unit has a red **✕**. Press it and you are
+asked for an optional reason — not on site, customer declined — and the unit is
+struck off with a *not required* tag and the reason shown beneath it. It stops
+counting as outstanding but stays visible, and **Put back** undoes it. The mark
+is stored against the job, so it survives reloading the jobsheet tomorrow.
+
+**Add a unit on site.** *+ Add unit* takes a model, serial and location and adds
+it to the current job, tagged *added on site*. It routes itself to the right
+worksheet by the same rules as everything else, and it comes back when the
+jobsheet is loaded again. Only hand-added units can be removed; jobsheet units
+stay put.
+
+**Search.** A box filters by serial, model or location — useful once a job runs
+to a dozen units. The count beside it reads "3 of 14" while filtering.
+
+**Clearer progress.** The line now reads *"1 of 4 done · 2 left · 1 today ·
+1 not required"*, with **how many are left** in bold, since that is the number
+that matters when you are deciding whether you can leave site. The bar shows
+settled units in grey behind the green.
+
+### Bugs caught while building it
+
+Two, both found by testing the module directly before touching the interface:
+units added on site were lost when the jobsheet was reloaded, and undoing a
+*not required* mark left the unit still flagged, because clearing the mark
+removes the stored record and the code treated a missing record as "no change".
+
+## v1.36 — main page tidied
+
+**Settings fold away.** *Certificate PDF* and *Backup & restore* are things you
+set once and leave, so they now live behind a **Settings** button and stay
+collapsed. The drawer remembers whether you left it open.
+
+Two exceptions, because a folded setting is a setting you forget: the button
+line always shows **how long since the last backup** and which certificate style
+is selected, and the drawer **opens itself** if you have never backed up or the
+last backup is more than a week old — the point at which browser storage starts
+clearing.
+
+**Offset tiles are about half the height.** Each is now one row: name and
+description on the left, the day countdown on the right where it still reads as
+the biggest thing on the tile, then the details and buttons beneath. The
+countdown, the colour coding and the recalibration warning banner are untouched,
+since those are the parts that earn their space.
+
+**Smaller hero.** The heading is one line instead of two and roughly a third of
+the previous size, the lede is shorter, and the background trace is smaller and
+fainter. Around 70 mm of vertical space recovered before you reach the offsets.
+
+## v1.35 — Standard Medical text certificates
+
+Four of the five worksheets now produce text certificates. The setting reads
+**Text (all except Cloud Temp)**.
+
+Standard Medical shares its layout with Standard Non-Medical, so rather than a
+second near-identical generator there is now one builder with the differences
+declared in a small spec:
+
+| | Standard Medical | Standard Non-Medical |
+|---|---|---|
+| Tolerance | fixed ±0.300 °C | depends on device type |
+| Offsets | Cal 1 and Cal 2 | single field |
+| Extra field | Calibration System | Non-Standard Variations |
+
+Everything else — the four columns, the instrument block, the banners, the
+comments and signatures — is the same code.
+
+**Banner wording now prefers the worksheet's own.** The certificate was
+substituting its own concise line, which lost a distinction that matters: "As
+Found not yet complete" is not the same as "adjustment carried out". The screen
+wording is used whenever it fits on one line, with the concise version as
+fallback.
+
+Every worksheet was generated in every state — normal, failing, verification
+code, long comments, and mid-adjustment — and all land on a single page except
+a genuinely long comment, which continues to page 2 as intended.
+
+## v1.34 — everything on one page
+
+The Non-Medical certificate was running to two pages. Three changes, each of
+which also tightens the other sheets:
+
+**Left/Right moved into the probe cells.** The coloured L and R dots now sit
+beside each probe serial instead of occupying a whole sub-header row — about
+9 mm saved per certificate, and it reads more directly: the marker is next to
+the thing it labels.
+
+**One-line status wording.** The certificate now writes its own concise line —
+*"Adjustment not needed — As Found within tolerance ±3.0 °C. As Left not
+applicable."* — rather than reproducing the fuller sentence the worksheet shows
+on screen. The screen keeps the longer wording, which is more useful while
+you're working.
+
+**Tighter top.** A couple of millimetres out of the header and the variations
+line.
+
+Result: Non-Medical, 19/24 and Barkey are all single page with a normal comment.
+A genuinely long comment still continues to page 2, as it should.
+
+### A bug this shook out
+
+Moving comments above the signatures meant the comments box no longer left room
+for the signatures beneath it — on a long comment the sign-off ran 7 mm off the
+bottom of the page. The generator's own overflow check caught it. The 19/24
+sheet now uses the same shared comments-and-signatures block as the others,
+which reserves that space properly.
+
+## v1.33 — comments above signatures, and Standard Non-Medical text certificates
+
+**Comments now sit above the signatures**, on the certificates *and* on the
+worksheets themselves (19/24 and Non-Medical). They read as part of the record
+rather than an afterthought below the sign-off.
+
+**Standard Non-Medical Device generates text certificates.** The setting reads
+**Text (19/24, Barkey, Non-Medical)**; SMD and Cloud Temp still use the image
+path. Roughly 19 KB. It carries the device type and its tolerance in the
+subtitle, the Non-Standard Variations line, and the Air / Load / Chart Recorder
+column layout, with Load and Chart Recorder printing as N/A where they do not
+apply to the unit.
+
+The Final set point on this worksheet also gained the **nearest offset point
+used**, matching the 19/24 sheet.
+
+### Under the bonnet
+
+Rather than copy the 19/24 table code, the measurement table is now one shared
+`makeTable()` that takes a description of the column bands — two-column groups
+get the Left/Right sub-header automatically. Comments-and-signatures and the
+status banners are shared too. Three duplicated copies of that logic was how the
+green-instead-of-red bug got in, so this is deliberate.
+
+The refactor was checked by rendering the 19/24 certificate before and after and
+comparing pixel by pixel: **identical**.
+
+Status banners also wrap now instead of running off the right edge — the
+Non-Medical "Load and Chart Recorder are not applicable" line was long enough to
+overflow.
+
+## v1.32 — 19/24 instrument block, and the final offset point
+
+**The 19/24 certificate now has the same bordered block as Barkey**, with the
+reference thermometer brought in off its own floating line. Four labelled rows
+in one border:
+
+| | |
+|---|---|
+| **Digital Reference Thermometer** | serial, cal due, validity badge |
+| **Room Temperature (RT)** | RT ref, badge, cal due, max, min, average |
+| **Controller Settings** | initial offsets, initial set point, nearest offset point |
+| | final offsets, final set point, nearest offset point |
+
+**Nearest offset point on the Final set point.** The worksheet only showed this
+for the Initial set point, but the As Left corrections are taken from the point
+nearest the *final* set point, so it is worth stating. Added to **both the
+worksheet and the certificate** — the certificate reads it from the page rather
+than working it out separately, so the two cannot disagree.
+
+On a sheet needing no adjustment the final row stays as N/A chips, as before.
+
+## v1.31 — verification worksheets, and a tidier Barkey header
+
+**The all-zero sheet code now carries through.** Entering `B 00000` or
+`S 00000` retitles the worksheet as a *Verification* worksheet on screen, but
+the text certificate was still printing "Calibration". It now reads the live
+title from the page, so the PDF says **Engineer Verification Worksheet** to
+match. A normal sheet number is unaffected.
+
+**Barkey header tidied.** Engineer and Reference thermometer have come out of
+the field grid — the engineer is already in the signature block, and the
+thermometer now has a proper row of its own. The header block is two labelled
+rows in one border:
+
+| | |
+|---|---|
+| **Digital Reference Thermometer** | serial, cal due date, validity badge |
+| **Room Temperature (RT)** | RT ref, validity badge, cal due, max, min, average |
+
+That leaves the field grid as job reference, date, site, department, model and
+serial number.
+
+## v1.30 — one standard header on every certificate
+
+Barkey now carries the same header as the 19/24 sheet: **"Engineer Calibration
+Worksheet"** on the left with the worksheet name beneath it, and the **LABCOLD
+wordmark on the right with the certificate number underneath**.
+
+Rather than copying the layout into each generator, there is now a single
+`drawHeader()` that both call. They cannot drift apart, and the three worksheets
+still to be converted will inherit the same header for free.
+
+## v1.29 — failures now show as failures on the 19/24 certificate
+
+A real bug, and a bad one on a calibration document: **the text certificate
+painted the Difference of Average row green and the status banner green
+regardless of the result.** A unit that failed on screen — red row, red banner,
+adjustment required — printed as though it had passed.
+
+The cause was mine: I hard-coded those colours instead of reading what the
+worksheet had already decided. The generator now takes the state from the
+worksheet's own `ok`/`bad` classes, so the certificate cannot disagree with the
+screen:
+
+- **Difference of Average** is tinted per column (Air and Load can differ), red
+  when out of tolerance, green when in.
+- **Status banners** go red with red text when the worksheet says adjustment is
+  required, and carry the worksheet's own wording.
+- **The high/low markers** (blue on the highest corrected maximum, green on the
+  lowest corrected minimum) now read the worksheet's `selectedHigh` and
+  `selectedLow` flags rather than being recalculated here.
+- **The As Left section** takes its crossed-out state from the worksheet's
+  `notNeeded` flag. Previously it inferred it from whether readings had been
+  typed, so a sheet needing adjustment but not yet filled in printed as
+  crossed out.
+
+Verified both ways: in tolerance (green throughout, As Left crossed out) and
+out of tolerance (red banner, red difference row, As Left live and awaiting
+readings).
+
+## v1.28 — no timestamp, and Barkey matched to the 19/24 layout
+
+**The "Generated <date time>" line is gone.** On a UKAS document a timestamp
+later than the calibration date invites questions an engineer should not have to
+answer — a certificate regenerated to correct a typo would appear to have been
+produced days after the work. It is a one-line switch
+(`SHOW_GENERATED_STAMP` in `labcal_vector_pdf.js`) if it is ever wanted back.
+Page numbering on two-page certificates is unaffected.
+
+**Barkey now follows the 19/24 layout.** It gained:
+
+- the **reference thermometer row** — serial in a pill, cal due date, validity
+  badge — instead of being buried in the header fields
+- a bordered **Room Temperature (RT)** row with the thermometer pill, its
+  validity badge, cal due, max, min and average on one line
+- **status banners** above each section: green *"As Found: every check within
+  specification"*, or red *"one or more checks outside specification —
+  adjustment required"*, and the same before As Left
+
+Checked both ways: with everything in tolerance (five green ticks, green
+banners, As Left greyed as N/A) and with the heating display deliberately out
+(pink row, red cross, red banner, and the As Left section unlocked and live).
+
+## v1.27 — text certificates for Barkey
+
+The Barkey worksheet now generates text certificates too. The setting reads
+**Text (19/24 + Barkey)**; the other three worksheets still use the image path.
+
+**11 KB** for a Barkey certificate — it is a shorter sheet than the 19/24.
+
+Everything from the worksheet carries over: the reference/correction/window
+calculations, the specification text on each row, the pass and fail marks
+(drawn, not typed, so they cannot come out as stray characters), the greyed-out
+As Left block when no adjustment was required, the stopwatch check, and the
+cursive signature. Long comments overflow to a second page exactly as on the
+19/24 sheet.
+
+Four things fixed while building it, all found by generating from the live
+worksheet rather than a mock-up: the snowflake was drawn over the wordmark; the
+"Ref. cal due" cell picked up the validity badge text instead of the date; the
+stopwatch times showed a dash instead of zero seconds; and the required-field
+markers sat after the colon instead of before it.
+
+## v1.26 — long comments no longer disappear
+
+**The bug:** the text generator capped the comments box at four lines and threw
+away anything beyond that, without saying so. Write a long note and the
+certificate came out looking like the version before you wrote it.
+
+Now the box grows to fit what you have written. If it will not fit on page 1,
+page 1 shows *"Comments — continued on page 2"* and the **whole** comment is
+printed on a second page, headed with the certificate number, site, serial and
+job reference so a loose sheet is still identifiable.
+
+**Also added: a "Generated <date time>" line** at the bottom of every text
+certificate. Regenerating a certificate produces the same filename as before, so
+two versions were impossible to tell apart once saved. Now they are.
+
+### If a regenerated certificate still looks like the old one
+
+Check the Generated line at the bottom first — that tells you which copy you are
+looking at.
+
+- **On the iPad**, saving over a file of the same name can leave Files showing
+  the old preview. Open it from the Files app rather than the preview, or save
+  under a new name and delete the old one.
+- **In the day panel**, regenerating for the same job and serial marks the older
+  certificate *superseded* and keeps both. Make sure you are sharing or merging
+  the current one, not the superseded row above it.
+- **Merging** works per job. Two certificates only merge together if they carry
+  the same job reference; a blank job reference puts one in its own group.
+
+## v1.25 — text certificate fixes from the first real one
+
+Three things the first genuinely generated certificate exposed:
+
+**The room temperature row was unreadable.** The RT Ref box, its validity badge
+and "Cal due" were all printed on top of each other, because the thermometer is
+named `UKAS107 (valid until Aug/2026)` — far longer than the box allowed for.
+The serial alone is now shown (`UKAS107`); the validity is already in the badge
+beside it, so nothing is lost. Boxes and badges also shrink their text to fit
+rather than overflowing.
+
+**Stray apostrophes before "Valid to ...".** The tick character is not in the
+PDF's built-in font, so it printed as a stray glyph and threw the letter spacing
+out. The tick is now drawn as two short lines instead of typed.
+
+**Max and Min in the room temperature row** no longer have a green background,
+as asked — they read as plain white cells like Average.
+
+One self-inflicted wound worth recording: the fix for the tick stripped every
+character outside Latin-1, which also removed the em dash from "Adjustment not
+needed — Air and Load...". The filter now removes only what the font genuinely
+cannot draw (ticks, arrows, symbols) and keeps dashes and quotes.
+
+## v1.24 — the Image/Text switch actually appears
+
+v1.23 shipped the text certificate generator but **not the control to turn it
+on** — the home page still showed only "Certificate PDF size" with Standard /
+High / Maximum. My fault, and worth recording how it happened.
+
+An earlier edit inserted a block of code after every occurrence of the text
+`renderPdfQuality();`. That string appears inside the function's own body as
+well as at the call site, so the block was inserted three times, nested inside
+itself. The file still parsed — the copies ended up in different scopes — so the
+syntax check passed. The v1.23 edit that was supposed to add the switch then
+failed to match the mangled text and did nothing, silently.
+
+Fixed: the duplicated blocks are stripped out and one clean copy is in place.
+The panel is now titled **Certificate PDF** with two dropdowns — style
+(Image / Text) and, for image mode, quality.
+
+Also corrected: the home page self-check was looking for
+`labcal_vector_pdf.js` and `labcal_font_dancing.js`, which only the 19/24
+worksheet loads, so it would have reported two missing files that were not
+missing. The home page now checks only what it loads; the worksheet checks its
+own two and says so in the hint beside the buttons if Text is selected but the
+files did not load.
+
+## v1.23 — text certificates (19/24 Range)
+
+The 19/24 worksheet can now draw its certificate as **real text** with jsPDF
+instead of screenshotting the page. About **18 KB** instead of ~400 KB, and the
+numbers are selectable, searchable and sharp at any zoom.
+
+**Choosing it.** *Certificate PDF* on the home page switches between **Image
+(all worksheets)** and **Text (19/24 Range)**. Image stays the default until you
+have compared a few. The other four worksheets ignore the setting and always use
+the image path — they are not converted yet.
+
+**It cannot cost you a certificate.** If anything goes wrong building the text
+version, the error is logged, you get a message, and generation falls straight
+through to the image path that has always worked.
+
+**New files:** `labcal_vector_pdf.js` (the generator) and
+`labcal_font_dancing.js` (the signature font — Dancing Script pinned to weight
+600 and subset to signature glyphs, 28 KB instead of the full 133 KB family,
+embedded once per document).
+
+### Known limitations
+
+- 19/24 Range only.
+- The layout is fixed rather than reflowing. Comments are capped at four lines,
+  and an unusually long site name or model could crowd its field. The generator
+  logs a warning if content ever runs past the page edge.
+- Checked against S 51430 from ENQ142086: same readings, same corrections, same
+  markers, same status text.
 
 ## v1.22 — telling you when something didn't load
 
@@ -348,7 +1293,9 @@ that actually changed:
 | `labcal_certs.js` | The day's certificate list (IndexedDB), job grouping and merge. |
 | `labcal_units.js` | Per-unit worksheet snapshots for reopening and amending. |
 | `labcal_backup.js` | One-file backup and merging restore. |
-| `labcal_pdf.js` | **NEW** — certificate PDF render quality (Standard/High/Maximum). |
+| `labcal_pdf.js` | Certificate PDF quality, and the image/text style switch. |
+| `labcal_vector_pdf.js` | **NEW** — text-based certificate generator (19/24 Range). |
+| `labcal_font_dancing.js` | **NEW** — subset signature font for text certificates. |
 | `pdf-lib.min.js` | **NEW** — PDF merge engine, lazy-loaded only when merging. |
 | `index.html` | Offsets panel with countdown + warnings; Calibration section locks until a file is loaded |
 | `calibration.html` | Jobsheet worklist panel; each worksheet card locks unless *its own* ecosystem's file is loaded |
@@ -358,13 +1305,13 @@ that actually changed:
 | `calibration_worksheet_SNMD.html` | Auto-loads Fluke & Comark offsets |
 | `calibration_worksheet_19_24.html` | Auto-loads Fluke & Comark offsets |
 | `cloud_temp.html` | Auto-loads Fluke & Comark offsets |
-| `sw.js` | Cache bumped to **v17**, caches all shared modules |
+| `sw.js` | Cache bumped to **v56**; same-origin files network-first |
 | `data_logger_viewer.html` | Chart PNG and summary CSV go through the share sheet on iPad |
 | `pdf_merge_reorder.html` | Merged PDF goes through the share sheet on iPad |
 | `tools.html` | Unchanged — included so the folder is complete |
 
 After uploading, open the home page once while online so the service worker
-picks up v17, then hit **Refresh offline copy**.
+picks up v56, then hit **Refresh offline copy**.
 
 ## Which file unlocks what
 

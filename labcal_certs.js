@@ -23,6 +23,7 @@
   var CHANGE_EVENT = 'labcal-certs-changed';
 
   var doc = global.document;
+  var lastError = null;   // why the last filing attempt failed, if it did
 
   function todayIso() {
     var d = new Date();
@@ -38,7 +39,28 @@
     if (!supported()) return Promise.reject(new Error('This browser has no space to keep the day\'s certificates.'));
     if (dbPromise) return dbPromise;
     dbPromise = new Promise(function (resolve, reject) {
+      // iOS can leave an IndexedDB open request pending indefinitely — another
+      // tab holding the database, or Safari simply not answering. Fail after a
+      // few seconds instead of hanging whatever is waiting on it.
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        dbPromise = null;                      // let the next attempt try again
+        reject(new Error('Certificate storage did not respond.'));
+      }, 2500);
+      var done = function (fn) {
+        return function (arg) {
+          if (settled) return;
+          settled = true; clearTimeout(timer); fn(arg);
+        };
+      };
+      resolve = done(resolve); reject = done(reject);
+
       var req = global.indexedDB.open(DB_NAME, DB_VERSION);
+      req.onblocked = function () {
+        reject(new Error('Certificate storage is locked by another tab of this site. Close the other tabs and try again.'));
+      };
       req.onupgradeneeded = function () {
         var db = req.result;
         if (!db.objectStoreNames.contains(STORE)) {
@@ -79,6 +101,7 @@
       site: meta.site || '',
       jobRef: meta.jobRef || '',
       sheet: meta.sheet || '',
+      unitUid: meta.unitUid || '',   // the permanent link to its unit
       size: blob && blob.size ? blob.size : 0,
       blob: blob
     };
@@ -92,7 +115,10 @@
       .then(function (id) { announce(); return id; })
       .catch(function (e) {
         // Never let a storage problem lose the engineer their certificate —
-        // the file has already been saved/shared by this point.
+        // the file has already been saved/shared by this point. But do not
+        // hide it either: a certificate that was never filed will not appear
+        // on its job, and silence made that look like a display bug.
+        lastError = (e && e.message) ? e.message : String(e);
         console.warn('Could not file this certificate in the day list:', e);
         return null;
       });
@@ -138,6 +164,25 @@
     return tx('readwrite')
       .then(function (os) { return wrap(os.add(rec)); })
       .then(function (id) { announce(); return id; });
+  }
+
+  // Re-file a certificate against a different unit or job. Used when a
+  // certificate ends up recorded with details that do not match the unit it
+  // belongs to; the values it was filed under are kept alongside.
+  function refile(id, patch) {
+    return tx('readwrite').then(function (os) {
+      return wrap(os.get(id)).then(function (rec) {
+        if (!rec) throw new Error('That certificate is no longer in storage.');
+        if (rec.origSerial === undefined) rec.origSerial = rec.serial || '';
+        if (rec.origJobRef === undefined) rec.origJobRef = rec.jobRef || '';
+        if (patch.serial !== undefined) rec.serial = patch.serial;
+        if (patch.jobRef !== undefined) rec.jobRef = patch.jobRef;
+        if (patch.sheet !== undefined) rec.sheet = patch.sheet;
+        if (patch.unitUid !== undefined) rec.unitUid = patch.unitUid;
+        rec.refiledAt = new Date().toISOString();
+        return wrap(os.put(rec));
+      });
+    }).then(function (r) { announce(); return r; });
   }
 
   function remove(id) {
@@ -246,12 +291,37 @@
   }
 
   // Staple every certificate from a day into one PDF, in the order produced.
-  function mergeDay(day, onProgress, jobRef) {
+  // cover: an optional Blob placed in front of the certificates — used for the
+  // job summary, so a merged job opens on the list of what was done.
+  // opts.latestOnly: one certificate per unit — the newest. A pack sent to a
+  // customer should carry the current certificate for each unit, not the
+  // superseded ones as well.
+  function mergeDay(day, onProgress, jobRef, cover, opts) {
     var want = day || todayIso();
+    opts = opts || {};
     return Promise.all([listDay(want, jobRef), loadPdfLib()]).then(function (res) {
       var list = res[0], PDFLib = res[1];
+      if (opts.latestOnly) {
+        var newest = {};
+        list.forEach(function (c) {
+          var key = c.unitUid || ('s:' + String(c.serial || '').toUpperCase().replace(/[^A-Z0-9]/g, '')) || ('id:' + c.id);
+          var prev = newest[key];
+          if (!prev || String(c.savedAt || '') > String(prev.savedAt || '')) newest[key] = c;
+        });
+        var keep = {};
+        Object.keys(newest).forEach(function (k) { keep[newest[k].id] = true; });
+        list = list.filter(function (c) { return keep[c.id]; });
+      }
       if (!list.length) throw new Error('There are no certificates to merge for that job.');
       return PDFLib.PDFDocument.create().then(function (out) {
+        function addCover() {
+          if (!cover) return Promise.resolve();
+          return blobToArrayBuffer(cover)
+            .then(function (buf) { return PDFLib.PDFDocument.load(buf); })
+            .then(function (src) { return out.copyPages(src, src.getPageIndices()); })
+            .then(function (pages) { pages.forEach(function (p) { out.addPage(p); }); })
+            .catch(function (e) { console.warn('Summary cover skipped:', e); });
+        }
         var i = 0;
         function next() {
           if (i >= list.length) return out.save();
@@ -272,18 +342,27 @@
               return next();
             });
         }
-        return next();
+        return addCover().then(next);
       }).then(function (bytes) {
-        return { blob: new Blob([bytes], { type: 'application/pdf' }), count: list.length };
+        return { blob: new Blob([bytes], { type: 'application/pdf' }), count: list.length, cover: !!cover };
       });
     });
   }
 
+  // IndexedDB fires no cross-tab event, so a certificate generated on a
+  // worksheet would not reach a calibration page open in another tab. A
+  // localStorage ping does travel between tabs, so use it as the signal.
+  var PING = 'labcal.certs.ping';
   function announce() {
     try { global.dispatchEvent(new CustomEvent(CHANGE_EVENT)); } catch (e) {}
+    try { global.localStorage.setItem(PING, String(Date.now())); } catch (e) {}
   }
   function onChange(fn) {
-    if (typeof fn === 'function') global.addEventListener(CHANGE_EVENT, fn);
+    if (typeof fn !== 'function') return;
+    global.addEventListener(CHANGE_EVENT, fn);
+    global.addEventListener('storage', function (e) {
+      if (!e || e.key === PING) fn();
+    });
   }
 
   // The merged file is named after the job so two jobs on the same day can
@@ -305,9 +384,12 @@
     KEEP_DAYS: KEEP_DAYS,
     CHANGE_EVENT: CHANGE_EVENT,
     supported: supported,
+    lastError: function () { return lastError; },
     todayIso: todayIso,
     add: add,
     addRestored: addRestored,
+    refile: refile,
+    all: all,
     get: get,
     remove: remove,
     clearDay: clearDay,

@@ -15,6 +15,9 @@
 <script src="labcal_certs.js"></script>
 <script src="labcal_units.js"></script>
 <script src="labcal_pdf.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="labcal_font_dancing.js"></script>
+<script src="labcal_vector_pdf.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -68,19 +71,24 @@
 </head>
 <body>
 <div class="toolbar">
+  <button class="btn light" id="syncJobBtn" onclick="saveToJobList()" title="Push the model, serial and location back to the job list">Save to job list</button>
   <button class="btn" id="generateBtn" onclick="generatePDF()">Generate PDF</button>
-  <button class="btn light" id="generateExcelBtn" onclick="generateExcel()">Generate Excel</button>
-  <button class="btn light" onclick="document.getElementById('excelImportFile').click()">Import Excel</button>
-  <input id="excelImportFile" type="file" accept=".xlsx,.xls" style="display:none" onchange="importExcelFile(event)">
-  <button class="btn light" onclick="window.print()">Print</button>
-  <button class="btn light" onclick="startNewCalibration()">Start New Calibration</button>
-  <button class="btn light" onclick="document.getElementById('offsetFile').click()">Load offsets</button>
-  <input id="offsetFile" type="file" accept="application/json,.json" style="display:none" onchange="loadOffsetsFile(event)">
-  <button class="btn light" onclick="document.getElementById('jobsheetFile').click()">Load Jobsheet PDF</button>
-  <input id="jobsheetFile" type="file" accept="application/pdf,.pdf" style="display:none" onchange="loadJobsheetPDF(event)">
-  <button class="btn light" onclick="loadLocal()">Load saved</button>
+  <button class="btn light" id="moreToolsBtn" type="button" onclick="toggleMoreTools()">More…</button>
+  <span class="moreTools" id="moreTools" style="display:none">
+    <button class="btn light" id="generateExcelBtn" onclick="generateExcel()">Generate Excel</button>
+    <button class="btn light" onclick="document.getElementById('excelImportFile').click()">Import Excel</button>
+    <input id="excelImportFile" type="file" accept=".xlsx,.xls" style="display:none" onchange="importExcelFile(event)">
+    <button class="btn light" onclick="window.print()">Print</button>
+    <button class="btn light" onclick="startNewCalibration()">Start New Calibration</button>
+    <button class="btn light" onclick="document.getElementById('offsetFile').click()">Load offsets</button>
+    <input id="offsetFile" type="file" accept="application/json,.json" style="display:none" onchange="loadOffsetsFile(event)">
+    <button class="btn light" onclick="document.getElementById('jobsheetFile').click()">Load Jobsheet PDF</button>
+    <input id="jobsheetFile" type="file" accept="application/pdf,.pdf" style="display:none" onchange="loadJobsheetPDF(event)">
+    <button class="btn light" onclick="loadLocal()">Load saved</button>
+  </span>
   <span class="hintText" id="offsetStatus">Offline HTML prototype · tolerance ±0.5 °C</span>
   <span class="hintText" id="pdfNameHint"></span>
+
 </div>
 <div class="offsetWarning" id="offsetWarning" style="display:none"></div>
 <div id="jobsheetModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
@@ -130,7 +138,7 @@
       <td class="label" style="width:31%">Average: <input class="input calc" id="rtAvg" readonly><span id="rtRangeWarn" class="hintText warn" style="display:none;margin-left:4px;font-weight:700;white-space:nowrap">Max must be ≥ Min</span></td>
     </tr>
     <tr><td rowspan="2" class="label">Controller Settings</td><td colspan="2">Initial offsets <span class="req">*</span>: <span style="display:inline-flex;gap:8px;align-items:center;vertical-align:middle"><span class="small">Cal 1:</span><select class="input offsetSel" id="initialOffsetsCal1" style="width:58px;display:inline-block"></select><span class="small">Cal 2:</span><select class="input offsetSel" id="initialOffsetsCal2" style="width:58px;display:inline-block"></select></span></td><td colspan="3">Initial set point <span class="req">*</span>: <input class="input num" inputmode="decimal" id="initialSetpoint" value="5.0" placeholder="e.g. 5, -20, -34"> <span class="small" id="setpointRangeHint" style="color:#333"></span><br><span class="small" style="color:#333">Nearest offset point used: <b id="initialNearestPoint">—</b></span></td></tr>
-    <tr><td colspan="2">Final offsets <span class="req" title="Required when As Left needs completing">*</span>: <span style="display:inline-flex;gap:8px;align-items:center;vertical-align:middle"><span class="small">Cal 1:</span><select class="input offsetSel" id="finalOffsetsCal1" style="width:58px;display:inline-block"></select><span class="small">Cal 2:</span><select class="input offsetSel" id="finalOffsetsCal2" style="width:58px;display:inline-block"></select></span></td><td colspan="3">Final set point <span class="req" title="Required when As Left needs completing">*</span>: <input class="input num" inputmode="decimal" id="finalSetpoint"></td></tr>
+    <tr><td colspan="2">Final offsets <span class="req" title="Required when As Left needs completing">*</span>: <span style="display:inline-flex;gap:8px;align-items:center;vertical-align:middle"><span class="small">Cal 1:</span><select class="input offsetSel" id="finalOffsetsCal1" style="width:58px;display:inline-block"></select><span class="small">Cal 2:</span><select class="input offsetSel" id="finalOffsetsCal2" style="width:58px;display:inline-block"></select></span></td><td colspan="3">Final set point <span class="req" title="Required when As Left needs completing">*</span>: <input class="input num" inputmode="decimal" id="finalSetpoint"><br><span class="small" style="color:#333">Nearest offset point used: <b id="finalNearestPoint">—</b></span></td></tr>
   </table>
 
   <div class="probeHint"><b>Probe dropdown:</b> choose the probe/port in each column. The app will use the closest correction to the Initial Set Point for AF and to the Final Set Point for AL. The selected correction is copied into Max Correction and Min Correction automatically.<br><b>Air calculation markers:</b> blue underline = highest corrected maximum used; green underline = lowest corrected minimum used.</div>
@@ -175,13 +183,17 @@
     <tr id="afCycleLoadRow"><td>Load (T2)</td><td><input class="input num" inputmode="decimal" id="af_cycle_load_max" data-decimals="1" placeholder="xx.x"></td><td><input class="input num" inputmode="decimal" id="af_cycle_load_min" data-decimals="1" placeholder="xx.x"></td><td><input class="input calc" id="af_cycle_load_avg" readonly></td><td class="label">AL Adj made:</td><td><input class="input" id="al_adj_made"></td></tr>
     <tr id="alCycleAirRow"><td rowspan="2" class="subhead">AL</td><td>Air (T1)</td><td><input class="input num" inputmode="decimal" id="al_cycle_air_max" data-decimals="1" placeholder="xx.x"></td><td><input class="input num" inputmode="decimal" id="al_cycle_air_min" data-decimals="1" placeholder="xx.x"></td><td><input class="input calc" id="al_cycle_air_avg" readonly></td><td class="label">Cycle start: <span class="req" title="Required when As Left needs completing">*</span></td><td><span style="display:flex;align-items:center;gap:2px;justify-content:center"><select id="al_cycle_start_h" class="input timeSel" style="width:44px"></select>:<select id="al_cycle_start_m" class="input timeSel" style="width:44px"></select></span></td></tr>
     <tr id="alCycleLoadRow"><td>Load (T2)</td><td><input class="input num" inputmode="decimal" id="al_cycle_load_max" data-decimals="1" placeholder="xx.x"></td><td><input class="input num" inputmode="decimal" id="al_cycle_load_min" data-decimals="1" placeholder="xx.x"></td><td><input class="input calc" id="al_cycle_load_avg" readonly></td><td colspan="2"></td></tr>
-    <tr><td colspan="3">Engineer's Name <span class="req">*</span>: <input class="input" id="engineer"></td><td colspan="2">Signature: <span id="engineerSignature" class="signature"></span></td><td colspan="2">Date: <input class="input" id="engDate" type="text" readonly style="text-align:center"></td></tr>
-    <tr><td colspan="3">Checker's Name: <input class="input" id="checker"></td><td colspan="2">Signature: <span id="checkerSignature" class="signature"></span></td><td colspan="2">Date: <input class="input" id="checkDate" type="date"></td></tr>
   </table>
   <div style="margin-top:8px;border:1px solid var(--line)">
     <div class="label" style="padding:4px 6px;background:#e3e3e3">Comments <span class="muted">(calculations, deviations, customer requests)</span></div>
     <textarea id="comments" style="width:100%;height:60px;border:0;box-sizing:border-box;font-size:12px;padding:6px;resize:vertical;display:block"></textarea>
   </div>
+  <!-- Signatures sit below the comments, so the comments read as part of
+       the record rather than an afterthought at the foot of the page. -->
+  <table style="margin-top:8px;table-layout:fixed">
+    <tr><td colspan="3">Engineer's Name <span class="req">*</span>: <input class="input" id="engineer"></td><td colspan="2">Signature: <span id="engineerSignature" class="signature"></span></td><td colspan="2">Date: <input class="input" id="engDate" type="text" readonly style="text-align:center"></td></tr>
+    <tr><td colspan="3">Checker's Name: <input class="input" id="checker"></td><td colspan="2">Signature: <span id="checkerSignature" class="signature"></span></td><td colspan="2">Date: <input class="input" id="checkDate" type="date"></td></tr>
+  </table>
   <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths, Display cycle, Display from product and Room Temperature average all rounded to 1 decimal place using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air and Load reference averages each use the highest corrected maximum and the lowest corrected minimum within that column; those two values are visibly marked in the table. Adjustment not needed is applied only when the As Found Air and Load results are both present and within the tolerance for this device (±0.5 °C). If either result is missing or outside tolerance, As Left remains active and must be completed.</div>
 </div>
 <script>
@@ -372,6 +384,40 @@ function offsetsFingerprint(raw){
 // Device handed over from the jobsheet worklist on the calibration page.
 // Consumed once, and only ever into empty fields — reopening a worksheet
 // must never quietly overwrite readings already taken.
+// The job list is the source of truth for which unit this is.
+// The everyday toolbar is Generate PDF and Save to job list. Excel, print,
+// offsets and the rest still exist — they are just folded behind More…, so
+// the top of the sheet is not a wall of buttons.
+function toggleMoreTools(){
+  const box=document.getElementById('moreTools');
+  const btn=document.getElementById('moreToolsBtn');
+  if(!box) return;
+  const open = box.style.display === 'none';
+  box.style.display = open ? 'inline' : 'none';
+  if(btn) btn.textContent = open ? 'Fewer' : 'More…';
+  try{ localStorage.setItem('labcal.ui.moreTools', open ? '1' : '0'); }catch(e){}
+}
+(function restoreMoreTools(){
+  try{
+    if(localStorage.getItem('labcal.ui.moreTools') !== '1') return;
+    // These scripts run at the end of the body, so DOMContentLoaded may
+    // already have fired — waiting for it would silently do nothing.
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', toggleMoreTools);
+    else toggleMoreTools();
+  }catch(e){}
+})();
+
+function applyUnitIdentity(d, j){
+  const set=(id,val)=>{
+    const el=document.getElementById(id);
+    if(el && val) el.value=val;
+  };
+  set('model', d.model||d.equipment||'');
+  set('serial', d.serial||'');
+  set('department', d.location||j.department||'');
+  set('site', j.customer||'');
+  set('jobRef', j.callNumber||'');
+}
 function applyJobsheetHandoff(){
   if(!window.LabCalJobsheet) return false;
   const p=LabCalJobsheet.takeHandoff('ws19_24');
@@ -387,9 +433,23 @@ function applyJobsheetHandoff(){
   fill('department', d.location||j.department||'');
   fill('site', j.customer||'');
   fill('jobRef', j.callNumber||'');
+  // The autosave has already put the PREVIOUS unit's details back on this
+  // form, so fill() — which only writes into an empty field — left the old
+  // job reference in place and the certificate was filed under the old job.
+  // Arriving from a job list, that list is authoritative: overwrite.
+  applyUnitIdentity(d, j);
+
   // Reopening a unit that was worked before: put its readings back.
   const restored=restoreUnitSnapshot(j.callNumber||'', d.serial||'');
-  if(restored){ showRestoredBanner(restored); return true; }
+  if(restored){
+    // The snapshot was saved with whatever serial the unit had at the time.
+    // If it has since been corrected on the job list, the list is right — so
+    // re-apply the identity over the restored readings rather than letting an
+    // old snapshot quietly reinstate the old serial.
+    applyUnitIdentity(d, j);
+    showRestoredBanner(restored);
+    return true;
+  }
   const statusEl=document.getElementById('offsetStatus');
   if(statusEl){
     statusEl.textContent=`${statusEl.textContent} · From jobsheet ${j.callNumber||''}: ${d.model||d.equipment||''} ${d.serial||''}`.trim();
@@ -920,11 +980,14 @@ function nearestOffsetPoint(setpoint){
   return points.reduce((best,p)=>Math.abs(p-setpoint)<Math.abs(best-setpoint)?p:best,points[0]);
 }
 function refreshNearestOffsetDisplay(){
-  const el=document.getElementById('initialNearestPoint');
-  if(!el) return;
-  const sp=n('initialSetpoint');
-  const nearest=nearestOffsetPoint(sp);
-  el.textContent = nearest===null ? '—' : nearest+' °C';
+  // Both set points get the same treatment — the As Left corrections come from
+  // the point nearest the FINAL set point, so it is worth stating.
+  [['initialNearestPoint','initialSetpoint'],['finalNearestPoint','finalSetpoint']].forEach(([elId,spId])=>{
+    const el=document.getElementById(elId);
+    if(!el) return;
+    const nearest=nearestOffsetPoint(n(spId));
+    el.textContent = nearest===null ? '—' : nearest+' °C';
+  });
 }
 function n(id){const v=parseFloat((document.getElementById(id)?.value||'').replace(',','.'));return Number.isFinite(v)?v:null}
 const DEVICE_SETPOINT_RANGES={
@@ -1466,6 +1529,16 @@ function excelFileName(){ return pdfFileName().replace(/\.pdf$/,'.xlsx'); }
 // to load — otherwise the old ~1 MB settings come back silently.
 function pdfQualityLabel(){
   if(!window.LabCalPdf) return ' · ⚠ labcal_pdf.js not loaded — using old large-file settings';
+  if(LabCalPdf.style && LabCalPdf.style()==='text'){
+    // Say plainly when Text is selected but the files that do it are absent,
+    // rather than quietly producing the image version instead.
+    const missing=[];
+    if(!window.LabCalVectorPdf) missing.push('labcal_vector_pdf.js');
+    if(!window.jspdf) missing.push('jsPDF');
+    if(!window.LabCalDancingFont) missing.push('labcal_font_dancing.js');
+    if(missing.length) return ` · ⚠ Text selected but ${missing.join(', ')} did not load — using the image version`;
+    return ' · text certificate (~18 KB, selectable)';
+  }
   const p=LabCalPdf.current();
   return ` · quality: ${p.name} (${p.scale}×, q${p.quality})`;
 }
@@ -1593,13 +1666,33 @@ function restoreSwappedFields(swaps){
 // Purely additive — the file has already been saved or shared by this point,
 // so a storage failure here can never lose the engineer their work.
 function fileCertificateForToday(blob, filename){
-  if(!window.LabCalCerts || !blob) return;
+  if(!blob) return;
+  const hint=document.getElementById('pdfNameHint');
+  const warn=msg=>{ if(hint) hint.textContent = 'PDF saved, but ' + msg; console.warn(msg); };
+  if(!window.LabCalCerts){ warn('labcal_certs.js did not load, so it is not on the job list.'); return; }
+  if(!LabCalCerts.supported()){ warn('this browser will not store it, so it will not appear on the job list.'); return; }
   const v=id=>{ const el=document.getElementById(id); return el?el.value:''; };
-  LabCalCerts.add(blob, {
+  const filing = LabCalCerts.add(blob, {
     filename, sheet:'ws19_24',
     certRef:v('certNo'), serial:v('serial'), model:v('model'),
-    site:v('site'), jobRef:v('jobRef')
+    site:v('site'), jobRef:v('jobRef'),
+    // the unit this worksheet was opened for — the link that survives a
+    // corrected serial, a repeated certificate number or a mistyped job ref
+    unitUid: (window.LabCalJobsheet && LabCalJobsheet.link && (LabCalJobsheet.link()||{}).uid) || ''
+  }).then(id=>{
+    if(!id) warn('it could not be added to the job list' + (LabCalCerts.lastError()? ' — '+LabCalCerts.lastError() : '') + '.');
+    return id;
   });
+
+  // Filing must never hold up the PDF. If storage does not answer, carry on
+  // and say so — the engineer can attach it later with Find… on the unit.
+  return Promise.race([
+    filing,
+    new Promise(resolve => setTimeout(() => {
+      warn('certificate storage did not respond, so it may not be on the job list. Use Find… on the unit if it is missing.');
+      resolve(null);
+    }, 2500))
+  ]);
 }
 // ---------------------------------------------------------------------
 // Per-unit snapshot. The worksheet's own autosave holds one unit at a time;
@@ -1646,6 +1739,36 @@ function showRestoredBanner(rec){
   el.textContent=`Reopened ${rec.serial||''} — readings restored from ${when}. Generating again produces an amended certificate; the earlier one is kept and marked superseded.`.trim();
   el.style.color='#7a4c06';
 }
+// ---------------------------------------------------------------------
+// Two-way link with the job list. The worksheet knows which unit it was
+// opened for, so a serial corrected here goes back to the list rather than
+// leaving the two disagreeing.
+// ---------------------------------------------------------------------
+function jobLinkFields(){
+  const v=id=>{ const el=document.getElementById(id); return el?String(el.value||'').trim():''; };
+  return { model:v('model'), serial:v('serial'), location:v('department') };
+}
+function saveToJobList(silent){
+  if(!window.LabCalJobsheet || typeof LabCalJobsheet.syncFromWorksheet !== 'function'){
+    if(!silent) alert('labcal_jobsheet.js is out of date on this device.\n\nOpen the LabCal home page while online, tap "Refresh offline copy", then close every tab of this site and reopen.');
+    return null;
+  }
+  const l = LabCalJobsheet.link && LabCalJobsheet.link();
+  if(!l || !l.serial){
+    if(!silent) alert('This worksheet was not opened from a job list, so there is nothing to update.\n\nOpen the unit from the calibration page to link them.');
+    return null;
+  }
+  const d = LabCalJobsheet.syncFromWorksheet(jobLinkFields());
+  if(!silent){
+    const btn=document.getElementById('syncJobBtn');
+    if(btn){
+      const was=btn.textContent;
+      btn.textContent = d ? 'Saved to job list ✓' : 'Unit not found on the list';
+      setTimeout(()=>{ btn.textContent=was; }, 2200);
+    }
+  }
+  return d;
+}
 function markJobsheetDone(){
   if(!window.LabCalJobsheet) return;
   const serialEl=document.getElementById('serial');
@@ -1653,7 +1776,44 @@ function markJobsheetDone(){
   if(!serialEl || !serialEl.value) return;
   LabCalJobsheet.markDone(serialEl.value, certEl?certEl.value:'');
 }
+// Text-based certificate: draws the sheet with jsPDF instead of capturing it
+// as an image. Falls back to the image path on any error, so a problem here
+// can never stop a certificate being produced.
+async function generateVectorPDF(){
+  const filename=pdfFileName();
+  const btn=document.getElementById('generateBtn');
+  const originalLabel=btn.textContent;
+  btn.disabled=true; btn.textContent='Generating PDF…';
+  try{
+    if(!runPreGenerationChecks()){ return true; }
+    const blob=LabCalVectorPdf.blob19_24();
+    reportPdfSize(blob.size);
+    // File it FIRST, and wait for the write to commit. Sharing opens the iOS
+    // share sheet and waits on the engineer; leaving the page during that
+    // used to abort the storage write, so the certificate never reached the
+    // job list even though the PDF was saved.
+    saveUnitSnapshot();
+    saveToJobList(true);
+    await fileCertificateForToday(blob, filename);
+    markJobsheetDone();
+    if(window.LabCalSave){ await LabCalSave.deliver(blob, filename); }
+    else { downloadBlob(blob,filename); }
+    return true;
+  }catch(err){
+    console.error('Vector PDF failed, falling back to the image version:', err);
+    alert('The text-based certificate could not be produced, so the standard one was used instead.\n\n'+(err&&err.message?err.message:err));
+    return false;
+  }finally{
+    btn.disabled=false; btn.textContent=originalLabel;
+  }
+}
+
 async function generatePDF(){
+  if(window.LabCalPdf && LabCalPdf.style && LabCalPdf.style()==='text'
+     && window.LabCalVectorPdf && window.jspdf){
+    if(await generateVectorPDF()) return;
+    // fell through: carry on with the image version below
+  }
   if(!runPreGenerationChecks()) return;
   const btn=document.getElementById('generateBtn');
   const originalLabel=btn.textContent;
@@ -1689,11 +1849,16 @@ async function generatePDF(){
     // the file goes to the iOS share sheet where "Save to Files" can pick the
     // folder. Plain download everywhere else. See labcal_save.js.
     reportPdfSize(blob.size);
+    // File it FIRST, and wait for the write to commit. Sharing opens the iOS
+    // share sheet and waits on the engineer; leaving the page during that
+    // used to abort the storage write, so the certificate never reached the
+    // job list even though the PDF was saved.
+    saveUnitSnapshot();
+    saveToJobList(true);
+    await fileCertificateForToday(blob, filename);
+    markJobsheetDone();
     if(window.LabCalSave){ await LabCalSave.deliver(blob, filename); }
     else { downloadBlob(blob,filename); }
-    saveUnitSnapshot();
-    fileCertificateForToday(blob, filename);
-    markJobsheetDone();
   }catch(err){
     alert('PDF generation failed: '+(err && err.message ? err.message : err));
   }finally{

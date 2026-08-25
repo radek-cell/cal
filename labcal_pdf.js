@@ -22,6 +22,7 @@
   'use strict';
 
   var KEY = 'labcal.pdf.quality';
+  var KEY_STYLE = 'labcal.pdf.style';
 
   var PRESETS = {
     standard: {
@@ -62,6 +63,28 @@
     return true;
   }
 
+  // 'image' — the html2canvas capture used since the suite began.
+  // 'text'  — drawn as real text with jsPDF. Far smaller and selectable, but
+  //           only implemented for the 19/24 worksheet so far; the others
+  //           ignore this and always use the image path.
+  // Text is the default. It is a fifth of the size, selectable and searchable,
+  // and prints sharper. Image remains available for Cloud Temp (which has no
+  // text generator yet) and as a fallback if a text certificate ever fails.
+  function style() {
+    var s = store();
+    if (!s) return 'text';
+    try {
+      var v = s.getItem(KEY_STYLE);
+      return v === 'image' ? 'image' : 'text';
+    } catch (e) { return 'text'; }
+  }
+
+  function setStyle(v) {
+    var s = store();
+    if (!s) return false;
+    try { s.setItem(KEY_STYLE, v === 'text' ? 'text' : 'image'); return true; } catch (e) { return false; }
+  }
+
   function scale() { return current().scale; }
   function quality() { return current().quality; }
 
@@ -82,6 +105,8 @@
     PRESETS: PRESETS,
     current: current,
     setPreset: setPreset,
+    style: style,
+    setStyle: setStyle,
     scale: scale,
     quality: quality,
     imageOpts: imageOpts,

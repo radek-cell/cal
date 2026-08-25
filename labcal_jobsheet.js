@@ -23,6 +23,11 @@
   var KEY_HANDOFF = 'labcal.jobsheet.handoff';
   var KEY_ROUTES  = 'labcal.jobsheet.routes';
   var KEY_PROGRESS = 'labcal.jobsheet.progress';
+  var KEY_EXTRA = 'labcal.jobsheet.extra';   // units added on site, per job
+  var KEY_LINK  = 'labcal.jobsheet.link';    // which unit the open worksheet belongs to
+  var KEY_FIXES = 'labcal.jobsheet.fixes';   // corrections to a jobsheet's own data
+  var KEY_JOBS = 'labcal.jobsheet.jobs';     // every job, keyed by reference
+  var KEY_ACTIVE = 'labcal.jobsheet.active'; // which job is open
   var CHANGE_EVENT = 'labcal-jobsheet-changed';
 
   // ===================================================================
@@ -573,6 +578,14 @@
   // whenever that jobsheet is loaded again.
   function progressStore() { return readJson(KEY_PROGRESS, {}) || {}; }
 
+  // Every unit gets a permanent id the moment it joins a job. Certificates are
+  // filed against this, not against the serial — a serial can be corrected, a
+  // certificate number can repeat (S 00000 on a verification sheet), and a job
+  // reference can be mistyped. The id never changes, so the link never breaks.
+  function newUid() {
+    return 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
   function serialKey(serial) {
     return String(serial || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
   }
@@ -580,6 +593,194 @@
   function progressFor(jobRef) {
     var all = progressStore();
     return all[String(jobRef || '')] || {};
+  }
+
+  // A unit that is not on site, or that the customer does not want done, is
+  // marked not required rather than left looking outstanding forever. It is
+  // recorded against the job so it survives reloading the jobsheet.
+  function setNotRequired(jobRef, serial, on, reason) {
+    var k = serialKey(serial);
+    if (!k) return;
+    var all = progressStore();
+    var job = all[String(jobRef || '')] || {};
+    var prev = job[k] || {};
+    if (on) {
+      job[k] = {
+        done: prev.done || false,
+        doneAt: prev.doneAt || '',
+        certRef: prev.certRef || '',
+        notRequired: true,
+        notRequiredAt: new Date().toISOString(),
+        reason: reason || ''
+      };
+    } else if (prev.notRequired) {
+      if (prev.done) {
+        job[k] = { done: true, doneAt: prev.doneAt, certRef: prev.certRef };
+      } else {
+        delete job[k];
+      }
+    }
+    all[String(jobRef || '')] = job;
+    writeJson(KEY_PROGRESS, all);
+    applyProgressToCurrent();
+    announce();
+  }
+
+  // ---- units added on site ------------------------------------------------
+  function extraStore() { return readJson(KEY_EXTRA, {}) || {}; }
+  function extrasFor(jobRef) { return extraStore()[String(jobRef || '')] || []; }
+
+  function addDevice(device) {
+    var js = current();
+    if (!js) return null;
+    var entry = {
+      uid: newUid(),
+      model: String(device.model || '').trim(),
+      equipment: '',
+      serial: String(device.serial || '').trim(),
+      location: String(device.location || '').trim(),
+      addedManually: true,
+      addedAt: new Date().toISOString()
+    };
+    if (!entry.model && !entry.serial) return null;
+
+    var all = extraStore();
+    var list = all[String(js.callNumber || '')] || [];
+    var dupe = list.some(function (x) { return serialKey(x.serial) === serialKey(entry.serial) && serialKey(entry.serial); });
+    if (!dupe) { list.push(entry); all[String(js.callNumber || '')] = list; writeJson(KEY_EXTRA, all); }
+
+    var s2 = suggestSheet(entry);
+    js.devices.push({
+      idx: js.devices.length, uid: entry.uid,
+      model: entry.model, equipment: '', serial: entry.serial, location: entry.location,
+      sheet: s2.sheet, sheetWhy: s2.why, suggested: s2.sheet,
+      done: false, doneAt: '', certRef: '', addedManually: true
+    });
+    writeJson(KEY_CURRENT, js);
+    saveActiveJob();
+    announce();
+    return entry;
+  }
+
+  // Corrections are remembered against the job, so re-uploading the same
+  // (still wrong) jobsheet does not undo them or duplicate the unit.
+  function fixesStore() { return readJson(KEY_FIXES, {}) || {}; }
+  function fixesFor(jobRef) { return fixesStore()[String(jobRef || '')] || {}; }
+  function recordFix(jobRef, originalSerial, patch) {
+    var k = serialKey(originalSerial);
+    if (!k) return;
+    var all = fixesStore();
+    var job = all[String(jobRef || '')] || {};
+    var prev = job[k] || {};
+    job[k] = {
+      serial: patch.serial !== undefined ? patch.serial : prev.serial,
+      model: patch.model !== undefined ? patch.model : prev.model,
+      location: patch.location !== undefined ? patch.location : prev.location,
+      at: new Date().toISOString()
+    };
+    all[String(jobRef || '')] = job;
+    writeJson(KEY_FIXES, all);
+  }
+
+  // Jobsheets carry wrong serials often enough that they have to be
+  // correctable on site. Changing a serial has to carry the unit's progress
+  // with it, otherwise a corrected unit looks untouched again.
+  function editDevice(idx, patch) {
+    var js = current();
+    if (!js || !js.devices[idx]) return null;
+    var d = js.devices[idx];
+    var oldSerial = d.serial;
+    var newSerial = patch.serial === undefined ? d.serial : String(patch.serial).trim();
+    var changedSerial = serialKey(newSerial) !== serialKey(oldSerial);
+
+    var changed = [];
+    if (patch.model !== undefined && String(patch.model).trim() !== d.model) changed.push('model');
+    if (patch.location !== undefined && String(patch.location).trim() !== d.location) changed.push('location');
+    if (changedSerial) changed.push('serial');
+
+    if (patch.model !== undefined) d.model = String(patch.model).trim();
+    if (patch.location !== undefined) d.location = String(patch.location).trim();
+
+    if (changed.length) {
+      d.edited = true;
+      d.editedAt = new Date().toISOString();
+      d.editedFields = (d.editedFields || []).concat(changed).filter(function (v, i, a) {
+        return a.indexOf(v) === i;
+      });
+    }
+    recordFix(js.callNumber, d.sheetSerial || oldSerial, {
+      serial: newSerial, model: d.model, location: d.location
+    });
+    if (!d.sheetSerial) d.sheetSerial = oldSerial;   // as printed on the jobsheet
+
+    if (changedSerial) {
+      // move the progress record onto the corrected serial
+      var all = progressStore();
+      var job = all[String(js.callNumber || '')] || {};
+      var oldKey = serialKey(oldSerial), newKey = serialKey(newSerial);
+      if (oldKey && job[oldKey]) {
+        if (newKey) job[newKey] = job[oldKey];
+        delete job[oldKey];
+        all[String(js.callNumber || '')] = job;
+        writeJson(KEY_PROGRESS, all);
+      }
+      // and any part-finished worksheet saved against the old serial
+      if (global.LabCalUnits && d.sheet && oldKey && newKey) {
+        try {
+          var snap = global.LabCalUnits.load(d.sheet, js.callNumber, oldSerial);
+          if (snap && snap.state) {
+            global.LabCalUnits.save(d.sheet, js.callNumber, newSerial, snap.state, snap.meta || {});
+            global.LabCalUnits.remove(d.sheet, js.callNumber, oldSerial);
+          }
+        } catch (e) { /* the correction still stands */ }
+      }
+      // keep hand-added units findable under their new serial
+      if (d.addedManually) {
+        var ex = extraStore();
+        var list = (ex[String(js.callNumber || '')] || []).map(function (x) {
+          if (serialKey(x.serial) === oldKey) {
+            return { uid: d.uid, model: d.model, equipment: '', serial: newSerial, location: d.location,
+                     addedManually: true, addedAt: x.addedAt };
+          }
+          return x;
+        });
+        ex[String(js.callNumber || '')] = list;
+        writeJson(KEY_EXTRA, ex);
+      }
+      // a certificate already issued carries the old serial — record that
+      if (d.done && oldSerial) d.serialWas = oldSerial;
+      d.serial = newSerial;
+    }
+
+    // a corrected model may belong on a different worksheet
+    if (patch.model !== undefined && !d.done) {
+      var sug = suggestSheet(d);
+      if (sug.sheet && sug.why !== 'learned') { d.sheet = sug.sheet; d.sheetWhy = sug.why; }
+    }
+
+    writeJson(KEY_CURRENT, js);
+    saveActiveJob();
+    announce();
+    return d;
+  }
+
+  function removeDevice(idx) {
+    var js = current();
+    if (!js || !js.devices[idx]) return false;
+    var d = js.devices[idx];
+    if (!d.addedManually) return false;    // only hand-added units can be removed
+    var all = extraStore();
+    var list = (all[String(js.callNumber || '')] || []).filter(function (x) {
+      return serialKey(x.serial) !== serialKey(d.serial);
+    });
+    all[String(js.callNumber || '')] = list;
+    writeJson(KEY_EXTRA, all);
+    js.devices.splice(idx, 1);
+    js.devices.forEach(function (x, i) { x.idx = i; });
+    writeJson(KEY_CURRENT, js);
+    saveActiveJob();
+    announce();
+    return true;
   }
 
   function recordProgress(jobRef, serial, info) {
@@ -626,28 +827,191 @@
   }
 
   // Fold the stored progress into the loaded worklist.
+  // Jobs saved before unit ids existed get one now, once.
+  function ensureUids() {
+    var js = readJson(KEY_CURRENT, null);
+    if (!js || !js.devices) return;
+    var changed = false;
+    js.devices.forEach(function (d) { if (!d.uid) { d.uid = newUid(); changed = true; } });
+    if (changed) { writeJson(KEY_CURRENT, js); saveActiveJob(); }
+  }
+
   function applyProgressToCurrent() {
+    ensureUids();
     var js = current();
     if (!js) return false;
     var prog = progressFor(js.callNumber);
     var changed = false;
     js.devices.forEach(function (d) {
       var p = prog[serialKey(d.serial)];
-      if (p && p.done && !d.done) {
+      if (!p) {
+        if (d.notRequired) { d.notRequired = false; d.notRequiredReason = ''; changed = true; }
+        return;
+      }
+      if (p.done && !d.done) {
         d.done = true;
         d.doneAt = p.doneAt || '';
         d.certRef = d.certRef || p.certRef || '';
         d.carriedOver = true;   // certified before this worklist was loaded
         changed = true;
       }
+      if (!!p.notRequired !== !!d.notRequired) {
+        d.notRequired = !!p.notRequired;
+        d.notRequiredReason = p.reason || '';
+        changed = true;
+      }
     });
-    if (changed) writeJson(KEY_CURRENT, js);
+    if (changed) { writeJson(KEY_CURRENT, js); saveActiveJob(); }
     return changed;
   }
 
   function todayIso() {
     var d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  // ---- jobs -------------------------------------------------------------
+  // More than one job can be open at once; each keeps its own unit list and
+  // progress. A job is identified by its reference (the ENQ number), so
+  // loading the same jobsheet again merges into the job already there rather
+  // than starting a second copy of it.
+  function jobsStore() { return readJson(KEY_JOBS, {}) || {}; }
+  function jobKey(ref) { return String(ref || '').trim().toUpperCase() || 'NOJOB'; }
+
+  // A job by its reference, whether or not it is the one currently open.
+  function jobByRef(ref) {
+    var all = jobsStore();
+    return all[jobKey(ref)] || null;
+  }
+
+  function progressOf(job) {
+    if (!job || !job.devices) return { total: 0, done: 0, notRequired: 0, outstanding: 0 };
+    var today = todayIso(), out = { total: job.devices.length, done: 0, today: 0, earlier: 0, started: 0, notRequired: 0, outstanding: 0 };
+    job.devices.forEach(function (d) {
+      if (d.notRequired && !d.done) { out.notRequired++; return; }
+      if (d.done) {
+        out.done++;
+        if (String(d.doneAt || '').slice(0, 10) === today) out.today++; else out.earlier++;
+      } else if (isStarted(job.callNumber, d)) out.started++;
+    });
+    out.outstanding = out.total - out.done - out.notRequired;
+    return out;
+  }
+
+  // Which days did work actually happen on this job? Opened, certified,
+  // marked not required, or corrected — anything the engineer touched.
+  function activeDaysOf(job) {
+    var days = {};
+    var add = function (iso) { if (iso) days[String(iso).slice(0, 10)] = true; };
+    if (!job) return [];
+    add(job.day); add(job.openedAt); add(job.loadedAt);
+    (job.devices || []).forEach(function (d) {
+      add(d.doneAt); add(d.notRequiredAt); add(d.editedAt); add(d.addedAt);
+    });
+    // progress records carry dates for work done before this list was loaded
+    var prog = (progressStore()[String(job.callNumber || '')]) || {};
+    Object.keys(prog).forEach(function (k) {
+      add(prog[k].doneAt); add(prog[k].notRequiredAt);
+    });
+    return Object.keys(days).sort();
+  }
+
+  // Jobs touched on a given day, newest first.
+  function jobsActiveOn(day) {
+    var all = jobsStore();
+    return Object.keys(all).map(function (k) {
+      var j = all[k];
+      var days = activeDaysOf(j);
+      if (days.indexOf(day) === -1) return null;
+      var p = progressOf(j);
+      return {
+        key: k, callNumber: j.callNumber || '', customer: j.customer || '',
+        department: j.department || '', fileName: j.fileName || '',
+        openedAt: j.openedAt || '', firstDay: days[0], lastDay: days[days.length - 1],
+        multiDay: days.length > 1, days: days,
+        total: p.total, done: p.done, notRequired: p.notRequired, outstanding: p.outstanding,
+        started: p.started
+      };
+    }).filter(Boolean).sort(function (a, b) { return (b.openedAt || '') < (a.openedAt || '') ? -1 : 1; });
+  }
+
+  // Every day any job was touched — for marking the calendar.
+  function allActiveDays() {
+    var all = jobsStore(), out = {};
+    Object.keys(all).forEach(function (k) {
+      activeDaysOf(all[k]).forEach(function (d) { out[d] = (out[d] || 0) + 1; });
+    });
+    return out;
+  }
+
+  function listJobs() {
+    var all = jobsStore();
+    return Object.keys(all).map(function (k) {
+      var j = all[k];
+      var devices = j.devices || [];
+      var done = devices.filter(function (d) { return d.done; }).length;
+      var skipped = devices.filter(function (d) { return d.notRequired && !d.done; }).length;
+      return {
+        key: k, callNumber: j.callNumber || '', customer: j.customer || '',
+        day: j.day || '', openedAt: j.openedAt || '', fileName: j.fileName || '',
+        total: devices.length, done: done, notRequired: skipped,
+        outstanding: devices.length - done - skipped
+      };
+    }).sort(function (a, b) { return (b.openedAt || '') < (a.openedAt || '') ? -1 : 1; });
+  }
+
+  function activeKey() {
+    try { return global.localStorage.getItem(KEY_ACTIVE) || ''; } catch (e) { return ''; }
+  }
+  function setActiveJob(key) {
+    try { global.localStorage.setItem(KEY_ACTIVE, key || ''); } catch (e) {}
+    var all = jobsStore();
+    writeJson(KEY_CURRENT, all[key] || null);
+    if (all[key]) applyProgressToCurrent();
+    announce();
+    return current();
+  }
+  function saveActiveJob() {
+    var js = current();
+    if (!js) return;
+    var all = jobsStore();
+    all[jobKey(js.callNumber)] = js;
+    writeJson(KEY_JOBS, all);
+    try { global.localStorage.setItem(KEY_ACTIVE, jobKey(js.callNumber)); } catch (e) {}
+  }
+  function deleteJob(key) {
+    var all = jobsStore();
+    delete all[key];
+    writeJson(KEY_JOBS, all);
+    if (activeKey() === key) {
+      var next = Object.keys(all)[0] || '';
+      setActiveJob(next);
+    } else {
+      announce();
+    }
+  }
+
+  // A job created by hand, for work with no jobsheet.
+  function createJob(info) {
+    var ref = String((info && info.callNumber) || '').trim();
+    var js = {
+      openedAt: new Date().toISOString(),
+      day: (info && info.day) || todayIso(),
+      fileName: '',
+      customer: String((info && info.customer) || '').trim(),
+      callNumber: ref,
+      callDate: '', visitDate: '', address: '', department: '',
+      devices: [],
+      manual: true
+    };
+    var all = jobsStore();
+    if (all[jobKey(ref)]) return setActiveJob(jobKey(ref));   // already open
+    all[jobKey(ref)] = js;
+    writeJson(KEY_JOBS, all);
+    writeJson(KEY_CURRENT, js);
+    try { global.localStorage.setItem(KEY_ACTIVE, jobKey(ref)); } catch (e) {}
+    announce();
+    return current();
   }
 
   function current() {
@@ -660,6 +1024,7 @@
   function setCurrent(parsed, fileName) {
     var js = {
       loadedAt: new Date().toISOString(),
+      openedAt: new Date().toISOString(),
       day: todayIso(),
       fileName: fileName || '',
       customer: parsed.customer || '',
@@ -679,15 +1044,85 @@
           sheet: s.sheet,
           sheetWhy: s.why,
           suggested: s.sheet,
+          uid: newUid(),
           done: false,
           doneAt: '',
           certRef: ''
         };
       })
     };
+    // Apply any corrections made on site to the sheet's own data first, so a
+    // re-uploaded sheet with the same typo lines up with the unit already on
+    // the list rather than arriving as a duplicate.
+    var fixes = fixesFor(js.callNumber);
+    js.devices.forEach(function (d) {
+      var f = fixes[serialKey(d.serial)];
+      if (!f) return;
+      d.sheetSerial = d.serial;
+      if (f.serial) d.serial = f.serial;
+      if (f.model) d.model = f.model;
+      if (f.location) d.location = f.location;
+      d.corrected = true;
+      d.edited = true;
+      d.editedAt = f.at || '';
+      d.editedFields = ['corrected on site'];
+    });
+
+    // Loading the same jobsheet again (day two of the same job) merges into
+    // the job already open rather than replacing it: units already on the
+    // list keep their state, and anything new on the sheet is appended.
+    var existing = jobsStore()[jobKey(js.callNumber)];
+    if (existing && existing.devices) {
+      var bySerial = {};
+      existing.devices.forEach(function (d) {
+        var k = serialKey(d.serial);
+        if (k) bySerial[k] = d;
+      });
+      js.devices = js.devices.map(function (d) {
+        var k = serialKey(d.serial);
+        var was = k && bySerial[k];
+        if (!was) return d;
+        delete bySerial[k];
+        // keep everything the engineer has decided about this unit
+        d.uid = was.uid || d.uid;      // the unit keeps the id it already had
+        d.sheet = was.sheet || d.sheet;
+        d.sheetWhy = was.sheetWhy || d.sheetWhy;
+        d.done = was.done; d.doneAt = was.doneAt; d.certRef = was.certRef;
+        d.notRequired = was.notRequired; d.notRequiredReason = was.notRequiredReason;
+        d.carriedOver = was.carriedOver;
+        d.edited = d.edited || was.edited;
+        d.editedAt = d.editedAt || was.editedAt;
+        d.editedFields = d.editedFields || was.editedFields;
+        d.sheetSerial = d.sheetSerial || was.sheetSerial;
+        return d;
+      });
+      // units that were on the job but not on this sheet (added on site, or
+      // dropped from a revised sheet) stay on the list
+      Object.keys(bySerial).forEach(function (k) { js.devices.push(bySerial[k]); });
+      js.devices.forEach(function (d, i) { d.idx = i; });
+      js.openedAt = existing.openedAt || js.openedAt;
+    }
+
+    // Units added by hand on an earlier visit belong to this job too, so put
+    // them back when the jobsheet is loaded again.
+    extrasFor(js.callNumber).forEach(function (x) {
+      var already = js.devices.some(function (d) {
+        return serialKey(d.serial) && serialKey(d.serial) === serialKey(x.serial);
+      });
+      if (already) return;
+      var sx = suggestSheet(x);
+      js.devices.push({
+        idx: js.devices.length, uid: x.uid || newUid(),
+        model: x.model, equipment: '', serial: x.serial, location: x.location,
+        sheet: sx.sheet, sheetWhy: sx.why, suggested: sx.sheet,
+        done: false, doneAt: '', certRef: '', addedManually: true
+      });
+    });
+
     writeJson(KEY_CURRENT, js);
     // Same job, later day: bring yesterday's ticks back.
     applyProgressToCurrent();
+    saveActiveJob();
     announce();
     return current();
   }
@@ -727,8 +1162,9 @@
   function progress() {
     var js = current();
     if (!js) return { total: 0, done: 0, today: 0, earlier: 0, started: 0 };
-    var today = todayIso(), out = { total: js.devices.length, done: 0, today: 0, earlier: 0, started: 0 };
+    var today = todayIso(), out = { total: js.devices.length, done: 0, today: 0, earlier: 0, started: 0, notRequired: 0, outstanding: 0 };
     js.devices.forEach(function (d) {
+      if (d.notRequired && !d.done) { out.notRequired++; return; }
       if (d.done) {
         out.done++;
         if (String(d.doneAt || '').slice(0, 10) === today) out.today++;
@@ -737,6 +1173,7 @@
         out.started++;
       }
     });
+    out.outstanding = out.total - out.done - out.notRequired;
     return out;
   }
 
@@ -759,6 +1196,7 @@
       }
     };
     writeJson(KEY_HANDOFF, payload);
+    setLink({ jobRef: js.callNumber, serial: d.serial, uid: d.uid || '' });
     if (d.sheet) learnRoute(d.model, d.sheet, d.suggested);
     return payload;
   }
@@ -773,7 +1211,42 @@
       jobsheet: payload.jobsheet || {}
     };
     writeJson(KEY_HANDOFF, p);
+    setLink({ jobRef: (payload.jobsheet || {}).callNumber || '', serial: (payload.device || {}).serial || '' });
     return p;
+  }
+
+  // ---- the link between a worksheet and its unit --------------------------
+  // A worksheet needs to know which unit on which job it is filling in, so a
+  // serial corrected on the worksheet can be pushed back to the list. The
+  // link is stored, not held in memory, so it survives the page reload that
+  // happens when navigating between the two.
+  function setLink(l) { writeJson(KEY_LINK, l || null); }
+  function link() { return readJson(KEY_LINK, null); }
+
+  // Push what the worksheet now says back onto its unit. Returns the updated
+  // device, or null if the worksheet is not linked to one.
+  function syncFromWorksheet(patch) {
+    var l = link();
+    if (!l || !l.serial) return null;
+    var js = current();
+    if (!js || jobKey(js.callNumber) !== jobKey(l.jobRef)) {
+      var all = jobsStore();
+      if (all[jobKey(l.jobRef)]) { setActiveJob(jobKey(l.jobRef)); js = current(); }
+    }
+    if (!js) return null;
+    var idx = -1;
+    js.devices.forEach(function (d, i) {
+      if (idx === -1 && l.uid && d.uid === l.uid) idx = i;
+    });
+    if (idx === -1) {
+      js.devices.forEach(function (d, i) {
+        if (idx === -1 && serialKey(d.serial) === serialKey(l.serial)) idx = i;
+      });
+    }
+    if (idx === -1) return null;
+    var d = editDevice(idx, patch);
+    if (d) setLink({ jobRef: l.jobRef, serial: d.serial, uid: d.uid || l.uid || '' });
+    return d;
   }
 
   // Read AND clear — a handoff is consumed exactly once.
@@ -827,12 +1300,29 @@
     current: current,
     setCurrent: setCurrent,
     clearCurrent: clearCurrent,
+    listJobs: listJobs,
+    activeDaysOf: activeDaysOf,
+    jobsActiveOn: jobsActiveOn,
+    allActiveDays: allActiveDays,
+    jobByRef: jobByRef,
+    progressOf: progressOf,
+    activeKey: activeKey,
+    setActiveJob: setActiveJob,
+    createJob: createJob,
+    deleteJob: deleteJob,
+    jobKey: jobKey,
     updateDevice: updateDevice,
     markDone: markDone,
     progress: progress,
     isStarted: isStarted,
     progressFor: progressFor,
     recordProgress: recordProgress,
+    setNotRequired: setNotRequired,
+    addDevice: addDevice,
+    editDevice: editDevice,
+    fixesFor: fixesFor,
+    removeDevice: removeDevice,
+    extrasFor: extrasFor,
     clearProgress: clearProgress,
     reconcileFromCertificates: reconcileFromCertificates,
     applyProgressToCurrent: applyProgressToCurrent,
@@ -849,6 +1339,10 @@
     // handoff
     handoff: handoff,
     handoffUnit: handoffUnit,
+    setLink: setLink,
+    newUid: newUid,
+    link: link,
+    syncFromWorksheet: syncFromWorksheet,
     takeHandoff: takeHandoff,
     onChange: onChange,
     ddmmyyyyToIso: ddmmyyyyToIso
