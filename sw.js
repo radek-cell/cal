@@ -3,7 +3,7 @@
 // Bump CACHE_VERSION any time the HTML/JS files change and you want
 // devices that already installed the app to pick up the new version.
 // ---------------------------------------------------------------------
-const CACHE_VERSION  = 'v56';
+const CACHE_VERSION  = 'v66';
 const STATIC_CACHE   = `labcal-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE  = `labcal-runtime-${CACHE_VERSION}`;
 
@@ -29,6 +29,7 @@ const APP_SHELL = [
   // calibration worksheets
   './barkey_calibration_form.html',
   './calibration_worksheet_SMD.html',
+  './calibration_worksheet_NSMD.html',
   './calibration_worksheet_SNMD.html',
   './calibration_worksheet_19_24.html',
   './monitoring_systems.html',

@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="LabCal">
 <meta name="theme-color" content="#dfe6ee">
-<title>Engineer Calibration Worksheet Prototype</title>
+<title>Non-Standard Medical Device — Calibration Worksheet</title>
 <script src="labcal_offsets.js"></script>
 <script src="labcal_jobsheet.js"></script>
 <script src="labcal_save.js"></script>
@@ -115,7 +115,7 @@
 </div>
 <div class="page" id="page">
   <div class="header">
-    <div class="title"><span id="titleText">Engineer Calibration Worksheet</span><div class="subtitle">Standard Medical Device <span class="req">*</span>: <select id="deviceType" style="font-size:11px;border:0;border-bottom:1px dotted #333;background:transparent;padding:1px 2px;font-weight:600;color:#555"><option value="">-- select --</option><option value="Plasma Freezer">Plasma Freezer</option><option value="Blood Bank">Blood Bank</option><option value="Platelet Incubator">Platelet Incubator</option></select></div></div>
+    <div class="title"><span id="titleText">Engineer Calibration Worksheet</span><div class="subtitle">Non-Standard Medical Device <span class="req">*</span>: <select id="deviceType" style="font-size:11px;border:0;border-bottom:1px dotted #333;background:transparent;padding:1px 2px;font-weight:600;color:#555"><option value="">-- select --</option><option value="Plasma Freezer">Plasma Freezer</option><option value="Blood Bank">Blood Bank</option><option value="Platelet Incubator">Platelet Incubator</option></select></div></div>
     <div class="brand"><div class="logo">❄ LABCOLD</div><div class="no">No <span class="req">*</span>: <input id="certNo" value="S " maxlength="7" inputmode="numeric" placeholder="S 00000" style="width:150px;border:0;border-bottom:1px solid #333;font-size:20px;text-align:center;letter-spacing:2px"></div></div>
   </div>
 
@@ -481,7 +481,7 @@ function applyUnitIdentity(d, j){
 }
 function applyJobsheetHandoff(){
   if(!window.LabCalJobsheet) return false;
-  const p=LabCalJobsheet.takeHandoff('smd');
+  const p=LabCalJobsheet.takeHandoff('nsmd');
   if(!p) return false;
   const d=p.device||{}, j=p.jobsheet||{};
   const fill=(id,val)=>{
@@ -1761,7 +1761,7 @@ function fileCertificateForToday(blob, filename){
 // this keeps a copy per job + serial so a finished unit can be reopened and
 // amended later without the next one having overwritten it.
 // ---------------------------------------------------------------------
-const UNIT_SHEET='smd';
+const UNIT_SHEET='nsmd';
 let unitSaveTimer=null;
 function unitIdentity(){
   const v=id=>{ const el=document.getElementById(id); return el?String(el.value||'').trim():''; };
@@ -1846,7 +1846,7 @@ async function generateVectorPDF(){
   btn.disabled=true; btn.textContent='Generating PDF…';
   try{
     if(!runPreGenerationChecks()) return true;
-    const blob=LabCalVectorPdf.blobSMD();
+    const blob=LabCalVectorPdf.blobNSMD();
     reportPdfSize(blob.size);
     // File it FIRST, and wait for the write to commit. Sharing opens the iOS
     // share sheet and waits on the engineer; leaving the page during that
@@ -1870,7 +1870,7 @@ async function generateVectorPDF(){
 
 async function generatePDF(){
   if(window.LabCalPdf && LabCalPdf.style && LabCalPdf.style()==='text'
-     && window.LabCalVectorPdf && window.LabCalVectorPdf.blobSMD && window.jspdf){
+     && window.LabCalVectorPdf && window.LabCalVectorPdf.blobNSMD && window.jspdf){
     if(await generateVectorPDF()) return;
   }
   if(!runPreGenerationChecks()) return;
@@ -1942,7 +1942,7 @@ function buildExcelWorkbook(){
   push('Model', val('model'));
   push('Serial No', val('serial'));
   push('Manufacturer', manufacturerValue());
-  push('Standard Medical Device', val('deviceType'));
+  push('Non-Standard Medical Device', val('deviceType'));
   push('Load', val('load'));
   push('Calibration System', val('calSystem'));
   push('','');
@@ -2083,7 +2083,7 @@ function applyImportedFields(fieldMap){
     setValById('model', fieldMap['Model']);
     setValById('serial', fieldMap['Serial No']);
     setManufacturerFromImport(fieldMap['Manufacturer']);
-    setValById('deviceType', fieldMap['Standard Medical Device']);
+    setValById('deviceType', fieldMap['Non-Standard Medical Device']);
     setValById('load', fieldMap['Load']);
     setValById('calSystem', fieldMap['Calibration System']);
     setValById('drtSerial', fieldMap['Digital Reference Thermometer S/N']);

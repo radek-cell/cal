@@ -112,6 +112,20 @@
     return m ? m[1] : '';
   }
 
+  // An all-zero certificate number is the verification code: the worksheets
+  // themselves retitle to "Engineer Verification Worksheet" on "S 00000" and
+  // "BARKEY VERIFICATION WORKSHEET" on "B 00000". The same test decides whether
+  // a finished unit was calibrated or only verified, so the job summary says
+  // which one rather than the catch-all "Certified".
+  //
+  // Read from the digits rather than matching the exact string, so a stray
+  // space or a different prefix letter still reads correctly. No digits at all
+  // is NOT a verification — an unnumbered unit counts as calibrated.
+  function isVerificationRef(certRef) {
+    var digits = String(certRef == null ? '' : certRef).replace(/\D/g, '');
+    return digits.length > 0 && /^0+$/.test(digits);
+  }
+
   function serialOnly(v) {
     return ascii(v).split(' (')[0].trim();
   }
@@ -150,6 +164,28 @@
   Engine.prototype.w = function (s, size, style) {
     this.font(size, style);
     return this.d.getTextWidth(String(s));
+  };
+
+  // Fit a free-text value into the width its column actually has.
+  //
+  // Site and department come off the job sheet and can be any length. "The
+  // Clatterbridge Cancer Centre - Liverpool" is wider than its half-page
+  // column, and a long ward/location wider still, so both used to run straight
+  // through the label beside them, or off the right-hand edge of the page.
+  //
+  // Shrink the type first, down to `min` — the same approach pill() and
+  // badge() already take, and it keeps the row at exactly the height and
+  // position it has always had, so nothing below it moves. Only if the value
+  // still will not fit at the smallest readable size is the tail trimmed, and
+  // then it is marked with an ellipsis: a visibly shortened name, never a
+  // silently clipped one. Returns { text, size }.
+  Engine.prototype.fitText = function (s, avail, size, style, min) {
+    var text = ascii(s), sz = size, floor = min || 6.2;
+    while (sz > floor && this.w(text, sz, style) > avail) sz -= 0.1;
+    if (!text || this.w(text, sz, style) <= avail) return { text: text, size: sz };
+    var ell = '...';                    // the true ellipsis is not in the base font
+    while (text.length > 1 && this.w(text + ell, sz, style) > avail) text = text.slice(0, -1);
+    return { text: text.replace(/[\s,;:\-]+$/, '') + ell, size: sz };
   };
 
   Engine.prototype.box = function (x, y, w, h, fillRgb, strokeRgb, lw) {
@@ -556,7 +592,8 @@
         var w = e.w(pair[0], 8);
         e.star(pair[2] + w + 0.6, yy - 1.2);
         e.t(':', pair[2] + w + 2.4, yy, 8);
-        e.t(pair[1], pair[2] + 34, yy, 8.5, 'bold');
+        var fv = e.fitText(pair[1], half - 34 - 6, 8.5, 'bold');
+        e.t(fv.text, pair[2] + 34, yy, fv.size, 'bold');
         e.stroke(RULE_D); doc.setLineWidth(0.15);
         doc.setLineDashPattern([0.4, 0.6], 0);
         doc.line(pair[2] + 33, yy + 1.4, pair[2] + half - 6, yy + 1.4);
@@ -867,6 +904,15 @@
       variations: true,
       dualOffsets: false
     },
+    nsmd: {
+      subtitle: function () {
+        return 'Non-Standard Medical Device \u2014 ' + (val('deviceType') || '') + '  \u00b7  Tolerance: \u00b10.300 \u00b0C';
+      },
+      tolerance: function () { return '\u00b10.300 \u00b0C'; },
+      extraMeta: function () { return ['Calibration System', val('calSystem')]; },
+      variations: false,
+      dualOffsets: true
+    },
     smd: {
       subtitle: function () {
         return 'Standard Medical Device \u2014 ' + (val('deviceType') || '') + '  \u00b7  Tolerance: \u00b10.300 \u00b0C';
@@ -918,7 +964,8 @@
         var w = e.w(pair[0], 8);
         e.star(pair[2] + w + 0.6, yy - 1.2);
         e.t(':', pair[2] + w + 2.4, yy, 8);
-        e.t(pair[1], pair[2] + 34, yy, 8.5, 'bold');
+        var fv = e.fitText(pair[1], half - 34 - 6, 8.5, 'bold');
+        e.t(fv.text, pair[2] + 34, yy, fv.size, 'bold');
         e.stroke(RULE_D); doc.setLineWidth(0.15);
         doc.setLineDashPattern([0.4, 0.6], 0);
         doc.line(pair[2] + 33, yy + 1.4, pair[2] + half - 6, yy + 1.4);
@@ -1215,7 +1262,8 @@
         var w = e.w(pair[0], 8);
         e.star(pair[2] + w + 0.6, yy - 1.2);
         e.t(':', pair[2] + w + 2.4, yy, 8);
-        e.t(pair[1], pair[2] + 38, yy, 8.5, 'bold');
+        var fv = e.fitText(pair[1], half - 38 - 6, 8.5, 'bold');
+        e.t(fv.text, pair[2] + 38, yy, fv.size, 'bold');
         e.stroke(RULE_D); doc.setLineWidth(0.15);
         doc.setLineDashPattern([0.4, 0.6], 0);
         doc.line(pair[2] + 37, yy + 1.4, pair[2] + half - 6, yy + 1.4);
@@ -1529,6 +1577,11 @@
     var jsPDFctor = (global.jspdf && global.jspdf.jsPDF) || global.jsPDF;
     if (!jsPDFctor) throw new Error('The PDF library did not load.');
     if (!job || !job.devices || !job.devices.length) throw new Error('There are no units on this job yet.');
+    // A row the jobsheet repeated is folded into its twin on the worklist, so
+    // it must not appear as an extra line here either — the counts in the
+    // header come from progress(), which already leaves it out.
+    var summaryDevices = job.devices.filter(function (d) { return !d.duplicateMerged; });
+    if (!summaryDevices.length) throw new Error('There are no units on this job yet.');
     var doc = new jsPDFctor({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
     var e = new Engine(doc);
 
@@ -1551,12 +1604,18 @@
 
       if (first) {
         var p = progress || {};
-        var bits = [
-          p.total + ' unit' + (p.total === 1 ? '' : 's'),
-          p.done + ' certified',
-          (p.notRequired || 0) + ' not required',
-          (p.outstanding || 0) + ' outstanding'
-        ];
+        // Counted off the same list the table draws from, so the tally can
+        // never disagree with the rows underneath it.
+        var doneUnits = summaryDevices.filter(function (d) { return d.done; });
+        var verified = doneUnits.filter(function (d) { return isVerificationRef(d.certRef); }).length;
+        var calibrated = doneUnits.length - verified;
+        var bits = [p.total + ' unit' + (p.total === 1 ? '' : 's')];
+        // Say only what happened: a job with no verifications should not carry
+        // a "0 verified", and vice versa.
+        if (calibrated || !verified) bits.push(calibrated + ' calibrated');
+        if (verified) bits.push(verified + ' verified');
+        bits.push((p.notRequired || 0) + ' not required');
+        bits.push((p.outstanding || 0) + ' outstanding');
         e.box(MX, y, IN, 7, (p.outstanding ? [253, 243, 220] : GREEN_BG),
               (p.outstanding ? [227, 196, 150] : GREEN_BD), 0.2);
         e.t(bits.join('   \u00b7   '), MX + 3, y + 4.8, 8.5, 'bold',
@@ -1576,7 +1635,10 @@
     }
 
     function statusOf(d) {
-      if (d.done) return { text: 'Certified', tint: GREEN_BG, col: GREEN_TX };
+      if (d.done) {
+        return { text: isVerificationRef(d.certRef) ? 'Verified' : 'Calibrated',
+                 tint: GREEN_BG, col: GREEN_TX };
+      }
       if (d.notRequired) return { text: 'Not required', tint: GREY_BG, col: GREY_TXT };
       if (global.LabCalJobsheet && global.LabCalJobsheet.isStarted &&
           global.LabCalJobsheet.isStarted(job.callNumber, d)) {
@@ -1585,8 +1647,19 @@
       return { text: 'To do', tint: null, col: INK };
     }
 
+    // The summary lists units in the same order as the merged pack: certified
+    // units by certificate number, then everything still outstanding.
+    var ordered = summaryDevices.slice().sort(function (a, b) {
+      var an = a.certRef ? (String(a.certRef).match(/(\d+)/) || [0, 0])[1] : null;
+      var bn = b.certRef ? (String(b.certRef).match(/(\d+)/) || [0, 0])[1] : null;
+      if (an !== null && bn !== null) return parseInt(an, 10) - parseInt(bn, 10);
+      if (an !== null) return -1;
+      if (bn !== null) return 1;
+      return 0;                       // neither certified: leave as they came
+    });
+
     var y = pageHead(true);
-    job.devices.forEach(function (d, i) {
+    ordered.forEach(function (d, i) {
       if (y + ROW_H > PH - 18) { doc.addPage(); y = pageHead(false); }
       var st = statusOf(d);
       if (st.tint) e.box(MX, y, IN, ROW_H, st.tint, null);
@@ -1635,15 +1708,21 @@
   }
 
   global.LabCalVectorPdf = {
+    // Exported so the calibration page words a finished unit the same way the
+    // job summary does. One implementation decides calibrated vs verified —
+    // see the note on isVerificationRef above.
+    isVerificationRef: isVerificationRef,
     supports: function (sheet) {
-      return sheet === 'ws19_24' || sheet === 'barkey' || sheet === 'snmd' || sheet === 'smd';
+      return sheet === 'ws19_24' || sheet === 'barkey' || sheet === 'snmd' || sheet === 'smd' || sheet === 'nsmd';
     },
     buildSNMD: function () { return buildSNMD('snmd'); },
     blobSNMD: function () { return buildSNMD('snmd').output('blob'); },
     buildSMD: function () { return buildSNMD('smd'); },
+    buildNSMD: function () { return buildSNMD('nsmd'); },
     buildJobSummary: buildJobSummary,
     blobJobSummary: function (job, progress) { return buildJobSummary(job, progress).output('blob'); },
     blobSMD: function () { return buildSNMD('smd').output('blob'); },
+    blobNSMD: function () { return buildSNMD('nsmd').output('blob'); },
     build19_24: build19_24,
     blob19_24: function () { return build19_24().output('blob'); },
     buildBarkey: buildBarkey,

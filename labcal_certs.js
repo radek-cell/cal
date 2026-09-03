@@ -204,6 +204,18 @@
 
   // jobRef narrows to a single job. More than one job in a day is normal, and
   // the certificates for each must stay separable.
+  // Certificate numbers are like "S 51430" / "B 00123". Order by the number,
+  // not as text, so 51440 follows 51439 rather than sorting beside 514.
+  function certOrder(c) {
+    var m = String(c.certRef || c.filename || '').match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER;
+  }
+  function byCertNumber(a, b) {
+    var d = certOrder(a) - certOrder(b);
+    if (d) return d;
+    return String(a.savedAt || '') < String(b.savedAt || '') ? -1 : 1;
+  }
+
   function listDay(day, jobRef) {
     var want = day || todayIso();
     return all().then(function (list) {
@@ -312,6 +324,8 @@
         Object.keys(newest).forEach(function (k) { keep[newest[k].id] = true; });
         list = list.filter(function (c) { return keep[c.id]; });
       }
+      // a merged job reads in certificate-number order
+      list = list.slice().sort(byCertNumber);
       if (!list.length) throw new Error('There are no certificates to merge for that job.');
       return PDFLib.PDFDocument.create().then(function (out) {
         function addCover() {
@@ -399,6 +413,7 @@
     days: days,
     prune: prune,
     mergeDay: mergeDay,
+    byCertNumber: byCertNumber,
     onChange: onChange,
     formatSize: formatSize
   };

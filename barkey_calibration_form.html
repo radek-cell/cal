@@ -191,13 +191,42 @@ const OFFSET_DEVICE='dostmann';
 // shared vault until its certificate expires. This worksheet just reads it.
 // The local "Load offsets" button still works and also refreshes the vault,
 // so a file loaded here shows up on every other worksheet too.
+// ---------------------------------------------------------------------
+// The engineer's name, signature and date come from the offsets file and
+// are not typed on the sheet. Who performed the calibration and when are
+// part of the record, not free text a later hand can alter.
+// The checker's fields stay open — that is somebody else's to sign.
+// ---------------------------------------------------------------------
+function lockSignatureBlock(raw){
+  raw = raw || (window.LabCalOffsets && lastOffsetRaw) || {};
+  const lock=(id,value)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    if(value) el.value=value;
+    el.readOnly=true;
+    el.setAttribute('aria-readonly','true');
+    el.style.background='var(--bg2, #f1f3f5)';
+    el.style.color='#333';
+    el.title='From the offsets file — not editable here';
+  };
+  const name=raw.engineerName||'';
+  lock('eng', name);
+  lock('engineerSignature', raw.engineerSignature || name);
+  // the date the work was done, not a date anyone can set afterwards
+  const d=new Date();
+  const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const today=String(d.getDate()).padStart(2,'0')+'/'+MON[d.getMonth()]+'/'+d.getFullYear();
+  const dEl=document.getElementById('engDate');
+  lock('engDate', (dEl && dEl.value) ? dEl.value : today);
+}
+
 function applyOffsetsData(raw, sourceLabel){
   const data=normaliseOffsets(raw);
   if(!data) return false;
   probes=data;
   offsetsValidUntil=raw.validUntil;
   if(raw.refThermSerial) refTherm.value=raw.refThermSerial;
-  if(raw.engineerName && !eng.value) eng.value=raw.engineerName;
+  lockSignatureBlock(raw);
   roomTherms=Array.isArray(raw.roomTherms)?raw.roomTherms:[];
   rebuildRoomThermDropdown();
   stopwatches=Array.isArray(raw.stopwatches)?raw.stopwatches:[];

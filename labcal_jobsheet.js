@@ -25,6 +25,7 @@
   var KEY_PROGRESS = 'labcal.jobsheet.progress';
   var KEY_EXTRA = 'labcal.jobsheet.extra';   // units added on site, per job
   var KEY_LINK  = 'labcal.jobsheet.link';    // which unit the open worksheet belongs to
+  var KEY_DUPOK = 'labcal.jobsheet.dupok';   // duplicates the engineer confirmed are genuine
   var KEY_FIXES = 'labcal.jobsheet.fixes';   // corrections to a jobsheet's own data
   var KEY_JOBS = 'labcal.jobsheet.jobs';     // every job, keyed by reference
   var KEY_ACTIVE = 'labcal.jobsheet.active'; // which job is open
@@ -47,7 +48,7 @@
         let key=null;
         for(const k of Object.keys(byY)){ if(Math.abs(Number(k)-y)<=3){ key=k; break; } }
         if(key===null) key=String(y);
-        (byY[key]=byY[key]||[]).push({x:it.transform[4],str:it.str});
+        (byY[key]=byY[key]||[]).push({x:it.transform[4],str:it.str,w:it.width||0});
       });
       Object.keys(byY).map(Number).sort((a,b)=>b-a).forEach(y=>{
         const items=byY[String(y)].sort((a,b)=>a.x-b.x);
@@ -86,12 +87,36 @@
     const minX=Math.min(...items.map(it=>it.x));
     return Math.abs(x-minX)<3 ? x : null;
   }
+  // Put each text run in a column.
+  //
+  // Headers are LEFT-aligned but the values under them are CENTRED, so a
+  // value's starting x moves left as the text gets longer. Matching on the
+  // start alone therefore breaks for long values: on a real Labcold jobsheet
+  // the Serial and Location headers sit at x=191.9 and x=363.2, so anything
+  // starting left of their midpoint (277.55) is read as a serial — and
+  // "Dispensary L7 Aisle 1 Unchecked Items Fridge 2" starts at 276.9. It lost
+  // by 0.65 of a point, and the location was swallowed into the serial cell.
+  //
+  // So look at the span the text actually covers first. That long location
+  // runs 276.9 -> 488.3, which straddles the Location header and comes nowhere
+  // near the Serial one. A value that covers exactly one header belongs to it,
+  // whatever alignment the sheet uses — a left-aligned value starts on its own
+  // header, a centred one grows out across it. Only when the span settles
+  // nothing (no header covered, or several) do we fall back to the old
+  // nearest-start test, which is also what happens when the PDF gives us no
+  // width to work with.
   function classifyRowToColumns(items,anchors,maxDist){
     const cols={};
+    const put=(key,str)=>{ cols[key]=(cols[key]?cols[key]+' ':'')+str; };
     items.forEach(it=>{
+      const w=Number(it.w)||0;
+      if(w>0){
+        const covered=anchors.filter(a=>a.x>=it.x && a.x<=it.x+w);
+        if(covered.length===1){ put(covered[0].key,it.str); return; }
+      }
       let best=null,bestD=Infinity;
       anchors.forEach(a=>{ const d=Math.abs(it.x-a.x); if(d<bestD){bestD=d;best=a;} });
-      if(best && bestD<=maxDist) cols[best.key]=(cols[best.key]?cols[best.key]+' ':'')+it.str;
+      if(best && bestD<=maxDist) put(best.key,it.str);
     });
     return cols;
   }
@@ -180,9 +205,17 @@
       // If a location cell is merged across rows, most/all devices will have
       // come out with an empty or only-partial location. Reassemble the full
       // text from every fragment seen in the table and apply it uniformly.
+      //
+      // Only when MOST rows came out empty, though. A merged cell leaves
+      // nearly every row without a location; one blank cell in an otherwise
+      // well-filled column is just a blank cell. Treating that as a merge
+      // pasted all thirteen locations onto all fourteen units of a 14-unit
+      // job — every unit reading "Dispensary L7 Checked Items Fridge 1
+      // PharmaC Counter M1 ..." — which destroys good data to paper over one
+      // missing cell. Leave the one gap for the engineer to fill instead.
       const mergedLocation=locationFragments.join(' ').replace(/\s+/g,' ').trim();
       const withOwnLocation=devices.filter(d=>d.location).length;
-      if(mergedLocation && withOwnLocation<devices.length){
+      if(mergedLocation && devices.length && withOwnLocation*3<=devices.length){
         devices.forEach(d=>{ d.location=mergedLocation; });
       }
     }
@@ -275,9 +308,11 @@
           if(modelColIsEquipment) device.equipment=modelOrEquip;
           devices.push(device);
         }
+        // Same majority test as Format A above: only a genuinely merged
+        // cell (most rows empty) may overwrite locations that did parse.
         const mergedLocation=locationFragments.join(' ').replace(/\s+/g,' ').trim();
         const withOwnLocation=devices.filter(d=>d.location).length;
-        if(mergedLocation && withOwnLocation<devices.length){
+        if(mergedLocation && devices.length && withOwnLocation*3<=devices.length){
           devices.forEach(d=>{ d.location=mergedLocation; });
         }
       }
@@ -443,6 +478,7 @@
   var SHEETS = {
     barkey:      { id:'barkey',      name:'Barkey',                 href:'barkey_calibration_form.html',        offsets:'dostmann' },
     smd:         { id:'smd',         name:'Standard Medical',       href:'calibration_worksheet_SMD.html',      offsets:'dostmann' },
+    nsmd:        { id:'nsmd',        name:'Non-Standard Medical',   href:'calibration_worksheet_NSMD.html',     offsets:'dostmann' },
     snmd:        { id:'snmd',        name:'Standard Non-Medical',   href:'calibration_worksheet_SNMD.html',     offsets:'fluke_comark' },
     ws19_24:     { id:'ws19_24',     name:'19/24 Range',            href:'calibration_worksheet_19_24.html',    offsets:'fluke_comark' },
     cloud_temp:  { id:'cloud_temp',  name:'Cloud Temp',             href:'cloud_temp.html',                     offsets:'fluke_comark' },
@@ -836,6 +872,112 @@
     if (changed) { writeJson(KEY_CURRENT, js); saveActiveJob(); }
   }
 
+  // A jobsheet sometimes lists the same unit twice. Keep the first and cross
+  // the rest off, so they do not sit there as work still to do and so that
+  // certifying one does not look like certifying the other. An engineer who
+  // decides the sheet was right can put one back, and that decision sticks.
+  // How many of a repeated serial the engineer has confirmed are real units.
+  // Two rows with the same serial are indistinguishable, so the decision is
+  // recorded against the job and the serial, not against a row.
+  function dupOkStore() { return readJson(KEY_DUPOK, {}) || {}; }
+  function dupAllowance(jobRef, serial) {
+    var job = dupOkStore()[String(jobRef || '')] || {};
+    return job[serialKey(serial)] || 0;
+  }
+  function allowOneMoreDuplicate(jobRef, serial) {
+    var all = dupOkStore();
+    var job = all[String(jobRef || '')] || {};
+    var k = serialKey(serial);
+    if (!k) return;
+    job[k] = (job[k] || 0) + 1;
+    all[String(jobRef || '')] = job;
+    writeJson(KEY_DUPOK, all);
+  }
+
+  // A jobsheet that lists the same unit twice used to leave a second row on
+  // the worklist, crossed off as "not required". That reads as a job with an
+  // extra unit that someone decided to skip, which is not what happened — the
+  // jobsheet simply repeated itself, and the engineer still has to scroll past
+  // it and wonder. An exact serial match is the same physical unit, so the two
+  // rows are folded into one and the survivor carries a note saying the
+  // jobsheet listed it twice.
+  //
+  // Nothing is lost by folding: progress, "not required" and certificates are
+  // all stored against the serial, not against a row, so the surviving row
+  // already carries every bit of state the copy would have shown. Two genuinely
+  // different units that share a serial are still supported — the engineer says
+  // so once (splitDuplicate) and the allowance below keeps them apart from then
+  // on, exactly as before.
+  function markDuplicates(js) {
+    if (!js || !js.devices) return;
+    var seen = {}, keeper = {}, allowed = {};
+    js.devices.forEach(function (d) {
+      // clear any previous automatic marking before working it out again
+      if (d.duplicateOf) {
+        d.duplicateOf = null;
+        if (/^Duplicate of/.test(d.notRequiredReason || '')) {
+          d.notRequired = false; d.notRequiredReason = '';
+        }
+      }
+      d.duplicateMerged = false;
+      d.duplicateCopies = 0;
+    });
+    js.devices.forEach(function (d) {
+      var k = serialKey(d.serial);
+      if (!k) return;                       // no serial: cannot tell them apart
+      if (!seen[k]) {
+        seen[k] = d.uid || true;
+        keeper[k] = d;
+        allowed[k] = dupAllowance(js.callNumber, d.serial);
+        return;
+      }
+      if (allowed[k] > 0) { allowed[k]--; return; }   // confirmed as a real unit
+      d.duplicateOf = seen[k];
+      d.duplicateMerged = true;                       // folded away, not shown
+      var first = keeper[k];
+      if (first) {
+        first.duplicateCopies = (first.duplicateCopies || 0) + 1;
+        // Take anything the surviving row was missing from the copy — a
+        // repeated row sometimes carries a location the first one lost.
+        if (!first.location && d.location) first.location = d.location;
+        if (!first.model && d.model) first.model = d.model;
+        if (!first.equipment && d.equipment) first.equipment = d.equipment;
+      }
+    });
+  }
+
+  // "These really are two different units that happen to share a serial."
+  // Called from the surviving row; hands one copy back and re-marks.
+  function splitDuplicate(idx) {
+    var js = current();
+    if (!js || !js.devices[idx]) return false;
+    var d = js.devices[idx];
+    if (!d.duplicateCopies) return false;
+    allowOneMoreDuplicate(js.callNumber, d.serial);
+    markDuplicates(js);
+    writeJson(KEY_CURRENT, js);
+    saveActiveJob();
+    announce();
+    return true;
+  }
+
+  // Put a crossed-off duplicate back on the list, for good.
+  function undoDuplicate(idx) {
+    var js = current();
+    if (!js || !js.devices[idx]) return false;
+    var d = js.devices[idx];
+    allowOneMoreDuplicate(js.callNumber, d.serial);
+    d.duplicateOf = null;
+    d.duplicateRestored = true;
+    if (/^Duplicate of/.test(d.notRequiredReason || '')) {
+      d.notRequired = false; d.notRequiredReason = '';
+    }
+    writeJson(KEY_CURRENT, js);
+    saveActiveJob();
+    announce();
+    return true;
+  }
+
   function applyProgressToCurrent() {
     ensureUids();
     var js = current();
@@ -845,7 +987,9 @@
     js.devices.forEach(function (d) {
       var p = prog[serialKey(d.serial)];
       if (!p) {
-        if (d.notRequired) { d.notRequired = false; d.notRequiredReason = ''; changed = true; }
+        // A duplicate is marked by the jobsheet itself, not by a progress
+        // record, so it must not be cleared here.
+        if (d.notRequired && !d.duplicateOf) { d.notRequired = false; d.notRequiredReason = ''; changed = true; }
         return;
       }
       if (p.done && !d.done) {
@@ -886,8 +1030,10 @@
 
   function progressOf(job) {
     if (!job || !job.devices) return { total: 0, done: 0, notRequired: 0, outstanding: 0 };
-    var today = todayIso(), out = { total: job.devices.length, done: 0, today: 0, earlier: 0, started: 0, notRequired: 0, outstanding: 0 };
-    job.devices.forEach(function (d) {
+    // A row folded into its twin is not a unit — it must not be counted.
+    var devices = job.devices.filter(function (d) { return !d.duplicateMerged; });
+    var today = todayIso(), out = { total: devices.length, done: 0, today: 0, earlier: 0, started: 0, notRequired: 0, outstanding: 0 };
+    devices.forEach(function (d) {
       if (d.notRequired && !d.done) { out.notRequired++; return; }
       if (d.done) {
         out.done++;
@@ -948,7 +1094,7 @@
     var all = jobsStore();
     return Object.keys(all).map(function (k) {
       var j = all[k];
-      var devices = j.devices || [];
+      var devices = (j.devices || []).filter(function (d) { return !d.duplicateMerged; });
       var done = devices.filter(function (d) { return d.done; }).length;
       var skipped = devices.filter(function (d) { return d.notRequired && !d.done; }).length;
       return {
@@ -1090,6 +1236,7 @@
         d.done = was.done; d.doneAt = was.doneAt; d.certRef = was.certRef;
         d.notRequired = was.notRequired; d.notRequiredReason = was.notRequiredReason;
         d.carriedOver = was.carriedOver;
+        d.duplicateRestored = d.duplicateRestored || was.duplicateRestored;
         d.edited = d.edited || was.edited;
         d.editedAt = d.editedAt || was.editedAt;
         d.editedFields = d.editedFields || was.editedFields;
@@ -1118,6 +1265,8 @@
         done: false, doneAt: '', certRef: '', addedManually: true
       });
     });
+
+    markDuplicates(js);
 
     writeJson(KEY_CURRENT, js);
     // Same job, later day: bring yesterday's ticks back.
@@ -1162,8 +1311,9 @@
   function progress() {
     var js = current();
     if (!js) return { total: 0, done: 0, today: 0, earlier: 0, started: 0 };
-    var today = todayIso(), out = { total: js.devices.length, done: 0, today: 0, earlier: 0, started: 0, notRequired: 0, outstanding: 0 };
-    js.devices.forEach(function (d) {
+    var devices = js.devices.filter(function (d) { return !d.duplicateMerged; });
+    var today = todayIso(), out = { total: devices.length, done: 0, today: 0, earlier: 0, started: 0, notRequired: 0, outstanding: 0 };
+    devices.forEach(function (d) {
       if (d.notRequired && !d.done) { out.notRequired++; return; }
       if (d.done) {
         out.done++;
@@ -1318,6 +1468,8 @@
     progressFor: progressFor,
     recordProgress: recordProgress,
     setNotRequired: setNotRequired,
+    undoDuplicate: undoDuplicate,
+    splitDuplicate: splitDuplicate,
     addDevice: addDevice,
     editDevice: editDevice,
     fixesFor: fixesFor,

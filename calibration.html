@@ -261,6 +261,8 @@ h1{font-size:clamp(28px,4vw,42px);line-height:1.1;margin:0 0 14px;font-weight:70
 .jdev-tag.added{border:1px solid var(--cyan);color:var(--cyan)}
 .jdev-tag.notreq{border:1px solid #c0392b;color:#c0392b}
 .jdev-tag.edited{border:1px solid #7a5cc4;color:#5f45a3}
+.jdev-tag.dup{border:1px solid var(--line);color:var(--muted)}
+.jdev-tag.donetag{border:1px solid var(--green);color:var(--green)}
 .unitcerts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .ucert{
   display:inline-flex;align-items:center;gap:6px;
@@ -553,7 +555,7 @@ footer{
 
   <footer>
     <span>LabCal Calibration Suite · offline worksheet toolkit</span>
-    <span id="footYear">v1.513</span>
+    <span id="footYear">v1.523</span>
   </footer>
 
 </div>
@@ -580,6 +582,16 @@ const tools = [
     title:'Calibration Worksheet — Standard Medical Device',
     desc:'Calibration worksheet for standard medical devices (fridges, freezers, platelet incubators).',
     href:'calibration_worksheet_SMD.html',
+    status:'active',
+    needs:'dostmann',
+    meta:'A4 · PDF/Excel',
+    icon:'fridge'
+  },
+  {
+    code:'WS-07',
+    title:'Calibration Worksheet — Non-Standard Medical Device',
+    desc:'For medical devices that fall outside the standard range. A copy of the standard medical worksheet, to be adapted.',
+    href:'calibration_worksheet_NSMD.html',
     status:'active',
     needs:'dostmann',
     meta:'A4 · PDF/Excel',
@@ -725,7 +737,7 @@ function renderDate(){
   const d = new Date();
   const opts = {day:'2-digit', month:'short', year:'numeric'};
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-GB', opts).toUpperCase();
-  document.getElementById('footYear').textContent = 'v1.513 · ' + d.getFullYear();
+  document.getElementById('footYear').textContent = 'v1.523 · ' + d.getFullYear();
 }
 
 
@@ -1053,6 +1065,7 @@ async function renderCalibrationPage(){
 }
 
 let jobFilter = '';
+let statusFilter = 'all';   // all | todo | started | done | notreq
 let jobCerts = {};        // serialKey -> [certificate records] for the open job
 let jobCertsOther = [];   // certificates for this job that match no unit
 
@@ -1270,13 +1283,40 @@ function renderJobPanel(){
 
   const p = LabCalJobsheet.progress();
   const filter = jobFilter.trim().toLowerCase();
-  const matches = d => !filter || [d.model, d.equipment, d.serial, d.location]
-    .filter(Boolean).some(v => String(v).toLowerCase().includes(filter));
+  // A row folded into its twin is not shown at all — the survivor carries a
+  // "listed 2x on jobsheet" note instead of a crossed-off second row. Declared
+  // here because the tally below counts off it as well as the row list.
+  const live = js.devices.filter(d=>!d.duplicateMerged);
+  // Calibrated or verified? The test lives in labcal_vector_pdf.js so the
+  // screen and the job summary PDF can never word the same unit differently.
+  // If that module has not loaded, we genuinely do not know, so fall back to
+  // the neutral word rather than guessing (the module self-check reports the
+  // missing module separately).
+  const doneWord = (d) => {
+    if(!(window.LabCalVectorPdf && LabCalVectorPdf.isVerificationRef)) return 'certified';
+    return LabCalVectorPdf.isVerificationRef(d.certRef) ? 'verified' : 'calibrated';
+  };
+
+  const statusOf = d => d.done ? 'done'
+    : (d.notRequired ? 'notreq'
+    : (LabCalJobsheet.isStarted(js.callNumber, d) ? 'started' : 'todo'));
+  const matches = d => {
+    if(statusFilter !== 'all' && statusOf(d) !== statusFilter) return false;
+    return !filter || [d.model, d.equipment, d.serial, d.location]
+      .filter(Boolean).some(v => String(v).toLowerCase().includes(filter));
+  };
   const pct = p.total ? Math.round((p.done/p.total)*100) : 0;
   const startedPct = p.total ? Math.round(((p.done+p.started)/p.total)*100) : 0;
   // A job can run over several days: say how much of the tally is from
   // earlier visits so there is no guessing about what is left.
+  // Same split as the job summary PDF: say what actually happened rather than
+  // a catch-all. Counted off the live rows so the two can never disagree.
+  const doneUnits = live.filter(d=>d.done);
+  const verifiedN = doneUnits.filter(d=>doneWord(d)==='verified').length;
+  const calibratedN = doneUnits.length - verifiedN;
   const split = [
+    calibratedN ? `${calibratedN} calibrated` : '',
+    verifiedN ? `${verifiedN} verified` : '',
     p.today ? `${p.today} today` : '',
     p.earlier ? `${p.earlier} on earlier days` : '',
     p.started ? `${p.started} started` : '',
@@ -1290,8 +1330,9 @@ function renderJobPanel(){
     js.fileName ? jesc(js.fileName) : ''
   ].filter(Boolean).join(' · ');
 
-  const shown = js.devices.filter(matches);
+  const shown = live.filter(matches);
   const rows = js.devices.map((d,i)=>{
+    if(d.duplicateMerged) return '';
     if(!matches(d)) return '';
     const blocked = d.sheet ? sheetBlockedReason(d.sheet) : '';
     const whyText = d.sheetWhy==='learned' ? 'remembered' : (d.sheetWhy==='rule' ? 'matched' : '');
@@ -1299,10 +1340,12 @@ function renderJobPanel(){
     <div class="jdev${d.done?' done':''}${d.notRequired&&!d.done?' notreq':''}">
       <div class="jdev-main">
         <div class="jdev-model">${d.done?'<span class="tick">✓</span>':''}${jesc(d.model||d.equipment||'(no model)')}${
-          d.done && d.carriedOver ? '<span class="jdev-tag earlier">'+jesc(shortDay(d.doneAt))+'</span>' :
+          d.done ? '<span class="jdev-tag donetag">'+jesc(doneWord(d))+'</span>'
+            + (d.carriedOver ? '<span class="jdev-tag earlier">'+jesc(shortDay(d.doneAt))+'</span>' : '') :
+          (d.duplicateOf && !d.done ? '<span class="jdev-tag notreq">duplicate</span>' :
           (d.notRequired && !d.done ? '<span class="jdev-tag notreq">not required</span>' :
-          (!d.done && LabCalJobsheet.isStarted(js.callNumber, d) ? '<span class="jdev-tag started">started</span>' : ''))
-        }${d.addedManually ? '<span class="jdev-tag added">added on site</span>' : ''}${
+          (!d.done && LabCalJobsheet.isStarted(js.callNumber, d) ? '<span class="jdev-tag started">started</span>' : '')))
+        }${d.duplicateCopies ? `<span class="jdev-tag dup" title="The jobsheet lists this serial ${d.duplicateCopies+1} times. It is counted once.">listed ${d.duplicateCopies+1}\u00d7 on jobsheet</span>` : ''}${d.addedManually ? '<span class="jdev-tag added">added on site</span>' : ''}${
           d.edited ? `<span class="jdev-tag edited" title="${jesc((d.editedFields||[]).join(', '))}${d.editedAt?' · '+jesc(shortDay(d.editedAt)):''}">edited</span>` : ''
         }</div>
         <div class="jdev-meta">${jesc(d.serial||'no serial')}${d.location?' · '+jesc(d.location):''}${d.done&&d.certRef?' · cert '+jesc(d.certRef):''}${d.done&&d.doneAt?' · '+jesc(shortDay(d.doneAt)):''}${d.notRequired&&!d.done&&d.notRequiredReason?' · '+jesc(d.notRequiredReason):''}${
@@ -1317,6 +1360,7 @@ function renderJobPanel(){
           : `<button class="jbtn" type="button" data-open="${i}" ${(!d.sheet||blocked)?'disabled':''}>${d.done?'Reopen':'Open'}</button>
              ${d.done ? '' : `<button class="jbtn cross mini" type="button" data-skip="${i}" title="Not required — not on site, or customer declined">✕</button>`}`}
         <button class="jbtn ghost mini" type="button" data-edit="${i}" title="Correct the serial number or location">Edit</button>
+        ${d.duplicateCopies ? `<button class="jbtn ghost mini" type="button" data-split="${i}" title="These are two different units that happen to share a serial number">Two units</button>` : ''}
         ${d.addedManually && !d.done ? `<button class="jbtn ghost mini" type="button" data-remove="${i}" title="Remove this added unit">Remove</button>` : ''}
       </div>
       ${editingIdx === i ? `
@@ -1384,7 +1428,7 @@ function renderJobPanel(){
     ${toastHtml()}
     <div class="job-head">
       <div>
-        <p class="job-title">Worklist — ${js.devices.length} unit${js.devices.length===1?'':'s'}${p.earlier?' · continued':''}</p>
+        <p class="job-title">Worklist — ${live.length} unit${live.length===1?'':'s'}${p.earlier?' · continued':''}</p>
         <div class="job-sub">${meta}</div>
       </div>
       <div class="job-actions">
@@ -1404,7 +1448,11 @@ function renderJobPanel(){
     </div>
     <div class="jobtools">
       <input class="search" id="jobSearch" type="search" placeholder="Search serial, model or location…" value="${jesc(jobFilter)}">
-      <span class="count">${filter?`${shown.length} of ${js.devices.length}`:`${js.devices.length} unit${js.devices.length===1?'':'s'}`}</span>
+      <span class="count">${(filter||statusFilter!=='all')?`${shown.length} of ${live.length}`:`${live.length} unit${live.length===1?'':'s'}`}</span>
+      <select class="daysel" id="statusFilter" title="Show only units at this stage">
+        ${[['all','All'],['todo','To do'],['started','Started'],['done','Done'],['notreq','Not required']]
+          .map(([v,l])=>`<option value="${v}"${statusFilter===v?' selected':''}>${l}${v==='all'?'':` (${live.filter(x=>statusOf(x)===v).length})`}</option>`).join('')}
+      </select>
       <button class="jbtn ghost mini" type="button" id="jobAddBtn">+ Add unit</button>
     </div>
     <div class="addform" id="jobAddForm">
@@ -1415,7 +1463,7 @@ function renderJobPanel(){
       <button class="jbtn ghost mini" type="button" id="addCancel">Cancel</button>
     </div>
     ${rows}
-    ${filter && !shown.length ? '<div class="jdev"><div class="jdev-main"><div class="jdev-meta">No unit matches that search.</div></div></div>' : ''}
+    ${!shown.length ? `<div class="jdev"><div class="jdev-main"><div class="jdev-meta">${filter?'No unit matches that search.':'No unit at that stage.'}</div></div></div>` : ''}
     ${certLoadNote ? `<div class="certnote">${jesc(certLoadNote)}</div>` : ''}
     ${jobCertsOther.length ? `
     <div class="othercerts">
@@ -1446,6 +1494,9 @@ function renderJobPanel(){
     const rb = document.getElementById('jobReplaceBtn');
     if(rb) rb.addEventListener('click', ()=>jobFile.click());
     // --- search ---
+    const sf = document.getElementById('statusFilter');
+    if(sf) sf.addEventListener('change', ()=>{ statusFilter = sf.value; renderJobPanel(); });
+
     const search = document.getElementById('jobSearch');
     if(search) search.addEventListener('input', ()=>{
       jobFilter = search.value;
@@ -1477,9 +1528,32 @@ function renderJobPanel(){
       askingIdx = null; removingIdx = null; editingIdx = null; renderJobPanel();
     }));
     jobPanel.querySelectorAll('[data-restore]').forEach(btn=>btn.addEventListener('click',()=>{
-      const d = LabCalJobsheet.current().devices[Number(btn.getAttribute('data-restore'))];
+      const i = Number(btn.getAttribute('data-restore'));
+      const d = LabCalJobsheet.current().devices[i];
+      if(d.duplicateOf){
+        // crossed off automatically as a duplicate; putting it back is a
+        // decision that has to stick when the jobsheet is loaded again
+        LabCalJobsheet.undoDuplicate(i);
+        jobToast = {text:`${d.serial || d.model} put back — it will not be treated as a duplicate again.`};
+        renderJobPanel();
+        return;
+      }
       LabCalJobsheet.setNotRequired(LabCalJobsheet.current().callNumber, d.serial, false);
       jobToast = {text:`${d.serial || d.model} put back on the list.`};
+      renderJobPanel();
+    }));
+
+    // "Two units" on a row the jobsheet listed more than once: the engineer is
+    // saying these are genuinely separate units that share a serial number.
+    jobPanel.querySelectorAll('[data-split]').forEach(btn=>btn.addEventListener('click', ()=>{
+      if(!moduleReady(window.LabCalJobsheet, 'splitDuplicate', 'labcal_jobsheet.js')) return;
+      const i = Number(btn.getAttribute('data-split'));
+      const d = LabCalJobsheet.current().devices[i];
+      if(!LabCalJobsheet.splitDuplicate(i)){
+        jobToast = {text:'Could not separate that unit.'};
+      } else {
+        jobToast = {text:`${d.serial || d.model} separated — both rows will stay on the list.`};
+      }
       renderJobPanel();
     }));
 

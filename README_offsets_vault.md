@@ -1,7 +1,33 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.513)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.523)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.523 — Non-Standard Medical worksheet and certificate-number ordering, carried forward from v1.515
+
+This suite's line had branched before v1.515, so it never picked up the two
+things finished in that session. Both are now merged in:
+
+**New worksheet: Non-Standard Medical Device** (`calibration_worksheet_NSMD.html`,
+WS-07). It is a copy of the Standard Medical worksheet with nothing else
+changed, so it behaves identically today — the starting point for the changes
+that make it a non-standard sheet. It is registered for routing (manual
+selection only — no model code routes to it automatically yet), offline
+caching, text certificates and the offsets vault (Dostmann), and its
+certificate is headed *Non-Standard Medical Device*.
+
+Note the naming now in use: **Standard Medical**, **Non-Standard Medical**
+(new) and **Standard Non-Medical** are three separate worksheets.
+
+**Merged job PDFs and the job summary are ordered by certificate number**,
+smallest first, certified units before anything still outstanding. The number
+is read numerically, so S 51440 follows S 51439 rather than sorting beside
+S 514.
+
+This README's changelog below still reads as if v1.514 were current — the
+entries for whatever shipped between v1.515 and v1.522 on this branch were
+never written up here. Nothing in this release touches that gap; it only adds
+the two items above on top of v1.522 as it stood.
 
 ## v1.44 — text by default, and the certificates panel sorted
 
@@ -29,6 +55,31 @@ A day with nothing on it reads plainly: *"Certificates — none on 01 Aug ·
 
 From here versions run **v1.500, v1.501, v1.502 …** — three digits, so there is
 room for a lot of small releases before anything needs a bigger number.
+
+## v1.514 — signature block locked, duplicates crossed off, status filter
+
+**The engineer's name, signature and date are no longer typed on the sheet.**
+They come from the offsets file and are locked. Who performed the calibration
+and when are part of the record, not free text a later hand can change. The
+date is the day the work is done.
+
+The **checker's** name, signature and date stay open — that is somebody else's
+to sign.
+
+**Duplicated units on a jobsheet.** Where the same serial appears twice, the
+first is kept and the rest are crossed off with a **duplicate** tag and the
+reason shown. They stop counting as outstanding, and certifying one can no
+longer look like certifying the other.
+
+If the sheet was right and they really are two units, **Put back** restores one
+and that decision sticks — recorded against the job and serial, so re-uploading
+the same sheet tomorrow does not cross it off again. Two rows with the same
+serial are indistinguishable, so the decision has to be recorded against the
+serial rather than a row.
+
+**Status filter.** Beside the search box: **All · To do · Started · Done · Not
+required**, each with its count. Useful on a long job for seeing what is left
+without reading every row.
 
 ## v1.513 — load a whole memory card on an iPad
 
@@ -1305,19 +1356,19 @@ that actually changed:
 | `calibration_worksheet_SNMD.html` | Auto-loads Fluke & Comark offsets |
 | `calibration_worksheet_19_24.html` | Auto-loads Fluke & Comark offsets |
 | `cloud_temp.html` | Auto-loads Fluke & Comark offsets |
-| `sw.js` | Cache bumped to **v56**; same-origin files network-first |
+| `sw.js` | Cache bumped to **v57**; same-origin files network-first |
 | `data_logger_viewer.html` | Chart PNG and summary CSV go through the share sheet on iPad |
 | `pdf_merge_reorder.html` | Merged PDF goes through the share sheet on iPad |
 | `tools.html` | Unchanged — included so the folder is complete |
 
 After uploading, open the home page once while online so the service worker
-picks up v56, then hit **Refresh offline copy**.
+picks up v57, then hit **Refresh offline copy**.
 
 ## Which file unlocks what
 
 | Ecosystem | Unlocks |
 |---|---|
-| **Dostmann** | Barkey · Standard Medical Device |
+| **Dostmann** | Barkey · Standard Medical Device · Non-Standard Medical Device |
 | **Fluke & Comark** | Standard Non-Medical · 19/24 Range · Monitoring Systems (Cloud Temp) |
 
 The two are never interchangeable — loading a Fluke file into the Dostmann slot

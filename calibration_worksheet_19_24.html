@@ -342,15 +342,41 @@ const OFFSET_DEVICE='fluke_comark';
 // simply reads them at startup. The "Load offsets" button here still works and
 // writes back to the vault, so a file loaded on any worksheet is picked up by
 // all the others too.
+// ---------------------------------------------------------------------
+// The engineer's name, signature and date come from the offsets file and
+// are not typed on the sheet. Who performed the calibration and when are
+// part of the record, not free text a later hand can alter.
+// The checker's fields stay open — that is somebody else's to sign.
+// ---------------------------------------------------------------------
+function lockSignatureBlock(raw){
+  raw = raw || (window.LabCalOffsets && lastOffsetRaw) || {};
+  const lock=(id,value)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    if(value) el.value=value;
+    el.readOnly=true;
+    el.setAttribute('aria-readonly','true');
+    el.style.background='var(--bg2, #f1f3f5)';
+    el.style.color='#333';
+    el.title='From the offsets file — not editable here';
+  };
+  const name=raw.engineerName||'';
+  lock('engineer', name);
+  lock('engineerSignature', raw.engineerSignature || name);
+  // the date the work was done, not a date anyone can set afterwards
+  const d=new Date();
+  const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const today=String(d.getDate()).padStart(2,'0')+'/'+MON[d.getMonth()]+'/'+d.getFullYear();
+  const dEl=document.getElementById('engDate');
+  lock('engDate', (dEl && dEl.value) ? dEl.value : today);
+}
+
 function applyOffsetsData(raw, sourceLabel){
   const probeList=buildProbeListFromOffsets(raw);
   if(!probeList) return false;
   lastOffsetRaw=raw;
   roomTherms=Array.isArray(raw.roomTherms)?raw.roomTherms:[];
-  if(raw.engineerName){
-    const engEl=document.getElementById('engineer');
-    if(engEl && !engEl.value) engEl.value=raw.engineerName;
-  }
+  lockSignatureBlock(raw);
   PROBE_LIST=probeList;
   PROBES=Object.fromEntries(PROBE_LIST.map(p=>[p.id,p]));
   DIGITAL_THERMOMETERS=buildDigitalThermometersFromOffsets(raw)||[];
