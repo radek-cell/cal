@@ -1,7 +1,25 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.525)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.526)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.526 — Non-Standard Medical Device: Air/Load/Chart Recorder settings laid out consistently
+
+Purely a layout change, no calculation or tolerance behaviour altered.
+Display's selector (Standard / No decimal point on the display / Not
+present) moved out of the general job-details area and into the As Found
+table header, directly under **Air** — the same place Load's and Chart
+Recorder's own selectors already live. All three columns now present the
+same way: a settings dropdown sitting right in that column's header, so
+switching what's fitted for Air, Load and Chart Recorder reads as one
+consistent row of controls instead of Display living somewhere else on the
+form. As Left mirrors Air's choice with a small badge in its own header,
+exactly as it already did for Load and Chart Recorder.
+
+The explanatory note (previously a small aside next to the Display field)
+now sits as its own line above the As Found table, and only appears when
+Air's setting actually needs explaining (No decimal point, or Not
+present).
 
 ## v1.525 — Non-Standard Medical Device: Display now has a "No decimal point" variation
 

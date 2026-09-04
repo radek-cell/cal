@@ -148,15 +148,6 @@
         <option value="Calibrated on System 2">Calibrated on System 2</option>
       </select>
     </div>
-    <div class="field"><label>Display <span class="req">*</span>:</label>
-      <select id="displayMode">
-        <option value="">-- select --</option>
-        <option value="standard">Standard</option>
-        <option value="no-decimal">No decimal point on the display</option>
-        <option value="not-present">Not present</option>
-      </select>
-      <span id="displayVariationNote" class="hintText" style="display:none;margin-left:6px"></span>
-    </div>
   </div>
 
   <table>
@@ -174,9 +165,10 @@
   </table>
 
   <div class="probeHint"><b>Probe dropdown:</b> choose the probe/port in each column. The app will use the closest correction to the Initial Set Point for AF and to the Final Set Point for AL. The selected correction is copied into Max Correction and Min Correction automatically.<br><b>Air calculation markers:</b> blue underline = highest corrected maximum used; green underline = lowest corrected minimum used.</div>
+  <div id="displayVariationNote" class="hintText" style="display:none;margin:-4px 0 8px"></div>
   <div id="afStatus" class="statusbar">As Found status will appear here after calculation.</div>
   <table id="afTable">
-    <tr><th class="section">As Found (AF)</th><th colspan="2">Air</th><th id="loadColHeadAf">Load<select id="loadMode" class="colModeSel"><option value="">-- select --</option><option value="two-point">Two-point (±0.300°C)</option><option value="single-point">Single point (±1.0°C)</option><option value="not-present">Not present</option></select></th><th id="chartColHeadAf">Chart Recorder<select id="chartMode" class="colModeSel"><option value="">-- select --</option><option value="digital">Digital recorder</option><option value="based-on-air">Based on Air readings</option><option value="not-fitted">Not fitted</option></select></th></tr>
+    <tr><th class="section">As Found (AF)</th><th id="airColHeadAf" colspan="2">Air<select id="displayMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard</option><option value="no-decimal">No decimal point on the display</option><option value="not-present">Not present</option></select></th><th id="loadColHeadAf">Load<select id="loadMode" class="colModeSel"><option value="">-- select --</option><option value="two-point">Two-point (±0.300°C)</option><option value="single-point">Single point (±1.0°C)</option><option value="not-present">Not present</option></select></th><th id="chartColHeadAf">Chart Recorder<select id="chartMode" class="colModeSel"><option value="">-- select --</option><option value="digital">Digital recorder</option><option value="based-on-air">Based on Air readings</option><option value="not-fitted">Not fitted</option></select></th></tr>
     <tr class="lrRow"><td></td><td><span class="lrBadge"><span class="dot left">L</span><span class="txt">Left</span></span></td><td><span class="lrBadge"><span class="dot right">R</span><span class="txt">Right</span></span></td><td></td><td></td></tr>
     <tr><td>Probe Serial No <span class="req">*</span>:</td><td><select class="input probe" id="af_air1_probe"></select></td><td><select class="input probe" id="af_air2_probe"></select></td><td><select class="input probe" id="af_load_probe"></select></td><td><select class="input probe" id="af_chart_probe"></select></td></tr>
     <tr><td></td><td colspan="2" id="afAirProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Select one "A" probe and one "B" probe for Air</td><td colspan="2" id="afLoadChartProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Load/Chart must differ from Air probes</td></tr>
@@ -194,7 +186,7 @@
   <div id="alStatus" class="statusbar">As Left status will appear here after calculation.</div>
   <div id="alTableHost" class="stampHost">
   <table id="alTable">
-    <tr><th class="section">As Left (AL)</th><th colspan="2">Air</th><th id="loadColHeadAl">Load <span id="loadModeBadgeAl"></span></th><th id="chartColHeadAl">Chart Recorder <span id="chartModeBadgeAl"></span></th></tr>
+    <tr><th class="section">As Left (AL)</th><th colspan="2">Air <span id="displayModeBadgeAl"></span></th><th id="loadColHeadAl">Load <span id="loadModeBadgeAl"></span></th><th id="chartColHeadAl">Chart Recorder <span id="chartModeBadgeAl"></span></th></tr>
     <tr class="lrRow"><td></td><td><span class="lrBadge"><span class="dot left">L</span><span class="txt">Left</span></span></td><td><span class="lrBadge"><span class="dot right">R</span><span class="txt">Right</span></span></td><td></td><td></td></tr>
     <tr><td>Probe Serial No: <span class="small" style="font-weight:400">(same as As Found)</span></td><td><select class="input probe" id="al_air1_probe" disabled></select></td><td><select class="input probe" id="al_air2_probe" disabled></select></td><td><select class="input probe" id="al_load_probe" disabled></select></td><td><select class="input probe" id="al_chart_probe" disabled></select></td></tr>
     <tr><td></td><td colspan="2" id="alAirProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Select one "A" probe and one "B" probe for Air</td><td colspan="2" id="alLoadChartProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Load/Chart must differ from Air probes</td></tr>
@@ -224,7 +216,7 @@
     <div class="label" style="padding:4px 6px;background:#e3e3e3">Comments <span class="muted">(calculations, deviations, customer requests)</span></div>
     <textarea id="comments" style="width:100%;height:60px;border:0;box-sizing:border-box;font-size:12px;padding:6px;resize:vertical;display:block"></textarea>
   </div>
-  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when every column actually fitted on this unit is present and within its own tolerance — Air and a digital Chart Recorder ±0.300 °C, Load ±1.0 °C when set to single point instead of two-point. A Chart Recorder set to "Based on Air readings" has no probe of its own and always matches Air's result. Load, Chart Recorder and Display can each be marked not present/not fitted per unit above the As Found table; an absent column is greyed out and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
+  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place (0 when the unit's Display is set to "No decimal point") using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when every column actually fitted on this unit is present and within its own tolerance — Air and Load ±0.300 °C normally, widening to ±1.0 °C for Load when set to single point or for Air/Load together when the unit's Display has no decimal point; a digital Chart Recorder always ±0.300 °C regardless, since it is a separate instrument. A Chart Recorder set to "Based on Air readings" has no probe of its own and always matches Air's result (tolerance included). Air, Load and Chart Recorder each have their own settings in the As Found table header — Air's covers the unit's Display, Load and Chart Recorder cover what's fitted for each; an absent/no-display column is greyed out and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
 </div>
 <script>
 const TOL=0.3;
@@ -1353,8 +1345,10 @@ function applyColumnAvailability(){
   });
   // AL header badges mirror whatever was chosen in the AF header selects,
   // so As Left reads correctly without a second control to keep in sync.
+  const displayBadge=document.getElementById('displayModeBadgeAl');
+  if(displayBadge) displayBadge.textContent = isDisplayAbsent() ? '(N/A)' : (isNoDecimalDisplayMode() ? '(±1.0°C)' : '');
   const loadBadge=document.getElementById('loadModeBadgeAl');
-  if(loadBadge) loadBadge.textContent = isLoadAbsent() ? '(N/A)' : (loadModeVal()==='single-point' ? '(±1.0°C)' : '');
+  if(loadBadge) loadBadge.textContent = isLoadAbsent() ? '(N/A)' : (loadModeVal()==='single-point' || isNoDecimalDisplayMode() ? '(±1.0°C)' : '');
   const chartBadge=document.getElementById('chartModeBadgeAl');
   if(chartBadge) chartBadge.textContent = isChartAbsent() ? '(N/A)' : (isChartFromAir() ? '(from Air)' : '');
 }
