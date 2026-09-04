@@ -1,7 +1,32 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.524)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.525)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.525 — Non-Standard Medical Device: Display now has a "No decimal point" variation
+
+The Display selector added in v1.524 (Standard / Not present) gains a third
+option, matching the variation Standard Non-Medical already offers:
+
+**"No decimal point on the display"** — for units whose onboard display only
+ever shows whole degrees. Air's Display and Display cycle fields (and
+Load's, since Load reads the same onboard display) switch to whole-degree
+entry, and the tolerance for whatever is judged against that display widens
+from ±0.300°C to ±1.0°C — the same reasoning already accepted for Standard
+Non-Medical's own "No decimal point" variation, just extended to a display
+that Air and Load can share. Chart Recorder's own digital readout, when
+fitted independently ("Digital recorder" mode), is a separate instrument
+and keeps its standard ±0.300°C and one-decimal entry regardless; when
+Chart Recorder is instead "Based on Air readings", it inherits Air's
+figures and tolerance exactly, as it already did.
+
+The certificate's Air column header now also states its tolerance (e.g.
+"Air (±1.0°C)"), matching the per-column headers Load and Chart Recorder
+already show.
+
+The previous "Fitted" option is now named "Standard" (same meaning, no
+change in behaviour); a worksheet or Excel export already saved with the
+old "Fitted" value is read back correctly on import.
 
 ## v1.524 — Non-Standard Medical Device worksheet: Load/Chart Recorder/Display now amendable per unit
 

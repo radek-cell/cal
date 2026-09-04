@@ -1076,17 +1076,28 @@
     // untouched.
     var loadModeEl = document.getElementById('loadMode');
     var chartModeEl = document.getElementById('chartMode');
+    var displayModeEl = document.getElementById('displayMode');
+    // "No decimal point on the display" widens whatever is judged against
+    // that display (Air, and Load since it shares the same onboard
+    // display) to ±1.0°C — Chart Recorder's own digital readout, when
+    // fitted independently, is unaffected and keeps ±0.300°C regardless.
+    var noDecimalDisplay = !!displayModeEl && displayModeEl.value === 'no-decimal';
+    var airTitle = 'Air';
+    if (displayModeEl) {
+      airTitle = 'Air (' + (noDecimalDisplay ? '±1.0°C' : '±0.300°C') + ')';
+    }
     var loadTitle = 'Load';
     if (loadModeEl) {
       var lm = loadModeEl.value;
-      loadTitle = 'Load (' + (lm === 'not-present' ? 'N/A' : lm === 'single-point' ? '±1.0°C' : '±0.300°C') + ')';
+      var loadTol = (lm === 'single-point' || noDecimalDisplay) ? '±1.0°C' : '±0.300°C';
+      loadTitle = 'Load (' + (lm === 'not-present' ? 'N/A' : loadTol) + ')';
     }
     var chartTitle = 'Chart Recorder';
     if (chartModeEl) {
       var cm = chartModeEl.value;
       chartTitle = 'Chart Recorder (' + (cm === 'not-fitted' ? 'N/A' : cm === 'based-on-air' ? 'from Air' : '±0.300°C') + ')';
     }
-    var T = makeTable(e, doc, [{ title: 'Air', span: 2 },
+    var T = makeTable(e, doc, [{ title: airTitle, span: 2 },
                                { title: loadTitle, span: 1 },
                                { title: chartTitle, span: 1 }], 44);
 

@@ -151,9 +151,11 @@
     <div class="field"><label>Display <span class="req">*</span>:</label>
       <select id="displayMode">
         <option value="">-- select --</option>
-        <option value="fitted">Fitted</option>
+        <option value="standard">Standard</option>
+        <option value="no-decimal">No decimal point on the display</option>
         <option value="not-present">Not present</option>
       </select>
+      <span id="displayVariationNote" class="hintText" style="display:none;margin-left:6px"></span>
     </div>
   </div>
 
@@ -1118,7 +1120,7 @@ function roundedDiff(avg, display, avgDp=3, displayDp=1){
   const displayRounded = roundTo(display, displayDp);
   return avgRounded - displayRounded;
 }
-function calcNormal(prefix, col, tol=TOL){
+function calcNormal(prefix, col, tol=TOL, displayDp=1){
   const rawMax=n(`${prefix}_${col}_max`), rawMin=n(`${prefix}_${col}_min`);
   const mismatch = rawMax!==null && rawMin!==null && rawMax<rawMin;
   const max=add(n(`${prefix}_${col}_max`),n(`${prefix}_${col}_max_corr`));
@@ -1148,7 +1150,7 @@ function calcNormal(prefix, col, tol=TOL){
     return {diff:null, state: avg!==null ? 'ok' : null};
   }
   const display=n(`${prefix}_${col}_display`);
-  const diff=roundedDiff(avg, display, 3, 1);
+  const diff=roundedDiff(avg, display, 3, displayDp);
   set(`${prefix}_${col}_diff`,diff);
   const state=diff===null?null:(Math.abs(diff)>tol?'bad':'ok'); cls(`${prefix}_${col}_diff`,state); return {diff,state};
 }
@@ -1184,9 +1186,9 @@ function calcAir(prefix){
     return {diff:null, state: avg!==null ? 'ok' : null};
   }
   const display=n(`${prefix}_air_display`);
-  const diff=roundedDiff(avg, display, 3, 1);
+  const diff=roundedDiff(avg, display, 3, getDisplayDecimals());
   set(`${prefix}_air_diff`,diff);
-  const state=diff===null?null:(Math.abs(diff)>TOL?'bad':'ok'); cls(`${prefix}_air_diff`,state); return {diff,state};
+  const state=diff===null?null:(Math.abs(diff)>getDisplayTolerance()?'bad':'ok'); cls(`${prefix}_air_diff`,state); return {diff,state};
 }
 
 // ---------------------------------------------------------------------
@@ -1200,21 +1202,70 @@ function calcAir(prefix){
 //                   probe of its own — its Average/Difference/Display are
 //                   copied live from Air, so it always agrees with Air),
 //                   or not fitted at all.
-//   Display       — fitted, or not present on this model at all (no
-//                   onboard digital display for Air or Load to read from).
+//   Display       — Standard, "No decimal point on the display" (the unit's
+//                   display only ever shows whole degrees — Display/Display
+//                   cycle fields are entered and judged to 0 dp instead of 1,
+//                   and the tolerance for whatever is compared against it
+//                   widens to ±1.0°C, same reasoning as Standard Non-Medical's
+//                   own "No decimal point" variation), or not present on this
+//                   model at all (no onboard digital display for Air or Load
+//                   to read from). Chart Recorder's own digital readout, when
+//                   fitted, is a separate instrument and is not affected by
+//                   either Display variation — only by its own mode below.
 // A column that is absent is stamped -N/A-, disabled, greyed out with the
 // same styling as Standard Non-Medical's permanently-N/A columns, and left
 // out of every calculation and out of "adjustment needed" below.
 // ---------------------------------------------------------------------
 const SINGLE_POINT_TOL=1.0;
+const NO_DECIMAL_TOL=1.0;   // same figure as SINGLE_POINT_TOL today, but a
+                            // separate name/knob since they are independent
+                            // calibration decisions that only happen to
+                            // share a value — never assume they must match.
 function loadModeVal(){ return document.getElementById('loadMode')?.value || 'two-point'; }
 function chartModeVal(){ return document.getElementById('chartMode')?.value || 'digital'; }
-function displayModeVal(){ return document.getElementById('displayMode')?.value || 'fitted'; }
+function displayModeVal(){ return document.getElementById('displayMode')?.value || 'standard'; }
 function isLoadAbsent(){ return loadModeVal()==='not-present'; }
 function isChartAbsent(){ return chartModeVal()==='not-fitted'; }
 function isChartFromAir(){ return chartModeVal()==='based-on-air'; }
 function isDisplayAbsent(){ return displayModeVal()==='not-present'; }
-function loadTolerance(){ return loadModeVal()==='single-point' ? SINGLE_POINT_TOL : TOL; }
+function isNoDecimalDisplayMode(){ return displayModeVal()==='no-decimal'; }
+// The tolerance for whatever is judged against "the display" (Air always;
+// Load too, since it shares the same onboard display) — widened when that
+// display has no decimal point. Chart Recorder's own digital readout, when
+// fitted independently, keeps the standard ±0.300°C regardless (see above).
+function getDisplayTolerance(){ return isNoDecimalDisplayMode() ? NO_DECIMAL_TOL : TOL; }
+// The decimal places Display and Display-cycle fields are entered/judged
+// to — 0 when the unit's display has no decimal point, 1 otherwise. Applies
+// to Air's and Load's own Display fields (they share the onboard display);
+// Chart Recorder's own Display field, when fitted independently, is not in
+// this list and keeps its standard 1 dp.
+function getDisplayDecimals(){ return isNoDecimalDisplayMode() ? 0 : 1; }
+const DISPLAY_DECIMAL_IDS=['af_cycle_air_max','af_cycle_air_min','af_cycle_load_max','af_cycle_load_min',
+                            'al_cycle_air_max','al_cycle_air_min','al_cycle_load_max','al_cycle_load_min',
+                            'af_air_display','al_air_display','af_load_display','al_load_display'];
+function refreshDisplayDecimalsUI(){
+  const dp=getDisplayDecimals();
+  const placeholder = dp===0 ? 'xx' : 'xx.x';
+  DISPLAY_DECIMAL_IDS.forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.placeholder=placeholder;
+  });
+}
+function updateDisplayVariationNote(){
+  const note=document.getElementById('displayVariationNote');
+  if(!note) return;
+  const mode=displayModeVal();
+  let text='';
+  if(mode==='no-decimal') text='⚠ No decimal point on the display — Display and Display cycle recorded as whole degrees; tolerance widened to ±1.0°C for Air/Load.';
+  else if(mode==='not-present') text='⚠ No display fitted on this model — Air/Load readings are still taken, but there is nothing to compare them against.';
+  note.textContent=text;
+  note.style.display = text ? '' : 'none';
+}
+function loadTolerance(){
+  if(loadModeVal()==='single-point') return SINGLE_POINT_TOL;
+  if(isNoDecimalDisplayMode()) return NO_DECIMAL_TOL;
+  return TOL;
+}
 
 // A field id is "column-absent" if the reading it holds does not exist on
 // this unit at all — always disabled and stamped -N/A-, whatever the
@@ -1325,11 +1376,15 @@ function copyChartFromAir(prefix){
     cls(`${prefix}_chart_diff`, airAvg!==null ? 'ok' : null);
     return {diff:null, state: airAvg!==null ? 'ok' : null};
   }
+  // Chart-from-Air is literally reading the same onboard display Air reads,
+  // so it inherits Air's own decimal precision and tolerance, not the fixed
+  // ±0.300°C/1dp a fitted digital chart recorder would use.
+  const dp=getDisplayDecimals();
   const airDisplay=n(`${prefix}_air_display`);
-  set(`${prefix}_chart_display`, airDisplay, 1);
-  const diff=roundedDiff(airAvg, airDisplay, 3, 1);
+  set(`${prefix}_chart_display`, airDisplay, dp);
+  const diff=roundedDiff(airAvg, airDisplay, 3, dp);
   set(`${prefix}_chart_diff`, diff);
-  const state=diff===null?null:(Math.abs(diff)>TOL?'bad':'ok');
+  const state=diff===null?null:(Math.abs(diff)>getDisplayTolerance()?'bad':'ok');
   cls(`${prefix}_chart_diff`, state);
   return {diff, state};
 }
@@ -1339,9 +1394,12 @@ function copyChartFromAir(prefix){
 // own reading, or based on Air, which simply inherits Air's result).
 function columnResults(prefix){
   const results=[calcAir(prefix)];
-  if(!isLoadAbsent()) results.push(calcNormal(prefix, 'load', loadTolerance()));
+  // Load shares the unit's own onboard display with Air, so it uses the
+  // same decimal precision; Chart Recorder's own digital readout (when
+  // fitted independently) keeps its standard ±0.300°C/1dp regardless.
+  if(!isLoadAbsent()) results.push(calcNormal(prefix, 'load', loadTolerance(), getDisplayDecimals()));
   if(isChartFromAir()) results.push(copyChartFromAir(prefix));
-  else if(!isChartAbsent()) results.push(calcNormal(prefix, 'chart', TOL));
+  else if(!isChartAbsent()) results.push(calcNormal(prefix, 'chart', TOL, 1));
   return results;
 }
 // Plain-English list of which columns are active, for status messages —
@@ -1357,8 +1415,9 @@ function activeColumnsText(){
 // Tolerance text for the status bar, grouping columns that share the same
 // figure so "Air and Load ±0.300 °C" reads as one clause rather than two.
 function toleranceSummaryText(){
-  const cols=[['Air','±0.300 °C']];
-  if(!isLoadAbsent()) cols.push(['Load', loadModeVal()==='single-point' ? '±1.0 °C' : '±0.300 °C']);
+  const displayTolText = getDisplayTolerance()===NO_DECIMAL_TOL ? '±1.0 °C' : '±0.300 °C';
+  const cols=[['Air', displayTolText]];
+  if(!isLoadAbsent()) cols.push(['Load', (loadModeVal()==='single-point' || isNoDecimalDisplayMode()) ? '±1.0 °C' : '±0.300 °C']);
   if(!isChartAbsent() && !isChartFromAir()) cols.push(['Chart Recorder','±0.300 °C']);
   const byTol={}, order=[];
   cols.forEach(function(c){ if(!byTol[c[1]]){ byTol[c[1]]=[]; order.push(c[1]); } byTol[c[1]].push(c[0]); });
@@ -1366,6 +1425,7 @@ function toleranceSummaryText(){
 }
 
 function calcDisplayCycle(){
+  const dp=getDisplayDecimals();   // Air's and Load's own onboard display; see getDisplayDecimals()
   ['af','al'].forEach(prefix=>{
     ['air','load'].forEach(type=>{
       const avgEl=document.getElementById(`${prefix}_cycle_${type}_avg`);
@@ -1381,10 +1441,10 @@ function calcDisplayCycle(){
       }
       if(avgEl && avgEl.title.startsWith('Display cycle Max is lower')) avgEl.title='';
       const avg=avg2(max,min);
-      set(`${prefix}_cycle_${type}_avg`,avg,1);
+      set(`${prefix}_cycle_${type}_avg`,avg,dp);
       const target=document.getElementById(`${prefix}_${type}_display`);
       if(target && avg!==null){
-        target.value=fmt(avg,1);
+        target.value=fmt(avg,dp);
         target.title='Auto calculated from Display cycle Max and Min';
         target.classList.add('autoCorr');
       }
@@ -1514,6 +1574,8 @@ function checkProbesInGap(){
 function calculateAll(){
   applyOffsetsGate();
   applyColumnAvailability();
+  refreshDisplayDecimalsUI();
+  updateDisplayVariationNote();
   syncDates();
   syncLeftProbes();
   applyDigitalThermometer();
@@ -1681,8 +1743,13 @@ function decimalOK(el){
   if(el.disabled){ el.classList.remove('invalid','valid'); return true; } // N/A fields aren't real numbers — skip format check
   const v=String(el.value||'').trim();
   if(v===''){ el.classList.remove('invalid','valid'); return true; }
-  const d=Number(el.dataset.decimals);
-  const ok=new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v.replace(',','.'));
+  // Display and Display-cycle fields (Air/Load's shared onboard display)
+  // switch to whole-degree entry under "No decimal point on the display" —
+  // everything else keeps its own fixed data-decimals count regardless.
+  const d = DISPLAY_DECIMAL_IDS.includes(el.id) ? getDisplayDecimals() : Number(el.dataset.decimals);
+  const ok = d===0
+    ? /^-?\d+$/.test(v.replace(',','.'))
+    : new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v.replace(',','.'));
   el.classList.toggle('invalid', !ok);
   el.classList.toggle('valid', ok);
   return ok;
@@ -1698,9 +1765,10 @@ function validateDecimals(show=true){
 }
 function autoAdvance(el){
   if(!el.dataset.decimals) return;
-  const d=Number(el.dataset.decimals);
+  const d = DISPLAY_DECIMAL_IDS.includes(el.id) ? getDisplayDecimals() : Number(el.dataset.decimals);
   const v=String(el.value||'').replace(',','.');
-  if(new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v)){
+  const ok = d===0 ? /^-?\d+$/.test(v) : new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v);
+  if(ok){
     let list=[...document.querySelectorAll('input,select,textarea')].filter(x=>!x.disabled && x.offsetParent!==null);
     let i=list.indexOf(el);
     if(i>-1 && list[i+1]) list[i+1].focus();
@@ -2331,7 +2399,11 @@ function applyImportedFields(fieldMap){
     setValById('calSystem', fieldMap['Calibration System']);
     setValById('loadMode', fieldMap['Load Mode']);
     setValById('chartMode', fieldMap['Chart Recorder Mode']);
-    setValById('displayMode', fieldMap['Display Mode']);
+    // 'fitted' was this option's value before the "No decimal point on the
+    // display" variation existed — map it forward so an Excel file already
+    // exported from this worksheet doesn't come back in as an unselected
+    // Display field.
+    setValById('displayMode', fieldMap['Display Mode']==='fitted' ? 'standard' : fieldMap['Display Mode']);
     setValById('drtSerial', fieldMap['Digital Reference Thermometer S/N']);
     setSelectByText('rtRef', fieldMap['RT Thermometer Ref']);
     setValById('rtMax', fieldMap['Room Temperature Max']);
