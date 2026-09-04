@@ -66,6 +66,10 @@
      kept out of the comments box entirely so it can never overwrite, or be
      overwritten by, anything the engineer types. */
   .configLine{font-size:11.5px;font-weight:700;padding:5px 6px;background:#eef4ff;border-bottom:1px solid var(--line);color:#1a3a6b}
+  .controllerNoteLine{font-size:11.5px;font-weight:700;padding:5px 6px;background:#fff8e6;border-bottom:1px solid var(--line);color:#7a4a00}
+  .ctlUnavailable{font-size:12px;color:#7a4a00;font-weight:700}
+  .ctlParamBtn{font-size:11px;padding:2px 8px;border:1px solid #333;background:#fff;cursor:pointer}
+  .ctlParamBtn:disabled{color:#aaa;border-color:#bbb;cursor:not-allowed}
   .chartLRHead span:last-child{border-top-color:#b45309}
   table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}td,th{border:1px solid var(--line);padding:4px;vertical-align:middle}th{background:#ddd;font-weight:700}.section{background:#cfcfcf;font-weight:700}.subhead{background:#e3e3e3;text-align:center}.label{font-weight:700}.muted{font-weight:400;color:#333}.small{font-size:11px}.input{width:100%;border:0;background:transparent;font-size:12px;box-sizing:border-box;text-align:center}.input:focus{outline:2px solid #9ec5fe;background:#eef6ff}.input:disabled{background:#f0f0f0!important;color:#aaa;cursor:not-allowed} select.probe{display:block;width:100%;min-width:96px;height:28px;border:1px solid #333!important;background:#fff!important;color:#111!important;font-size:10.5px;text-align:left;appearance:auto;-webkit-appearance:menulist;padding:2px}.probeHint{font-size:11px;color:#333;background:#eef6ff;border:1px solid #9ec5fe;padding:6px;margin:6px 0}.autoCorr{background:#fff3cd!important}.calc{background:#f8f8f8;font-weight:700}.bad{background:var(--bad)!important}.ok{background:var(--ok)!important}.warn{background:var(--warn)!important}.selectedHigh{background:var(--hi)!important;border-bottom:3px solid #2563eb!important;font-weight:900!important}.selectedLow{background:var(--lo)!important;border-bottom:3px solid #16a34a!important;font-weight:900!important}.note{font-size:11px;margin:7px 0 0}.sign{height:26px}.comments{height:64px}.statusbar{padding:8px;margin:8px 0;border:1px solid #999;background:#fafafa;font-size:13px}.statusbar.bad{border-color:#b00020}.statusbar.ok{border-color:#207a20}.notNeeded{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.035) 0,rgba(0,0,0,.035) 8px,transparent 8px,transparent 16px)}.notNeeded input,.notNeeded select,.notNeeded textarea{text-decoration:line-through;background:#dcdcdc!important;color:#777!important}.notNeeded input:disabled,.notNeeded select:disabled,.notNeeded textarea:disabled{cursor:not-allowed}.adjustNote{background:#e7f7e7!important;border-color:#207a20!important;font-weight:700}#alCycleAirRow.notNeeded,#alCycleLoadRow.notNeeded{background:repeating-linear-gradient(135deg,rgba(0,0,0,.025) 0,rgba(0,0,0,.025) 7px,transparent 7px,transparent 14px)}input.na,select.na{text-decoration:line-through;background:#dcdcdc!important;color:#777;cursor:not-allowed}
   /* Real DOM stamp (not a ::after pseudo-element) — html2canvas / html2canvas-pro render
@@ -181,11 +185,27 @@
       <td class="label" style="width:11%">Min <span class="req">*</span>: <input class="input num" inputmode="decimal" id="rtMin" data-decimals="1" placeholder="xx.x"></td>
       <td class="label" style="width:31%">Average: <input class="input calc" id="rtAvg" readonly><span id="rtRangeWarn" class="hintText warn" style="display:none;margin-left:4px;font-weight:700;white-space:nowrap">Max must be ≥ Min</span></td>
     </tr>
-    <tr><td rowspan="2" class="label">Controller Settings</td><td colspan="2">Initial offsets <span class="req">*</span>: <span style="display:inline-flex;gap:8px;align-items:center;vertical-align:middle"><span class="small">Air:</span><select class="input offsetSel" id="initialOffsetsCal1" style="width:58px;display:inline-block"></select><span class="small">Load:</span><select class="input offsetSel" id="initialOffsetsCal2" style="width:58px;display:inline-block"></select></span></td><td colspan="3">Initial set point <span class="req">*</span>: <input class="input num" inputmode="decimal" id="initialSetpoint" placeholder="e.g. 5, -20, -34"> <span class="small" id="setpointRangeHint" style="color:#333"></span><br><span class="small" style="color:#333">Nearest offset point used: <b id="initialNearestPoint">—</b></span></td></tr>
-    <tr><td colspan="2">Final offsets <span class="req" title="Required when As Left needs completing">*</span>: <span style="display:inline-flex;gap:8px;align-items:center;vertical-align:middle"><span class="small">Air:</span><select class="input offsetSel" id="finalOffsetsCal1" style="width:58px;display:inline-block"></select><span class="small">Load:</span><select class="input offsetSel" id="finalOffsetsCal2" style="width:58px;display:inline-block"></select></span></td><td colspan="3">Final set point <span class="req" title="Required when As Left needs completing">*</span>: <input class="input num" inputmode="decimal" id="finalSetpoint"><br><span class="small" style="color:#333">Nearest offset point used: <b id="finalNearestPoint">—</b></span></td></tr>
+    <tr><td rowspan="2" class="label">Controller Settings<select id="controllerMode" class="colModeSel"><option value="standard">Standard Air / Load Offsets</option><option value="custom">Custom Offsets</option><option value="none">No Controller Offset Adjustment Available</option></select></td><td colspan="2"><span id="initOffsetsRow">Initial offsets <span class="req">*</span>: <span style="display:inline-flex;gap:8px;align-items:center;vertical-align:middle"><span class="small">Air:</span><select class="input offsetSel" id="initialOffsetsCal1" style="width:58px;display:inline-block"></select><span class="small">Load:</span><select class="input offsetSel" id="initialOffsetsCal2" style="width:58px;display:inline-block"></select></span></span><span id="ctlUnavailableInit" class="ctlUnavailable" style="display:none">Controller adjustment: <b>Not available</b></span></td><td colspan="3">Initial set point <span class="req">*</span>: <input class="input num" inputmode="decimal" id="initialSetpoint" placeholder="e.g. 5, -20, -34"> <span class="small" id="setpointRangeHint" style="color:#333"></span><br><span class="small" style="color:#333">Nearest offset point used: <b id="initialNearestPoint">—</b></span></td></tr>
+    <tr><td colspan="2"><span id="finalOffsetsRow">Final offsets <span class="req" title="Required when As Left needs completing">*</span>: <span style="display:inline-flex;gap:8px;align-items:center;vertical-align:middle"><span class="small">Air:</span><select class="input offsetSel" id="finalOffsetsCal1" style="width:58px;display:inline-block"></select><span class="small">Load:</span><select class="input offsetSel" id="finalOffsetsCal2" style="width:58px;display:inline-block"></select></span></span><span id="ctlUnavailableFinal" class="ctlUnavailable" style="display:none">No controller offset adjustment is available on this unit.</span></td><td colspan="3">Final set point <span class="req" title="Required when As Left needs completing">*</span>: <input class="input num" inputmode="decimal" id="finalSetpoint"><br><span class="small" style="color:#333">Nearest offset point used: <b id="finalNearestPoint">—</b></span></td></tr>
   </table>
 
   <div class="probeHint"><b>Probe dropdown:</b> choose the probe/port in each column. The app will use the closest correction to the Initial Set Point for AF and to the Final Set Point for AL. The selected correction is copied into Max Correction and Min Correction automatically.<br><b>Air calculation markers:</b> blue underline = highest corrected maximum used; green underline = lowest corrected minimum used.</div>
+  <!-- Custom controller parameters, for manufacturers whose controller does
+       not use Labcold's Air/Load offsets. Documentary only: these are recorded
+       on the certificate and never feed the temperature calculations. -->
+  <div id="customOffsetsBlock" style="display:none;margin:6px 0 8px">
+    <table style="table-layout:fixed">
+      <colgroup><col style="width:34%"><col style="width:22%"><col style="width:22%"><col style="width:22%"></colgroup>
+      <tr><th colspan="4" style="text-align:left">Controller parameters <span class="muted" style="font-weight:400">(as named on this controller — recorded on the certificate, not used in any calculation)</span></th></tr>
+      <tr><th>Parameter name</th><th>Initial</th><th>Final</th><th></th></tr>
+      <tr id="ctlParamRow1"><td><input class="input" id="ctlParam1Name" placeholder="e.g. Probe Offset" style="text-align:left"></td><td><input class="input" id="ctlParam1Init" placeholder="e.g. -0.400"></td><td><input class="input" id="ctlParam1Final" placeholder="e.g. -0.200"></td><td class="small" style="text-align:center;color:#555">1</td></tr>
+      <tr id="ctlParamRow2"><td><input class="input" id="ctlParam2Name" placeholder="e.g. Display Correction" style="text-align:left"></td><td><input class="input" id="ctlParam2Init"></td><td><input class="input" id="ctlParam2Final"></td><td class="small" style="text-align:center;color:#555">2</td></tr>
+      <tr id="ctlParamRow3"><td><input class="input" id="ctlParam3Name" style="text-align:left"></td><td><input class="input" id="ctlParam3Init"></td><td><input class="input" id="ctlParam3Final"></td><td class="small" style="text-align:center;color:#555">3</td></tr>
+      <tr id="ctlParamRow4"><td><input class="input" id="ctlParam4Name" style="text-align:left"></td><td><input class="input" id="ctlParam4Init"></td><td><input class="input" id="ctlParam4Final"></td><td class="small" style="text-align:center;color:#555">4</td></tr>
+      <tr><td colspan="4" style="text-align:left"><button type="button" id="ctlParamAdd" class="ctlParamBtn">+ Add parameter</button> <button type="button" id="ctlParamRemove" class="ctlParamBtn">− Remove last</button> <span class="small" id="ctlParamCountHint" style="color:#555"></span></td></tr>
+    </table>
+  </div>
+  <input type="hidden" id="ctlParamCount" value="2">
   <div id="displayVariationNote" class="hintText" style="display:none;margin:-4px 0 8px"></div>
   <div id="afStatus" class="statusbar">As Found status will appear here after calculation.</div>
   <table id="afTable">
@@ -236,7 +256,9 @@
   <div style="margin-top:8px;border:1px solid var(--line)">
     <div class="label" style="padding:4px 6px;background:#e3e3e3">Comments <span class="muted">(calculations, deviations, customer requests)</span></div>
     <div id="configLine" class="configLine">Configuration: —</div>
+    <div id="controllerNoteLine" class="controllerNoteLine" style="display:none"></div>
     <input type="hidden" id="configSummary">
+    <input type="hidden" id="controllerNote">
     <div class="label" style="padding:4px 6px 0;font-size:11px">Engineer comments:</div>
     <textarea id="comments" style="width:100%;height:60px;border:0;box-sizing:border-box;font-size:12px;padding:6px;resize:vertical;display:block"></textarea>
   </div>
@@ -1389,7 +1411,8 @@ function modeLabel(id){
 function configSummaryText(){
   return 'Configuration: Air – '+modeLabel('displayMode')
        + '; Load – '+modeLabel('loadMode')
-       + '; Chart Recorder – '+modeLabel('chartMode')+'.';
+       + '; Chart Recorder – '+modeLabel('chartMode')
+       + '; Controller Offset Mode – '+modeLabel('controllerMode')+'.';
 }
 function updateConfigLine(){
   const text=configSummaryText();
@@ -1398,6 +1421,109 @@ function updateConfigLine(){
   // Hidden mirror the certificate reads, so the PDF prints the configuration
   // above the engineer's comments.
   const hidden=document.getElementById('configSummary');
+  if(hidden) hidden.value=text;
+}
+
+// ---------------------------------------------------------------------
+// Controller Offset Mode.
+//
+// Measurement capability and adjustment capability are separate things: a
+// unit can be fully measured and documented even when its controller cannot
+// be touched. This section therefore only ever changes what can be entered,
+// what is required, whether an adjustment can be asked for, and what the
+// certificate says — never whether the temperature calculations run.
+// ---------------------------------------------------------------------
+const CONTROLLER_MODE_VALUES=['standard','custom','none'];
+const CTL_PARAM_MAX=4;
+function controllerModeVal(){
+  const v=document.getElementById('controllerMode')?.value;
+  return CONTROLLER_MODE_VALUES.includes(v) ? v : 'standard';
+}
+function isControllerCustom(){ return controllerModeVal()==='custom'; }
+function isControllerStandardOffsets(){ return controllerModeVal()==='standard'; }
+// The one question the rest of the sheet asks: can the engineer change this
+// controller at all?
+function controllerAdjustmentAvailable(){ return controllerModeVal()!=='none'; }
+function ctlParamCount(){
+  const v=parseInt(document.getElementById('ctlParamCount')?.value,10);
+  return Math.min(CTL_PARAM_MAX, Math.max(1, Number.isFinite(v) ? v : 2));
+}
+function setCtlParamCount(n){
+  const el=document.getElementById('ctlParamCount');
+  if(el) el.value=String(Math.min(CTL_PARAM_MAX, Math.max(1, n)));
+  applyControllerMode();
+}
+// The custom parameters the engineer actually filled in, for the certificate.
+function customControllerParams(){
+  const out=[];
+  for(let i=1;i<=ctlParamCount();i++){
+    const name=(document.getElementById(`ctlParam${i}Name`)?.value||'').trim();
+    const init=(document.getElementById(`ctlParam${i}Init`)?.value||'').trim();
+    const fin=(document.getElementById(`ctlParam${i}Final`)?.value||'').trim();
+    if(name || init || fin) out.push({name:name||('Parameter '+i), initial:init, final:fin});
+  }
+  return out;
+}
+function applyControllerMode(){
+  const mode=controllerModeVal();
+  const standard=mode==='standard', custom=mode==='custom', none=mode==='none';
+  const show=(id,on)=>{ const el=document.getElementById(id); if(el) el.style.display = on ? '' : 'none'; };
+  show('initOffsetsRow', !none);
+  show('finalOffsetsRow', !none);
+  show('ctlUnavailableInit', none);
+  show('ctlUnavailableFinal', none);
+  show('customOffsetsBlock', custom);
+  // The Air/Load offset dropdowns belong to Standard mode only. In Custom mode
+  // the named parameters below replace them; with no adjustment available they
+  // are N/A. Either way they are locked rather than hidden-but-live, so a
+  // stale value can never end up on a certificate.
+  ['initialOffsetsCal1','initialOffsetsCal2'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel) return;
+    sel.disabled=!standard;
+    sel.classList.toggle('na', none);
+    const blank=sel.querySelector('option[value=""]');
+    if(blank) blank.textContent = none ? 'N/A' : '--';
+    if(!standard) sel.value='';
+  });
+  for(let i=1;i<=CTL_PARAM_MAX;i++){
+    const row=document.getElementById(`ctlParamRow${i}`);
+    if(row) row.style.display = (custom && i<=ctlParamCount()) ? '' : 'none';
+    if(!custom || i>ctlParamCount()){
+      // Rows that are not in play must not carry values onto the certificate.
+      if(i>ctlParamCount()) ['Name','Init','Final'].forEach(sfx=>{
+        const el=document.getElementById(`ctlParam${i}${sfx}`);
+        if(el) el.value='';
+      });
+    }
+  }
+  const add=document.getElementById('ctlParamAdd'), rem=document.getElementById('ctlParamRemove');
+  if(add) add.disabled = ctlParamCount()>=CTL_PARAM_MAX;
+  if(rem) rem.disabled = ctlParamCount()<=1;
+  const hint=document.getElementById('ctlParamCountHint');
+  if(hint) hint.textContent = custom ? `${ctlParamCount()} of ${CTL_PARAM_MAX} parameters shown` : '';
+}
+// The automatic note recording that this unit's controller could not be
+// adjusted. Held in its own field, like the configuration line, so it can
+// never overwrite the engineer's own comments.
+function controllerNoteText(outOfTolerance){
+  if(isControllerCustom()){
+    // Written out in full here so the named parameters are always recorded on
+    // the certificate, whatever width the Controller Settings box has.
+    const ps=customControllerParams();
+    if(!ps.length) return '';
+    return 'Controller parameters: '+ps.map(p=>`${p.name} — initial ${p.initial||'—'}, final ${p.final||'—'}`).join('; ')+'.';
+  }
+  if(controllerAdjustmentAvailable()) return '';
+  return outOfTolerance
+    ? 'Controller adjustment: No controller offset adjustment available. The unit was found outside the specified tolerance and controller parameters could not be adjusted. The measured deviation has been documented.'
+    : 'Controller adjustment: No controller offset adjustment available. The unit performance has been documented as measured; controller parameters could not be adjusted.';
+}
+function updateControllerNote(outOfTolerance){
+  const text=controllerNoteText(outOfTolerance);
+  const line=document.getElementById('controllerNoteLine');
+  if(line){ line.textContent=text; line.style.display = text ? '' : 'none'; }
+  const hidden=document.getElementById('controllerNote');
   if(hidden) hidden.value=text;
 }
 function updateDisplayVariationNote(){
@@ -1942,6 +2068,7 @@ function calculateAll(){
   applyColumnAvailability();
   refreshDisplayDecimalsUI();
   updateDisplayVariationNote();
+  applyControllerMode();
   updateConfigLine();
   syncDates();
   syncLeftProbes();
@@ -1968,8 +2095,15 @@ function calculateAll(){
   const afComplete = af.length>0 && af.every(x=>x.state!==null);
   const afComparisons = af.filter(isComparisonResult);
   const afAllWithinTolerance = afComplete && afComparisons.every(x=>x.state==='ok');
-  const afNeedsAdjustment = afComplete && afComparisons.some(x=>x.state==='bad');
-  setAdjustmentMode(afAllWithinTolerance, afNeedsAdjustment);
+  const afOutOfTolerance = afComplete && afComparisons.some(x=>x.state==='bad');
+  // Being outside tolerance only calls for an adjustment if the controller can
+  // actually be adjusted. Where it cannot, the deviation is documented instead
+  // and As Left is never demanded — but the As Left table is still left open,
+  // so a second verification set can be recorded if the engineer wants one.
+  const canAdjust = controllerAdjustmentAvailable();
+  const afNeedsAdjustment = afOutOfTolerance && canAdjust;
+  setAdjustmentMode(afAllWithinTolerance, afOutOfTolerance);
+  updateControllerNote(afOutOfTolerance);
 
   const al=columnResults('al');
   const cols=activeColumnsText(), tolText=toleranceSummaryText();
@@ -1989,6 +2123,17 @@ function calculateAll(){
       alStatusEl.textContent=`As Left: complete As Found first (${cols}) — As Left unlocks once As Found shows whether adjustment is needed.`;
     }
     const adj=document.getElementById('al_adj_made'); if(adj && adj.value==='Adjustment not needed'){ adj.value=''; adj.style.fontSize=''; }
+  } else if(afOutOfTolerance && !canAdjust){
+    // Outside tolerance, but the controller cannot be adjusted: the result is
+    // documented rather than sent back for an adjustment the engineer has no
+    // way to make. As Left is not demanded, though it stays open in case a
+    // second verification set is wanted.
+    if(alStatusEl){
+      alStatusEl.className='statusbar';
+      alStatusEl.textContent='As Left not applicable — no controller offset adjustment is available on this unit, so the As Found deviation has been documented as measured. A second verification set can still be recorded here if required.';
+    }
+    const adj=document.getElementById('al_adj_made');
+    if(adj && (adj.value==='' || adj.value==='Adjustment not needed')){ adj.value='Controller adjustment not available'; adj.scrollLeft=0; fitInputText(adj); }
   } else {
     status('alStatus',al,'As Left',tolText);
     const adj=document.getElementById('al_adj_made'); if(adj && adj.value==='Adjustment not needed'){ adj.value=''; adj.style.fontSize=''; }
@@ -2027,25 +2172,28 @@ function setAdjustmentMode(stamped, unlocked){
     if(blank) blank.textContent = stamped ? 'N/A' : '--';
     if(stamped) sel.value='';
   });
-  // Final offsets/set point live outside the AL table but are only required
-  // when an adjustment is actually needed — mark them N/A the same way.
+  // Final offsets/set point live outside the AL table. They are N/A when no
+  // adjustment is needed — and also whenever the controller cannot be adjusted
+  // at all, so the engineer is never asked for a final offset that does not
+  // exist and can never be entered.
+  const noFinalOffsets = !!stamped || !controllerAdjustmentAvailable();
   const finalSetpointEl=document.getElementById('finalSetpoint');
   if(finalSetpointEl){
-    finalSetpointEl.disabled=!!stamped;
-    finalSetpointEl.classList.toggle('na', !!stamped);
-    if(stamped && finalSetpointEl.value.trim()===''){ finalSetpointEl.value=NA_TEXT; }
-    else if(!stamped && finalSetpointEl.value===NA_TEXT){ finalSetpointEl.value=''; }
+    finalSetpointEl.disabled=noFinalOffsets;
+    finalSetpointEl.classList.toggle('na', noFinalOffsets);
+    if(noFinalOffsets && finalSetpointEl.value.trim()===''){ finalSetpointEl.value=NA_TEXT; }
+    else if(!noFinalOffsets && finalSetpointEl.value===NA_TEXT){ finalSetpointEl.value=''; }
   }
   // Final offsets Cal 1/Cal 2 are dropdowns (like the time pickers) — relabel
   // the blank option to "N/A" instead of writing free text into them.
   ['finalOffsetsCal1','finalOffsetsCal2'].forEach(id=>{
     const sel=document.getElementById(id);
     if(!sel) return;
-    sel.disabled=!!stamped;
-    sel.classList.toggle('na', !!stamped);
+    sel.disabled = noFinalOffsets || !isControllerStandardOffsets();
+    sel.classList.toggle('na', noFinalOffsets);
     const blank=sel.querySelector('option[value=""]');
-    if(blank) blank.textContent = stamped ? 'N/A' : '--';
-    if(stamped) sel.value='';
+    if(blank) blank.textContent = noFinalOffsets ? 'N/A' : '--';
+    if(noFinalOffsets || !isControllerStandardOffsets()) sel.value='';
   });
   ['al_adj_made','al_cycle_start_h','al_cycle_start_m'].forEach(id=>{const e=document.getElementById(id); if(e) e.classList.toggle('ok', !!stamped);});
 }
@@ -2062,7 +2210,16 @@ function status(id,items,label,tolText){
   const note = excluded ? ` ${excluded} column${excluded>1?'s':''} excluded — no display to compare against.` : '';
   e.className='statusbar '+(bad?'bad':any?'ok':'');
   if(!any){ e.textContent=`${label}: enter readings and press Calculate.`; return; }
-  if(bad){ e.textContent=`${label}: adjustment required — one or more differences are greater than tolerance (${tolText}).`+note; return; }
+  if(bad){
+    // Where the controller cannot be adjusted, saying "adjustment required"
+    // would instruct the engineer to do something they have no way of doing.
+    const worst=comparisons.filter(x=>x.state==='bad').reduce((m,x)=> (x.diff!=null && (m==null || Math.abs(x.diff)>Math.abs(m))) ? x.diff : m, null);
+    const worstText = worst!=null ? ` (difference ${Math.abs(worst).toFixed(3)} °C)` : '';
+    e.textContent = controllerAdjustmentAvailable()
+      ? `${label}: adjustment required — one or more differences are greater than tolerance (${tolText}).`+note
+      : `${label}: outside tolerance${worstText}. Controller offset adjustment not available — deviation documented.`+note;
+    return;
+  }
   if(!comparisons.length){ e.textContent=`${label}: reference readings recorded. No display comparison is available on this unit, so no tolerance verdict applies.`; return; }
   e.textContent=`${label}: within tolerance (${tolText}).`+note;
 }
@@ -2085,6 +2242,7 @@ function restoreData(data){try{Object.entries(JSON.parse(data)).forEach(([id,v])
   const e=document.getElementById(id); if(!e) return;
   if(id==='loadMode' && !LOAD_MODE_VALUES.includes(v)) v='';
   if(id==='chartMode' && !CHART_MODE_VALUES.includes(v)) v='';
+  if(id==='controllerMode' && !CONTROLLER_MODE_VALUES.includes(v)) v='standard';
   e.value=v;
 });}catch(err){console.warn('Could not load local data',err)}}
 function startNewCalibration(){
@@ -2188,7 +2346,7 @@ function autoAdvance(el){
 }
 
 // --- Required-field validation before generating a certificate ---
-const requiredFieldIds=['certNo','jobRef','dateNative','site','department','manufacturer','deviceType','model','serial','load','calSystem','loadMode','chartMode','displayMode','drtSerial','rtRef','rtMax','rtMin','initialOffsetsCal1','initialOffsetsCal2','initialSetpoint','af_air1_probe','af_air2_probe','af_air1_max','af_air2_max','af_air1_min','af_air2_min','af_probes_in_h','af_probes_in_m','af_cycle_start_h','af_cycle_start_m','engineer'];
+const requiredFieldIds=['certNo','jobRef','dateNative','site','department','manufacturer','deviceType','model','serial','load','calSystem','loadMode','chartMode','displayMode','drtSerial','rtRef','rtMax','rtMin','initialSetpoint','af_air1_probe','af_air2_probe','af_air1_max','af_air2_max','af_air1_min','af_air2_min','af_probes_in_h','af_probes_in_m','af_cycle_start_h','af_cycle_start_m','engineer'];
 // Load, Chart Recorder and Display are only required when actually fitted
 // on this unit — see the Non-standard variations block above. A column
 // that's "not present"/"not fitted" is disabled and -N/A- stamped instead,
@@ -2196,6 +2354,13 @@ const requiredFieldIds=['certNo','jobRef','dateNative','site','department','manu
 // value nothing can ever fill in.
 function collectRequiredIds(){
   const ids=[...requiredFieldIds];
+  // The Air/Load offset dropdowns only exist in Standard mode. Custom mode
+  // records named parameters instead (documentary, so nothing is demanded),
+  // and where no adjustment is available there is nothing to record at all.
+  // The Initial set point is required in every mode regardless — it is what
+  // picks each probe's correction, so it is a measurement input, not an
+  // adjustment one.
+  if(isControllerStandardOffsets()) ids.push('initialOffsetsCal1','initialOffsetsCal2');
   if(!isDisplayAbsent()){
     ids.push('af_cycle_air_max','af_cycle_air_min','af_air_display');
   }
@@ -2206,7 +2371,11 @@ function collectRequiredIds(){
   if(chartHasOwnReadings()){
     ids.push('af_chart_probe','af_chart_max','af_chart_min','af_chart_display');
   }
-  const adjustmentNeeded = !document.getElementById('al_cycle_start_h')?.disabled;
+  // As Left is only *required* when an adjustment could actually be made. With
+  // no controller adjustment available the table stays open for a voluntary
+  // second verification set, but nothing in it is demanded.
+  const adjustmentNeeded = !document.getElementById('al_cycle_start_h')?.disabled
+    && controllerAdjustmentAvailable();
   if(adjustmentNeeded){
     ids.push('finalOffsetsCal1','finalOffsetsCal2','finalSetpoint','al_air1_max','al_air2_max','al_air1_min','al_air2_min','al_cycle_start_h','al_cycle_start_m');
     if(!isDisplayAbsent()) ids.push('al_cycle_air_max','al_cycle_air_min','al_air_display');
@@ -2676,6 +2845,13 @@ function buildExcelWorkbook(){
   push('Room Temperature Max', val('rtMax'));
   push('Room Temperature Min', val('rtMin'));
   push('Room Temperature Average', val('rtAvg'));
+  push('Controller Offset Mode', val('controllerMode'));
+  push('Controller Parameter Count', val('ctlParamCount'));
+  for(let i=1;i<=4;i++){
+    push('Controller Param '+i+' Name', val('ctlParam'+i+'Name'));
+    push('Controller Param '+i+' Initial', val('ctlParam'+i+'Init'));
+    push('Controller Param '+i+' Final', val('ctlParam'+i+'Final'));
+  }
   push('Initial offsets Cal 1', val('initialOffsetsCal1'));
   push('Initial offsets Cal 2', val('initialOffsetsCal2'));
   push('Initial set point', val('initialSetpoint'));
@@ -2827,6 +3003,15 @@ function applyImportedFields(fieldMap){
     setSelectByText('rtRef', fieldMap['RT Thermometer Ref']);
     setValById('rtMax', fieldMap['Room Temperature Max']);
     setValById('rtMin', fieldMap['Room Temperature Min']);
+    // An export from before Controller Offset Mode existed has no such field —
+    // fall back to Standard, which is exactly what those jobs were.
+    setValById('controllerMode', CONTROLLER_MODE_VALUES.includes(fieldMap['Controller Offset Mode']) ? fieldMap['Controller Offset Mode'] : 'standard');
+    if(fieldMap['Controller Parameter Count']) setValById('ctlParamCount', fieldMap['Controller Parameter Count']);
+    for(let i=1;i<=4;i++){
+      setValById('ctlParam'+i+'Name', fieldMap['Controller Param '+i+' Name']);
+      setValById('ctlParam'+i+'Init', fieldMap['Controller Param '+i+' Initial']);
+      setValById('ctlParam'+i+'Final', fieldMap['Controller Param '+i+' Final']);
+    }
     setValById('initialOffsetsCal1', fieldMap['Initial offsets Cal 1']);
     setValById('initialOffsetsCal2', fieldMap['Initial offsets Cal 2']);
     setValById('initialSetpoint', fieldMap['Initial set point']);
@@ -2951,6 +3136,8 @@ document.getElementById('dateNative')?.addEventListener('click',function(){ if(t
 document.getElementById('dateNative')?.addEventListener('focus',function(){ if(this.showPicker){ try{ this.showPicker(); }catch(e){} } });
 initCert();
 buildChartMirrorCells();
+document.getElementById('ctlParamAdd')?.addEventListener('click',()=>{ setCtlParamCount(ctlParamCount()+1); calculateAll(); });
+document.getElementById('ctlParamRemove')?.addEventListener('click',()=>{ setCtlParamCount(ctlParamCount()-1); calculateAll(); });
 restoreVaultOffsets();
 applyJobsheetHandoff();
 if(window.LabCalOffsets){ LabCalOffsets.onChange(()=>{ restoreVaultOffsets(); }); }

@@ -328,7 +328,15 @@
     // mixed into the text the engineer typed. Sheets without the field are
     // unaffected.
     var config = val('configSummary');
+    // Non-Standard Medical Device also records whether the controller could be
+    // adjusted at all. Printed with the configuration, above and separate from
+    // the engineer's own comments.
+    var ctlNote = val('controllerNote');
     var configLines = config ? doc.splitTextToSize(config, IN - 6) : [];
+    if (ctlNote) {
+      if (configLines.length) configLines = configLines.concat(['']);
+      configLines = configLines.concat(doc.splitTextToSize(ctlNote, IN - 6));
+    }
     var boldCount = configLines.length;
     var bodyText = comments ? (configLines.length ? 'Engineer comments:\n' : '') + comments : '';
     var comLines = configLines
@@ -941,7 +949,8 @@
       tolerance: function () { return '\u00b10.300 \u00b0C'; },
       extraMeta: function () { return ['Calibration System', val('calSystem')]; },
       variations: false,
-      dualOffsets: true
+      dualOffsets: true,
+      offsetLabels: ['Air:', 'Load:']
     },
     smd: {
       subtitle: function () {
@@ -1071,7 +1080,8 @@
       var mid = top + CT_ROW - 2.2;
       var x = e.label(offLabel, MX + LAB_W + 2, mid, 6.8, true);
       if (spec.dualOffsets) {
-        [['Cal 1:', offVal[0]], ['Cal 2:', offVal[1]]].forEach(function (pair, i) {
+        var offLabels = spec.offsetLabels || ['Cal 1:', 'Cal 2:'];
+        [[offLabels[0], offVal[0]], [offLabels[1], offVal[1]]].forEach(function (pair, i) {
           var bx = x + i * 24;
           e.t(pair[0], bx, mid, 6.8);
           if (greyed) e.chip(pair[1], bx + 9, mid - 3.1, 12);
@@ -1084,15 +1094,72 @@
       else e.t(spVal || '\u2014', sx + 1, mid, 8.5, 'bold');
       if (note) e.t('Nearest offset point used: ' + note, sx + 17, mid, 6.2, 'normal', [50, 90, 160]);
     }
-    var initOff = spec.dualOffsets ? [val('initialOffsetsCal1'), val('initialOffsetsCal2')] : val('initialOffsets');
-    var finalOff = spec.dualOffsets
-      ? (alNotNeededYet ? ['N/A', 'N/A'] : [val('finalOffsetsCal1'), val('finalOffsetsCal2')])
-      : (alNotNeededYet ? 'N/A' : val('finalOffsets'));
-    ctLine(ctTop, 'Initial offsets', initOff, 'Initial set point', val('initialSetpoint'),
-           (txtOf('initialNearestPoint') || '').replace('\u2014', ''), false);
-    ctLine(ctTop + CT_ROW, 'Final offsets', finalOff,
-           'Final set point', alNotNeededYet ? '\u2013N/A\u2013' : val('finalSetpoint'),
-           alNotNeededYet ? '' : (txtOf('finalNearestPoint') || '').replace('\u2014', ''), alNotNeededYet);
+    // Non-Standard Medical Device offers a Controller Offset Mode, because not
+    // every manufacturer's controller has Labcold's Air/Load offsets. The
+    // Controller Settings block follows whichever mode was chosen; sheets
+    // without the selector (no #controllerMode element) are unaffected.
+    var ctlModeEl = document.getElementById('controllerMode');
+    var ctlMode = ctlModeEl ? ctlModeEl.value : 'standard';
+    if (ctlMode === 'none') {
+      // Never leave unexplained blank boxes: say plainly that the controller
+      // could not be adjusted.
+      var midA = ctTop + CT_ROW - 2.2;
+      var xA = e.label('Controller adjustment', MX + LAB_W + 2, midA, 6.8, true);
+      e.t('Not available', xA + 1, midA, 8.5, 'bold');
+      var sxA = e.label('Initial set point', ctSplit + 2, midA, 6.8, true);
+      e.t(val('initialSetpoint') || '\u2014', sxA + 1, midA, 8.5, 'bold');
+      var noteA = (txtOf('initialNearestPoint') || '').replace('\u2014', '');
+      if (noteA) e.t('Nearest offset point used: ' + noteA, sxA + 17, midA, 6.2, 'normal', [50, 90, 160]);
+      var midB = ctTop + CT_ROW * 2 - 2.2;
+      // Kept short so it cannot run past the vertical split into the set
+      // point column; the full statement is in the Comments box.
+      e.t('Controller parameters could not be adjusted.', MX + LAB_W + 2, midB, 6.8, 'normal', NOTE);
+      var sxB = e.label('Final set point', ctSplit + 2, midB, 6.8, true);
+      e.chip('\u2013N/A\u2013', sxB + 1, midB - 3.1, 14);
+    } else if (ctlMode === 'custom') {
+      // Show the parameters under the names this controller actually uses.
+      var params = [];
+      for (var pi = 1; pi <= 4; pi++) {
+        var pn = val('ctlParam' + pi + 'Name'), pv = val('ctlParam' + pi + 'Init'), pf = val('ctlParam' + pi + 'Final');
+        if (pn || pv || pf) params.push([pn || ('Parameter ' + pi), pv, pf]);
+      }
+      [['Initial settings', 1], ['Final settings', 2]].forEach(function (rowSpec, ri) {
+        var mid = ctTop + CT_ROW * (ri + 1) - 2.2;
+        var x = e.label(rowSpec[0], MX + LAB_W + 2, mid, 6.8, true);
+        var txt = params.length
+          ? params.map(function (pp) { return pp[0] + ': ' + (pp[ri + 1] || '\u2014'); }).join('   ')
+          : '\u2014';
+        // Custom parameter names are free text and can be long. Shrink to fit
+        // the space before the vertical split rather than running across it,
+        // and trim as a last resort — the full list is always written out in
+        // the Comments box as well, so nothing is lost either way.
+        var avail = (ctSplit - 2) - (x + 1);
+        var fs = 7.0;
+        while (fs > 4.8 && e.w(txt, fs, 'bold') > avail) fs -= 0.2;
+        if (e.w(txt, fs, 'bold') > avail) {
+          while (txt.length > 4 && e.w(txt + '\u2026', fs, 'bold') > avail) txt = txt.slice(0, -1);
+          txt += '\u2026';
+        }
+        e.t(txt, x + 1, mid, fs, 'bold');
+        var sx = e.label(ri === 0 ? 'Initial set point' : 'Final set point', ctSplit + 2, mid, 6.8, true);
+        var spv = ri === 0 ? val('initialSetpoint') : (alNotNeededYet ? '\u2013N/A\u2013' : val('finalSetpoint'));
+        if (ri === 1 && alNotNeededYet) e.chip(spv, sx + 1, mid - 3.1, 14);
+        else e.t(spv || '\u2014', sx + 1, mid, 8.5, 'bold');
+        var nt = ri === 0 ? (txtOf('initialNearestPoint') || '').replace('\u2014', '')
+                          : (alNotNeededYet ? '' : (txtOf('finalNearestPoint') || '').replace('\u2014', ''));
+        if (nt) e.t('Nearest offset point used: ' + nt, sx + 17, mid, 6.2, 'normal', [50, 90, 160]);
+      });
+    } else {
+      var initOff = spec.dualOffsets ? [val('initialOffsetsCal1'), val('initialOffsetsCal2')] : val('initialOffsets');
+      var finalOff = spec.dualOffsets
+        ? (alNotNeededYet ? ['N/A', 'N/A'] : [val('finalOffsetsCal1'), val('finalOffsetsCal2')])
+        : (alNotNeededYet ? 'N/A' : val('finalOffsets'));
+      ctLine(ctTop, 'Initial offsets', initOff, 'Initial set point', val('initialSetpoint'),
+             (txtOf('initialNearestPoint') || '').replace('\u2014', ''), false);
+      ctLine(ctTop + CT_ROW, 'Final offsets', finalOff,
+             'Final set point', alNotNeededYet ? '\u2013N/A\u2013' : val('finalSetpoint'),
+             alNotNeededYet ? '' : (txtOf('finalNearestPoint') || '').replace('\u2014', ''), alNotNeededYet);
+    }
     y = blockTop + blockH + 2.5;
 
     // ---------------- banners ----------------

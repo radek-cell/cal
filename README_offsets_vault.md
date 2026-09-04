@@ -1,7 +1,53 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.530)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.531)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.531 — Non-Standard Medical Device: flexible Controller Offset Modes
+
+The Controller Settings section no longer assumes every unit has Labcold's
+Cal 1 / Cal 2 offsets. A new **Controller Offset Mode** selector sits in the
+Controller Settings label, with three modes.
+
+**Standard Air / Load Offsets** — unchanged behaviour, with the offsets
+labelled **Air** and **Load** on the certificate as well as on the form
+(they already read Air/Load on the form; the certificate said Cal 1 / Cal 2).
+
+**Custom Offsets** — for controllers with different adjustment parameters.
+The engineer names each parameter and records its initial and final value,
+1 to 4 of them, with Add and Remove. The Air/Load dropdowns are locked and
+cleared so they cannot contribute a stale value. These are documentary
+settings: they are printed on the certificate under the names given, and
+never touch the temperature calculations.
+
+**No Controller Offset Adjustment Available** — for units whose controller
+is locked, needs manufacturer software, or is simply not adjustable by the
+engineer. The offset fields are replaced by a plain "Controller adjustment:
+Not available" statement, nothing about offsets is required, and no final
+offset or final set point is ever demanded.
+
+Crucially, none of this touches measurement. Reference readings, probe
+corrections, corrected Max and Min, the reference average, the difference
+against the display and the tolerance verdict all run exactly as before in
+every mode — measurement capability and adjustment capability are now two
+separate things.
+
+**Out of tolerance with no adjustment available** no longer tells the
+engineer to do something they cannot do. Instead of "adjustment required",
+As Found reads e.g. *"outside tolerance (difference 0.800 °C). Controller
+offset adjustment not available — deviation documented."*, As Left is
+declared not applicable and nothing in it is required — though it stays
+open in case a second verification set is wanted — and the certificate
+carries an automatic note recording that the unit was found outside
+tolerance and could not be adjusted.
+
+The automatic configuration line now also names the controller mode, and
+the controller note is printed with it, above and separate from the
+engineer's own comments, which are never touched.
+
+The Initial set point stays required in every mode: it is what picks each
+probe's correction, so it is a measurement input rather than an adjustment
+one. The Final set point becomes N/A whenever no adjustment can be made.
 
 ## v1.530 — Non-Standard Medical Device: certificate output and mode logic corrections
 
