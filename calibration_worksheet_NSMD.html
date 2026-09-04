@@ -168,7 +168,7 @@
   <div id="displayVariationNote" class="hintText" style="display:none;margin:-4px 0 8px"></div>
   <div id="afStatus" class="statusbar">As Found status will appear here after calculation.</div>
   <table id="afTable">
-    <tr><th class="section">As Found (AF)</th><th id="airColHeadAf" colspan="2">Air<select id="displayMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard</option><option value="no-decimal">No decimal point on the display</option><option value="not-present">Not present</option></select></th><th id="loadColHeadAf">Load<select id="loadMode" class="colModeSel"><option value="">-- select --</option><option value="two-point">Two-point (±0.300°C)</option><option value="single-point">Single point (±1.0°C)</option><option value="not-present">Not present</option></select></th><th id="chartColHeadAf">Chart Recorder<select id="chartMode" class="colModeSel"><option value="">-- select --</option><option value="digital">Digital recorder</option><option value="based-on-air">Based on Air readings</option><option value="not-fitted">Not fitted</option></select></th></tr>
+    <tr><th class="section">As Found (AF)</th><th id="airColHeadAf" colspan="2">Air<select id="displayMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard</option><option value="no-decimal">No decimal point on the display</option><option value="not-present">Not present</option></select></th><th id="loadColHeadAf">Load<select id="loadMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard (±0.300°C)</option><option value="no-decimal">No decimal point on load (±1.0°C)</option><option value="not-present">Not present</option></select></th><th id="chartColHeadAf">Chart Recorder<select id="chartMode" class="colModeSel"><option value="">-- select --</option><option value="digital">Standard</option><option value="based-on-air">Based on Air readings</option><option value="not-fitted">Not fitted</option><option value="calibrate-button">Digital recorder with calibrate button</option></select></th></tr>
     <tr class="lrRow"><td></td><td><span class="lrBadge"><span class="dot left">L</span><span class="txt">Left</span></span></td><td><span class="lrBadge"><span class="dot right">R</span><span class="txt">Right</span></span></td><td></td><td></td></tr>
     <tr><td>Probe Serial No <span class="req">*</span>:</td><td><select class="input probe" id="af_air1_probe"></select></td><td><select class="input probe" id="af_air2_probe"></select></td><td><select class="input probe" id="af_load_probe"></select></td><td><select class="input probe" id="af_chart_probe"></select></td></tr>
     <tr><td></td><td colspan="2" id="afAirProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Select one "A" probe and one "B" probe for Air</td><td colspan="2" id="afLoadChartProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Load/Chart must differ from Air probes</td></tr>
@@ -216,7 +216,7 @@
     <div class="label" style="padding:4px 6px;background:#e3e3e3">Comments <span class="muted">(calculations, deviations, customer requests)</span></div>
     <textarea id="comments" style="width:100%;height:60px;border:0;box-sizing:border-box;font-size:12px;padding:6px;resize:vertical;display:block"></textarea>
   </div>
-  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place (0 when the unit's Display is set to "No decimal point") using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when every column actually fitted on this unit is present and within its own tolerance — Air and Load ±0.300 °C normally, widening to ±1.0 °C for Load when set to single point or for Air/Load together when the unit's Display has no decimal point; a digital Chart Recorder always ±0.300 °C regardless, since it is a separate instrument. A Chart Recorder set to "Based on Air readings" has no probe of its own and always matches Air's result (tolerance included). Air, Load and Chart Recorder each have their own settings in the As Found table header — Air's covers the unit's Display, Load and Chart Recorder cover what's fitted for each; an absent/no-display column is greyed out and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
+  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place (0 when the unit's Display is set to "No decimal point") using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when every column actually fitted on this unit is present and within its own tolerance — Air and Load ±0.300 °C normally, widening to ±1.0 °C for Load when set to "No decimal point on load", or for Air/Load together when the unit's Display has no decimal point; a Chart Recorder with its own readings (Standard, or with a calibrate button) is always ±0.300 °C regardless, since it is a separate instrument. A Chart Recorder set to "Based on Air readings" has no probe of its own and always matches Air's result (tolerance included). Air, Load and Chart Recorder each have their own settings in the As Found table header, and none can be left on "-- select --" once you start entering readings — Air's covers the unit's Display, Load and Chart Recorder cover what's fitted for each; an absent/no-display column is greyed out and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
 </div>
 <script>
 const TOL=0.3;
@@ -236,21 +236,47 @@ const OFFSET_GATED_AF_IDS=['af_air1_max','af_air2_max','af_load_max','af_chart_m
 const OFFSET_GATED_AL_IDS=['al_air1_max','al_air2_max','al_load_max','al_chart_max','al_air1_min','al_air2_min','al_load_min','al_chart_min'];
 const OFFSET_GATED_IDS=[...OFFSET_GATED_AF_IDS,...OFFSET_GATED_AL_IDS];
 const OFFSET_GATE_MSG='Load the probe offsets file first ("Load offsets" button) before entering readings.';
+// Air/Display, Load and Chart Recorder each carry their own settings
+// dropdown in the As Found table header. Until all three have an actual
+// selection (not left on the blank "-- select --"), entering readings
+// would be meaningless — the tolerance and rounding used for a column
+// depends entirely on which mode is picked for it, so a number typed in
+// beforehand could end up judged against the wrong rule once a mode is
+// finally chosen. Deliberately checks the raw select value here, not
+// loadModeVal()/chartModeVal()/displayModeVal() — those fall back to a
+// default so calculations never crash, which would defeat this gate.
+const MODE_GATE_MSG='Select Air, Load and Chart Recorder settings first (top of the As Found table) before entering readings.';
+const MODE_GATED_EXTRA_AF_IDS=['af_air_display','af_load_display','af_chart_display'];
+function modesSelected(){
+  return !!document.getElementById('displayMode')?.value
+    && !!document.getElementById('loadMode')?.value
+    && !!document.getElementById('chartMode')?.value;
+}
 function applyOffsetsGate(){
   const loaded=offsetsLoaded();
+  const modesOk=modesSelected();
   OFFSET_GATED_AF_IDS.forEach(id=>{
     const el=document.getElementById(id);
     if(!el) return;
     // A column that isn't fitted on this unit stays disabled regardless of
     // whether offsets are loaded — isColumnAbsentField has the final say.
-    el.disabled = !loaded || isColumnAbsentField(id);
-    el.title = loaded ? '' : OFFSET_GATE_MSG;
+    el.disabled = !loaded || !modesOk || isColumnAbsentField(id);
+    el.title = !loaded ? OFFSET_GATE_MSG : (!modesOk ? MODE_GATE_MSG : '');
   });
   // AL fields' final disabled state is decided by setAdjustmentMode (it also
   // depends on adjustment-mode) — just keep their tooltip in sync here.
   OFFSET_GATED_AL_IDS.forEach(id=>{
     const el=document.getElementById(id);
-    if(el) el.title = loaded ? '' : OFFSET_GATE_MSG;
+    if(el) el.title = !loaded ? OFFSET_GATE_MSG : (!modesOk ? MODE_GATE_MSG : '');
+  });
+  // The three Display value fields don't depend on probe offsets at all
+  // (they're the unit's own onboard display, not a reference-probe
+  // reading) — only the mode-selection half of the gate applies to them.
+  MODE_GATED_EXTRA_AF_IDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.disabled = !modesOk || isColumnAbsentField(id);
+    el.title = !modesOk ? MODE_GATE_MSG : '';
   });
 }
 function isoToday(){return new Date().toISOString().slice(0,10)}
@@ -1186,14 +1212,23 @@ function calcAir(prefix){
 // ---------------------------------------------------------------------
 // Non-standard variations. This is the only worksheet where Load, Chart
 // Recorder and Display can each be amended per unit:
-//   Load          — two-point (normal, ±0.300 °C), single point (a spot
-//                   reading rather than a full cycle, ±1.0 °C), or not
-//                   present on this model.
+//   Load          — Standard (±0.300 °C), "No decimal point on load" (the
+//                   Load probe's own display only ever shows whole degrees
+//                   — Load's Display/Display-cycle fields are entered and
+//                   judged to 0 dp instead of 1, and Load's own tolerance
+//                   widens to ±1.0°C), or not present on this model. Load
+//                   also widens to ±1.0°C/0dp whenever Air's own Display
+//                   is set to "No decimal point" (Load can share the same
+//                   onboard display Air reads on some models) — either
+//                   setting is enough on its own.
 //   Chart Recorder— a fitted independent digital recorder (its own probe
-//                   and readings, ±0.300 °C), based on Air readings (no
-//                   probe of its own — its Average/Difference/Display are
-//                   copied live from Air, so it always agrees with Air),
-//                   or not fitted at all.
+//                   and readings, ±0.300 °C, labelled "Standard"), the same
+//                   but read via the recorder's own built-in calibrate
+//                   button rather than a plain digital readout (identical
+//                   maths — still its own probe/readings, ±0.300 °C), based
+//                   on Air readings (no probe of its own — its
+//                   Average/Difference/Display are copied live from Air, so
+//                   it always agrees with Air), or not fitted at all.
 //   Display       — Standard, "No decimal point on the display" (the unit's
 //                   display only ever shows whole degrees — Display/Display
 //                   cycle fields are entered and judged to 0 dp instead of 1,
@@ -1208,39 +1243,54 @@ function calcAir(prefix){
 // same styling as Standard Non-Medical's permanently-N/A columns, and left
 // out of every calculation and out of "adjustment needed" below.
 // ---------------------------------------------------------------------
-const SINGLE_POINT_TOL=1.0;
-const NO_DECIMAL_TOL=1.0;   // same figure as SINGLE_POINT_TOL today, but a
-                            // separate name/knob since they are independent
-                            // calibration decisions that only happen to
-                            // share a value — never assume they must match.
-function loadModeVal(){ return document.getElementById('loadMode')?.value || 'two-point'; }
+const NO_DECIMAL_TOL=1.0;
+function loadModeVal(){ return document.getElementById('loadMode')?.value || 'standard'; }
 function chartModeVal(){ return document.getElementById('chartMode')?.value || 'digital'; }
 function displayModeVal(){ return document.getElementById('displayMode')?.value || 'standard'; }
 function isLoadAbsent(){ return loadModeVal()==='not-present'; }
+function isLoadNoDecimal(){ return loadModeVal()==='no-decimal'; }
 function isChartAbsent(){ return chartModeVal()==='not-fitted'; }
 function isChartFromAir(){ return chartModeVal()==='based-on-air'; }
+// True for any Chart Recorder mode that takes its own probe/readings on
+// this unit — "Standard" (value 'digital') and "Digital recorder with
+// calibrate button" both behave identically: own probe, own Max/Min/
+// Display, standard ±0.300°C/1dp — only "Based on Air" and "Not fitted"
+// are different.
+function chartHasOwnReadings(){ return !isChartAbsent() && !isChartFromAir(); }
 function isDisplayAbsent(){ return displayModeVal()==='not-present'; }
 function isNoDecimalDisplayMode(){ return displayModeVal()==='no-decimal'; }
-// The tolerance for whatever is judged against "the display" (Air always;
-// Load too, since it shares the same onboard display) — widened when that
-// display has no decimal point. Chart Recorder's own digital readout, when
-// fitted independently, keeps the standard ±0.300°C regardless (see above).
+// The tolerance for whatever is judged against Air's own display — widened
+// when that display has no decimal point. Chart Recorder's own digital
+// readout, when fitted independently, keeps the standard ±0.300°C
+// regardless (see above). Load has its own version of this below, since it
+// can now have an independent no-decimal setting of its own.
 function getDisplayTolerance(){ return isNoDecimalDisplayMode() ? NO_DECIMAL_TOL : TOL; }
-// The decimal places Display and Display-cycle fields are entered/judged
-// to — 0 when the unit's display has no decimal point, 1 otherwise. Applies
-// to Air's and Load's own Display fields (they share the onboard display);
-// Chart Recorder's own Display field, when fitted independently, is not in
-// this list and keeps its standard 1 dp.
+// The decimal places Air's Display/Display-cycle fields are entered/judged
+// to — 0 when Air's own display has no decimal point, 1 otherwise. Chart
+// Recorder's own Display field, when fitted independently, is not affected
+// and keeps its standard 1 dp.
 function getDisplayDecimals(){ return isNoDecimalDisplayMode() ? 0 : 1; }
-const DISPLAY_DECIMAL_IDS=['af_cycle_air_max','af_cycle_air_min','af_cycle_load_max','af_cycle_load_min',
-                            'al_cycle_air_max','al_cycle_air_min','al_cycle_load_max','al_cycle_load_min',
-                            'af_air_display','al_air_display','af_load_display','al_load_display'];
+// Load's own decimal places — 0 when EITHER Load's own "No decimal point on
+// load" is selected, or Air's shared Display has no decimal point (models
+// where Load reads the same onboard display Air does); 1 otherwise.
+function getLoadDecimals(){ return (isLoadNoDecimal() || isNoDecimalDisplayMode()) ? 0 : 1; }
+const AIR_DECIMAL_IDS=['af_cycle_air_max','af_cycle_air_min','al_cycle_air_max','al_cycle_air_min',
+                        'af_air_display','al_air_display'];
+const LOAD_DECIMAL_IDS=['af_cycle_load_max','af_cycle_load_min','al_cycle_load_max','al_cycle_load_min',
+                         'af_load_display','al_load_display'];
+// Kept for anything that still needs "any Air/Load display field" as one
+// list (decimalOK/autoAdvance format-checking) — the two are judged to the
+// same dp only when neither Load nor Air is independently set to no-decimal.
+const DISPLAY_DECIMAL_IDS=[...AIR_DECIMAL_IDS,...LOAD_DECIMAL_IDS];
 function refreshDisplayDecimalsUI(){
-  const dp=getDisplayDecimals();
-  const placeholder = dp===0 ? 'xx' : 'xx.x';
-  DISPLAY_DECIMAL_IDS.forEach(function(id){
+  const airDp=getDisplayDecimals(), loadDp=getLoadDecimals();
+  AIR_DECIMAL_IDS.forEach(function(id){
     const el=document.getElementById(id);
-    if(el) el.placeholder=placeholder;
+    if(el) el.placeholder = airDp===0 ? 'xx' : 'xx.x';
+  });
+  LOAD_DECIMAL_IDS.forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.placeholder = loadDp===0 ? 'xx' : 'xx.x';
   });
 }
 function updateDisplayVariationNote(){
@@ -1254,7 +1304,7 @@ function updateDisplayVariationNote(){
   note.style.display = text ? '' : 'none';
 }
 function loadTolerance(){
-  if(loadModeVal()==='single-point') return SINGLE_POINT_TOL;
+  if(isLoadNoDecimal()) return NO_DECIMAL_TOL;
   if(isNoDecimalDisplayMode()) return NO_DECIMAL_TOL;
   return TOL;
 }
@@ -1348,7 +1398,7 @@ function applyColumnAvailability(){
   const displayBadge=document.getElementById('displayModeBadgeAl');
   if(displayBadge) displayBadge.textContent = isDisplayAbsent() ? '(N/A)' : (isNoDecimalDisplayMode() ? '(±1.0°C)' : '');
   const loadBadge=document.getElementById('loadModeBadgeAl');
-  if(loadBadge) loadBadge.textContent = isLoadAbsent() ? '(N/A)' : (loadModeVal()==='single-point' || isNoDecimalDisplayMode() ? '(±1.0°C)' : '');
+  if(loadBadge) loadBadge.textContent = isLoadAbsent() ? '(N/A)' : (isLoadNoDecimal() || isNoDecimalDisplayMode() ? '(±1.0°C)' : '');
   const chartBadge=document.getElementById('chartModeBadgeAl');
   if(chartBadge) chartBadge.textContent = isChartAbsent() ? '(N/A)' : (isChartFromAir() ? '(from Air)' : '');
 }
@@ -1391,7 +1441,7 @@ function columnResults(prefix){
   // Load shares the unit's own onboard display with Air, so it uses the
   // same decimal precision; Chart Recorder's own digital readout (when
   // fitted independently) keeps its standard ±0.300°C/1dp regardless.
-  if(!isLoadAbsent()) results.push(calcNormal(prefix, 'load', loadTolerance(), getDisplayDecimals()));
+  if(!isLoadAbsent()) results.push(calcNormal(prefix, 'load', loadTolerance(), getLoadDecimals()));
   if(isChartFromAir()) results.push(copyChartFromAir(prefix));
   else if(!isChartAbsent()) results.push(calcNormal(prefix, 'chart', TOL, 1));
   return results;
@@ -1411,7 +1461,7 @@ function activeColumnsText(){
 function toleranceSummaryText(){
   const displayTolText = getDisplayTolerance()===NO_DECIMAL_TOL ? '±1.0 °C' : '±0.300 °C';
   const cols=[['Air', displayTolText]];
-  if(!isLoadAbsent()) cols.push(['Load', (loadModeVal()==='single-point' || isNoDecimalDisplayMode()) ? '±1.0 °C' : '±0.300 °C']);
+  if(!isLoadAbsent()) cols.push(['Load', (isLoadNoDecimal() || isNoDecimalDisplayMode()) ? '±1.0 °C' : '±0.300 °C']);
   if(!isChartAbsent() && !isChartFromAir()) cols.push(['Chart Recorder','±0.300 °C']);
   const byTol={}, order=[];
   cols.forEach(function(c){ if(!byTol[c[1]]){ byTol[c[1]]=[]; order.push(c[1]); } byTol[c[1]].push(c[0]); });
@@ -1419,9 +1469,9 @@ function toleranceSummaryText(){
 }
 
 function calcDisplayCycle(){
-  const dp=getDisplayDecimals();   // Air's and Load's own onboard display; see getDisplayDecimals()
   ['af','al'].forEach(prefix=>{
     ['air','load'].forEach(type=>{
+      const dp = type==='load' ? getLoadDecimals() : getDisplayDecimals();
       const avgEl=document.getElementById(`${prefix}_cycle_${type}_avg`);
       if(avgEl && avgEl.disabled) return; // permanently N/A or not-yet-unlocked — leave its current text alone
       const max=n(`${prefix}_cycle_${type}_max`);
@@ -1673,7 +1723,14 @@ function status(id,items,label,tolText){const bad=items.some(x=>x.state==='bad')
 function preparePdf(){ calculateAll(); setTimeout(()=>window.print(), 120); }
 window.addEventListener('beforeprint', calculateAll);
 function loadLocal(){const data=localStorage.getItem('calibration_autosave'); if(!data){alert('No local save found.'); return} restoreData(data); calculateAll()}
-function restoreData(data){try{Object.entries(JSON.parse(data)).forEach(([id,v])=>{const e=document.getElementById(id); if(e)e.value=v});}catch(err){console.warn('Could not load local data',err)}}
+function restoreData(data){try{Object.entries(JSON.parse(data)).forEach(([id,v])=>{
+  const e=document.getElementById(id); if(!e) return;
+  // A local save made before Load Mode was relabelled (two-point/single-point
+  // -> Standard/No decimal point on load) would otherwise restore to a value
+  // no longer in the dropdown, leaving it silently blank.
+  if(id==='loadMode' && (v==='two-point'||v==='single-point')) v = v==='two-point' ? 'standard' : 'no-decimal';
+  e.value=v;
+});}catch(err){console.warn('Could not load local data',err)}}
 function startNewCalibration(){
   if(!confirm('Start a new calibration? This clears the entire form — job details, readings, and probe selections — and cannot be undone.')) return;
   ids().forEach(id=>{
@@ -1737,10 +1794,13 @@ function decimalOK(el){
   if(el.disabled){ el.classList.remove('invalid','valid'); return true; } // N/A fields aren't real numbers — skip format check
   const v=String(el.value||'').trim();
   if(v===''){ el.classList.remove('invalid','valid'); return true; }
-  // Display and Display-cycle fields (Air/Load's shared onboard display)
-  // switch to whole-degree entry under "No decimal point on the display" —
-  // everything else keeps its own fixed data-decimals count regardless.
-  const d = DISPLAY_DECIMAL_IDS.includes(el.id) ? getDisplayDecimals() : Number(el.dataset.decimals);
+  // Display and Display-cycle fields switch to whole-degree entry under
+  // "No decimal point" — Air's own fields follow Air's setting, Load's
+  // follow Load's own (which also widens if Air's does) — everything else
+  // keeps its own fixed data-decimals count regardless.
+  const d = LOAD_DECIMAL_IDS.includes(el.id) ? getLoadDecimals()
+    : AIR_DECIMAL_IDS.includes(el.id) ? getDisplayDecimals()
+    : Number(el.dataset.decimals);
   const ok = d===0
     ? /^-?\d+$/.test(v.replace(',','.'))
     : new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v.replace(',','.'));
@@ -1759,7 +1819,9 @@ function validateDecimals(show=true){
 }
 function autoAdvance(el){
   if(!el.dataset.decimals) return;
-  const d = DISPLAY_DECIMAL_IDS.includes(el.id) ? getDisplayDecimals() : Number(el.dataset.decimals);
+  const d = LOAD_DECIMAL_IDS.includes(el.id) ? getLoadDecimals()
+    : AIR_DECIMAL_IDS.includes(el.id) ? getDisplayDecimals()
+    : Number(el.dataset.decimals);
   const v=String(el.value||'').replace(',','.');
   const ok = d===0 ? /^-?\d+$/.test(v) : new RegExp('^-?\\d+\\.\\d{'+d+'}$').test(v);
   if(ok){
@@ -1785,7 +1847,7 @@ function collectRequiredIds(){
     ids.push('af_load_probe','af_load_max','af_load_min');
     if(!isDisplayAbsent()) ids.push('af_cycle_load_max','af_cycle_load_min','af_load_display');
   }
-  if(chartModeVal()==='digital'){
+  if(chartHasOwnReadings()){
     ids.push('af_chart_probe','af_chart_max','af_chart_min','af_chart_display');
   }
   const adjustmentNeeded = !document.getElementById('al_cycle_start_h')?.disabled;
@@ -1796,7 +1858,7 @@ function collectRequiredIds(){
       ids.push('al_load_max','al_load_min');
       if(!isDisplayAbsent()) ids.push('al_cycle_load_max','al_cycle_load_min','al_load_display');
     }
-    if(chartModeVal()==='digital') ids.push('al_chart_max','al_chart_min','al_chart_display');
+    if(chartHasOwnReadings()) ids.push('al_chart_max','al_chart_min','al_chart_display');
   }
   if(document.getElementById('manufacturer')?.value==='Other'){
     ids.push('manufacturerOther');
@@ -2391,7 +2453,13 @@ function applyImportedFields(fieldMap){
     setValById('deviceType', fieldMap['Non-Standard Medical Device']);
     setValById('load', fieldMap['Load']);
     setValById('calSystem', fieldMap['Calibration System']);
-    setValById('loadMode', fieldMap['Load Mode']);
+    // Older exports used 'two-point'/'single-point' for Load Mode, before it
+    // was relabelled to match Display's Standard/No-decimal wording — map
+    // them across so a file exported from an earlier version still imports
+    // its Load setting correctly rather than landing on a blank dropdown.
+    setValById('loadMode', fieldMap['Load Mode']==='two-point' ? 'standard'
+      : fieldMap['Load Mode']==='single-point' ? 'no-decimal'
+      : fieldMap['Load Mode']);
     setValById('chartMode', fieldMap['Chart Recorder Mode']);
     // 'fitted' was this option's value before the "No decimal point on the
     // display" variation existed — map it forward so an Excel file already

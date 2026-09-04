@@ -1089,7 +1089,7 @@
     var loadTitle = 'Load';
     if (loadModeEl) {
       var lm = loadModeEl.value;
-      var loadTol = (lm === 'single-point' || noDecimalDisplay) ? '±1.0°C' : '±0.300°C';
+      var loadTol = (lm === 'no-decimal' || noDecimalDisplay) ? '±1.0°C' : '±0.300°C';
       loadTitle = 'Load (' + (lm === 'not-present' ? 'N/A' : loadTol) + ')';
     }
     var chartTitle = 'Chart Recorder';

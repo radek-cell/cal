@@ -1,7 +1,41 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.526)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.527)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.527 — Non-Standard Medical Device: settings must be chosen before entering readings; Load and Chart Recorder options extended
+
+Three changes, all confined to the Non-Standard Medical Device worksheet:
+
+**Air, Load and Chart Recorder must now be selected before you can start
+entering readings.** Previously the three settings dropdowns in the As
+Found table header could be left on "-- select --" while numbers were
+still typed into Reference Max/Min and Display — meaning readings could be
+entered before the unit's actual configuration was chosen, and would then
+be silently judged against whichever default happened to apply. Now
+Reference Max/Min and Display for Air, Load and Chart Recorder all stay
+locked (same greyed-out treatment as "load the offsets file first") until
+all three dropdowns have a real selection, with a tooltip explaining why.
+
+**Load's dropdown is now Standard / No decimal point on load / Not
+present** — replacing "Two-point / Single point / Not present". This
+matches the wording already used for Air's own Display setting, and gives
+Load its own independent no-decimal-point option: whole-degree entry and
+±1.0°C tolerance for Load's own readings, whether or not Air's Display has
+decimals. (Air's own "No decimal point on the display" still widens Load
+too, exactly as before, for models where Load reads the same onboard
+display as Air — either setting alone is enough.) Old saved jobs and Excel
+exports using the previous "Two-point"/"Single point" values are mapped
+across automatically (Two-point → Standard, Single point → No decimal
+point on load) so nothing already in progress is lost.
+
+**Chart Recorder gains a fourth option: "Digital recorder with calibrate
+button"**, alongside the renamed "Standard" (was "Digital recorder"),
+"Based on Air readings" and "Not fitted". It behaves identically to
+Standard — its own probe, its own Max/Min/Display readings, judged to the
+usual ±0.300°C/1dp — the only difference is the label, for recorders
+checked via their own built-in calibrate button rather than read as a
+plain digital display.
 
 ## v1.526 — Non-Standard Medical Device: Air/Load/Chart Recorder settings laid out consistently
 
