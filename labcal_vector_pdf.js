@@ -1089,13 +1089,14 @@
     var loadTitle = 'Load';
     if (loadModeEl) {
       var lm = loadModeEl.value;
-      var loadTol = (lm === 'no-decimal' || noDecimalDisplay) ? '±1.0°C' : '±0.300°C';
-      loadTitle = 'Load (' + (lm === 'not-present' ? 'N/A' : loadTol) + ')';
+      var loadTol = noDecimalDisplay ? '±1.0°C' : '±0.300°C';
+      loadTitle = 'Load (' + (lm === 'not-present' ? 'N/A' : lm === 'no-display' ? 'No Display' : loadTol) + ')';
     }
     var chartTitle = 'Chart Recorder';
     if (chartModeEl) {
       var cm = chartModeEl.value;
-      chartTitle = 'Chart Recorder (' + (cm === 'not-fitted' ? 'N/A' : cm === 'based-on-air' ? 'from Air' : '±0.300°C') + ')';
+      var chartFromAir = (cm === 'based-on-air' || cm === 'digital-based-on-air');
+      chartTitle = 'Chart Recorder (' + (cm === 'not-fitted' ? 'N/A' : chartFromAir ? 'from Air' : cm === 'based-on-load' ? 'from Load' : '±0.300°C') + ')';
     }
     var T = makeTable(e, doc, [{ title: airTitle, span: 2 },
                                { title: loadTitle, span: 1 },

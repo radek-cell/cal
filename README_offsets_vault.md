@@ -1,7 +1,42 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.527)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.528)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.528 — Non-Standard Medical Device: Air/Load/Chart Recorder dropdowns redesigned per written spec
+
+Replaces v1.527's Load and Chart Recorder options with the definitive set
+from the user's written specification. Air Mode keeps the same behaviour
+as before, relabelled to match:
+
+**Air Mode**: Standard / **No Decimal Point** (was "No decimal point on
+the display") / **No Display Fitted** (was "Not present") — same values,
+same calculations, label only.
+
+**Load Mode**: Standard / **No Load Fitted** (was "Not present") /
+**Load Fitted No Display** (new — replaces v1.527's "No decimal point on
+load"). "Load Fitted No Display" keeps Load's own Reference Max/Min
+readings enabled and required, but disables and excludes only Load's
+Display and Display-cycle fields — for units where Load's probe is fitted
+but nothing shows its reading anywhere. This is independent of Air's own
+Display setting.
+
+**Chart Recorder Mode**: Standard (was "Digital recorder") / **No Chart
+Recorder Fitted** (was "Not fitted") / **Chart Recorder Based on Air
+Readings** (unchanged) / **Digital Chart Recorder Based on Load** (new) /
+**Digital Chart Recorder Based on Air** (new — behaves identically to
+"Chart Recorder Based on Air Readings"; the two are distinct dropdown
+labels per the spec). v1.527's "Digital recorder with calibrate button"
+option has been removed. Both new "Based on ..." modes dynamically mirror
+their source's Average/Display every time a value changes — never a
+one-off copy — and are read-only, matching "Chart Recorder Based on Air
+Readings"'s existing behaviour.
+
+Old saved jobs and Excel exports carrying any now-retired value (Load's
+old "Two-point"/"Single point"/"No decimal point on load", or Chart's
+"calibrate button") are reset to blank rather than guessed at, so the
+mode-selection gate (added in v1.527) prompts a fresh, correct pick from
+today's options.
 
 ## v1.527 — Non-Standard Medical Device: settings must be chosen before entering readings; Load and Chart Recorder options extended
 

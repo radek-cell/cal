@@ -168,7 +168,7 @@
   <div id="displayVariationNote" class="hintText" style="display:none;margin:-4px 0 8px"></div>
   <div id="afStatus" class="statusbar">As Found status will appear here after calculation.</div>
   <table id="afTable">
-    <tr><th class="section">As Found (AF)</th><th id="airColHeadAf" colspan="2">Air<select id="displayMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard</option><option value="no-decimal">No decimal point on the display</option><option value="not-present">Not present</option></select></th><th id="loadColHeadAf">Load<select id="loadMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard (±0.300°C)</option><option value="no-decimal">No decimal point on load (±1.0°C)</option><option value="not-present">Not present</option></select></th><th id="chartColHeadAf">Chart Recorder<select id="chartMode" class="colModeSel"><option value="">-- select --</option><option value="digital">Standard</option><option value="based-on-air">Based on Air readings</option><option value="not-fitted">Not fitted</option><option value="calibrate-button">Digital recorder with calibrate button</option></select></th></tr>
+    <tr><th class="section">As Found (AF)</th><th id="airColHeadAf" colspan="2">Air<select id="displayMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard</option><option value="no-decimal">No Decimal Point</option><option value="not-present">No Display Fitted</option></select></th><th id="loadColHeadAf">Load<select id="loadMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard</option><option value="not-present">No Load Fitted</option><option value="no-display">Load Fitted No Display</option></select></th><th id="chartColHeadAf">Chart Recorder<select id="chartMode" class="colModeSel"><option value="">-- select --</option><option value="digital">Standard</option><option value="not-fitted">No Chart Recorder Fitted</option><option value="based-on-air">Chart Recorder Based on Air Readings</option><option value="based-on-load">Digital Chart Recorder Based on Load</option><option value="digital-based-on-air">Digital Chart Recorder Based on Air</option></select></th></tr>
     <tr class="lrRow"><td></td><td><span class="lrBadge"><span class="dot left">L</span><span class="txt">Left</span></span></td><td><span class="lrBadge"><span class="dot right">R</span><span class="txt">Right</span></span></td><td></td><td></td></tr>
     <tr><td>Probe Serial No <span class="req">*</span>:</td><td><select class="input probe" id="af_air1_probe"></select></td><td><select class="input probe" id="af_air2_probe"></select></td><td><select class="input probe" id="af_load_probe"></select></td><td><select class="input probe" id="af_chart_probe"></select></td></tr>
     <tr><td></td><td colspan="2" id="afAirProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Select one "A" probe and one "B" probe for Air</td><td colspan="2" id="afLoadChartProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Load/Chart must differ from Air probes</td></tr>
@@ -216,7 +216,7 @@
     <div class="label" style="padding:4px 6px;background:#e3e3e3">Comments <span class="muted">(calculations, deviations, customer requests)</span></div>
     <textarea id="comments" style="width:100%;height:60px;border:0;box-sizing:border-box;font-size:12px;padding:6px;resize:vertical;display:block"></textarea>
   </div>
-  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place (0 when the unit's Display is set to "No decimal point") using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when every column actually fitted on this unit is present and within its own tolerance — Air and Load ±0.300 °C normally, widening to ±1.0 °C for Load when set to "No decimal point on load", or for Air/Load together when the unit's Display has no decimal point; a Chart Recorder with its own readings (Standard, or with a calibrate button) is always ±0.300 °C regardless, since it is a separate instrument. A Chart Recorder set to "Based on Air readings" has no probe of its own and always matches Air's result (tolerance included). Air, Load and Chart Recorder each have their own settings in the As Found table header, and none can be left on "-- select --" once you start entering readings — Air's covers the unit's Display, Load and Chart Recorder cover what's fitted for each; an absent/no-display column is greyed out and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
+  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place (0 when the unit's Display is set to "No decimal point") using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when every column actually fitted on this unit is present and within its own tolerance — Air and Load ±0.300 °C normally, widening to ±1.0 °C for both when Air's own display has "No Decimal Point"; a Chart Recorder with its own readings (Standard) is always ±0.300 °C regardless, since it is a separate instrument. "Load Fitted No Display" keeps Load's own Max/Min readings active but excludes Load's Display comparison, since there is nothing on Load to compare against. A Chart Recorder "Based on Air Readings"/"Digital Chart Recorder Based on Air" or "Digital Chart Recorder Based on Load" has no probe of its own and is dynamically linked to Air's or Load's result respectively (tolerance included) — it updates live, never just copied once. Air, Load and Chart Recorder each have their own settings in the As Found table header, and none can be left on "-- select --" once you start entering readings; an absent/no-display column is greyed out, not required for validation or PDF generation, and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
 </div>
 <script>
 const TOL=0.3;
@@ -1210,77 +1210,89 @@ function calcAir(prefix){
 }
 
 // ---------------------------------------------------------------------
-// Non-standard variations. This is the only worksheet where Load, Chart
-// Recorder and Display can each be amended per unit:
-//   Load          — Standard (±0.300 °C), "No decimal point on load" (the
-//                   Load probe's own display only ever shows whole degrees
-//                   — Load's Display/Display-cycle fields are entered and
-//                   judged to 0 dp instead of 1, and Load's own tolerance
-//                   widens to ±1.0°C), or not present on this model. Load
-//                   also widens to ±1.0°C/0dp whenever Air's own Display
-//                   is set to "No decimal point" (Load can share the same
-//                   onboard display Air reads on some models) — either
-//                   setting is enough on its own.
-//   Chart Recorder— a fitted independent digital recorder (its own probe
-//                   and readings, ±0.300 °C, labelled "Standard"), the same
-//                   but read via the recorder's own built-in calibrate
-//                   button rather than a plain digital readout (identical
-//                   maths — still its own probe/readings, ±0.300 °C), based
-//                   on Air readings (no probe of its own — its
-//                   Average/Difference/Display are copied live from Air, so
-//                   it always agrees with Air), or not fitted at all.
-//   Display       — Standard, "No decimal point on the display" (the unit's
-//                   display only ever shows whole degrees — Display/Display
-//                   cycle fields are entered and judged to 0 dp instead of 1,
-//                   and the tolerance for whatever is compared against it
-//                   widens to ±1.0°C, same reasoning as Standard Non-Medical's
-//                   own "No decimal point" variation), or not present on this
-//                   model at all (no onboard digital display for Air or Load
-//                   to read from). Chart Recorder's own digital readout, when
-//                   fitted, is a separate instrument and is not affected by
-//                   either Display variation — only by its own mode below.
-// A column that is absent is stamped -N/A-, disabled, greyed out with the
-// same styling as Standard Non-Medical's permanently-N/A columns, and left
-// out of every calculation and out of "adjustment needed" below.
+// Non-standard variations. This is the only worksheet where Air, Load and
+// Chart Recorder can each be amended per unit — per the "Dropdown
+// Configuration for Air, Load and Chart Recorder Columns" spec:
+//   Air Mode      — Standard (normal, ±0.300°C, decimals entered normally),
+//                   "No Decimal Point" (the unit's display only ever shows
+//                   whole degrees — Display/Display-cycle fields are
+//                   entered and judged to 0 dp instead of 1, and the
+//                   tolerance for whatever is compared against it widens
+//                   to ±1.0°C — Load too, since it can share the same
+//                   onboard display Air reads), or "No Display Fitted" (no
+//                   onboard digital display at all — fields requiring an
+//                   Air display reading are disabled and excluded from
+//                   validation/PDF; Air's own reference measurements are
+//                   unaffected).
+//   Load Mode     — Standard (full Load column enabled, unchanged calcs),
+//                   "No Load Fitted" (Load's own measurement fields
+//                   disabled, excluded from calculations/validation), or
+//                   "Load Fitted No Display" (Load's Max/Min readings stay
+//                   enabled and are still taken, but Load has no display of
+//                   its own to compare them against — only Load's
+//                   display-related fields are disabled/excluded, same
+//                   "nothing to compare against" treatment as Air's own "No
+//                   Display Fitted").
+//   Chart Recorder— Standard (a fitted independent digital recorder, its
+//                   own probe/readings, ±0.300°C, manual entry), "No Chart
+//                   Recorder Fitted" (whole column disabled, excluded),
+//                   "Chart Recorder Based on Air Readings" or "Digital
+//                   Chart Recorder Based on Air" (both: no probe of its
+//                   own — Average/Difference/Display are dynamically
+//                   linked from Air's own result every time it changes, so
+//                   Chart always agrees with Air; read-only; the two
+//                   labels are distinct per the spec but behave
+//                   identically), or "Digital Chart Recorder Based on
+//                   Load" (the same dynamic linkage, but mirroring Load's
+//                   result instead of Air's).
+// A column/field that is absent is stamped -N/A-, disabled, greyed out with
+// the same styling as Standard Non-Medical's permanently-N/A columns, and
+// left out of every calculation, validation and PDF requirement below.
 // ---------------------------------------------------------------------
 const NO_DECIMAL_TOL=1.0;
 function loadModeVal(){ return document.getElementById('loadMode')?.value || 'standard'; }
 function chartModeVal(){ return document.getElementById('chartMode')?.value || 'digital'; }
 function displayModeVal(){ return document.getElementById('displayMode')?.value || 'standard'; }
 function isLoadAbsent(){ return loadModeVal()==='not-present'; }
-function isLoadNoDecimal(){ return loadModeVal()==='no-decimal'; }
+// "Load Fitted No Display": Load's own Max/Min readings are still taken,
+// but there is no display on Load to compare them against — independent
+// of whether Air's own Display is fitted.
+function isLoadNoDisplay(){ return loadModeVal()==='no-display'; }
 function isChartAbsent(){ return chartModeVal()==='not-fitted'; }
-function isChartFromAir(){ return chartModeVal()==='based-on-air'; }
+// "Chart Recorder Based on Air Readings" and "Digital Chart Recorder Based
+// on Air" are two distinct dropdown labels (per the spec) that behave
+// identically — both dynamically mirror Air's result.
+function isChartFromAir(){ return chartModeVal()==='based-on-air' || chartModeVal()==='digital-based-on-air'; }
+// "Digital Chart Recorder Based on Load" — dynamically mirrors Load's
+// result instead of Air's.
+function isChartFromLoad(){ return chartModeVal()==='based-on-load'; }
 // True for any Chart Recorder mode that takes its own probe/readings on
-// this unit — "Standard" (value 'digital') and "Digital recorder with
-// calibrate button" both behave identically: own probe, own Max/Min/
-// Display, standard ±0.300°C/1dp — only "Based on Air" and "Not fitted"
-// are different.
-function chartHasOwnReadings(){ return !isChartAbsent() && !isChartFromAir(); }
+// this unit — only "Standard" does; every "Based on ..." mode and "Not
+// fitted" are handled separately.
+function chartHasOwnReadings(){ return !isChartAbsent() && !isChartFromAir() && !isChartFromLoad(); }
 function isDisplayAbsent(){ return displayModeVal()==='not-present'; }
 function isNoDecimalDisplayMode(){ return displayModeVal()==='no-decimal'; }
 // The tolerance for whatever is judged against Air's own display — widened
 // when that display has no decimal point. Chart Recorder's own digital
 // readout, when fitted independently, keeps the standard ±0.300°C
-// regardless (see above). Load has its own version of this below, since it
-// can now have an independent no-decimal setting of its own.
+// regardless (see above).
 function getDisplayTolerance(){ return isNoDecimalDisplayMode() ? NO_DECIMAL_TOL : TOL; }
-// The decimal places Air's Display/Display-cycle fields are entered/judged
-// to — 0 when Air's own display has no decimal point, 1 otherwise. Chart
-// Recorder's own Display field, when fitted independently, is not affected
-// and keeps its standard 1 dp.
+// The decimal places Display/Display-cycle fields are entered/judged to —
+// 0 when Air's own display has no decimal point, 1 otherwise. Applies to
+// both Air's and Load's own Display fields (Load shares Air's onboard
+// display on models with only one); Chart Recorder's own Display field,
+// when fitted independently, is not affected and keeps its standard 1 dp.
 function getDisplayDecimals(){ return isNoDecimalDisplayMode() ? 0 : 1; }
-// Load's own decimal places — 0 when EITHER Load's own "No decimal point on
-// load" is selected, or Air's shared Display has no decimal point (models
-// where Load reads the same onboard display Air does); 1 otherwise.
-function getLoadDecimals(){ return (isLoadNoDecimal() || isNoDecimalDisplayMode()) ? 0 : 1; }
+// Load no longer has a decimal-precision setting of its own (see Load
+// Mode above) — kept as a distinct name from getDisplayDecimals() only so
+// call sites read clearly; both currently follow Air's own setting.
+function getLoadDecimals(){ return getDisplayDecimals(); }
 const AIR_DECIMAL_IDS=['af_cycle_air_max','af_cycle_air_min','al_cycle_air_max','al_cycle_air_min',
                         'af_air_display','al_air_display'];
 const LOAD_DECIMAL_IDS=['af_cycle_load_max','af_cycle_load_min','al_cycle_load_max','al_cycle_load_min',
                          'af_load_display','al_load_display'];
 // Kept for anything that still needs "any Air/Load display field" as one
-// list (decimalOK/autoAdvance format-checking) — the two are judged to the
-// same dp only when neither Load nor Air is independently set to no-decimal.
+// list (decimalOK/autoAdvance format-checking).
 const DISPLAY_DECIMAL_IDS=[...AIR_DECIMAL_IDS,...LOAD_DECIMAL_IDS];
 function refreshDisplayDecimalsUI(){
   const airDp=getDisplayDecimals(), loadDp=getLoadDecimals();
@@ -1298,13 +1310,12 @@ function updateDisplayVariationNote(){
   if(!note) return;
   const mode=displayModeVal();
   let text='';
-  if(mode==='no-decimal') text='⚠ No decimal point on the display — Display and Display cycle recorded as whole degrees; tolerance widened to ±1.0°C for Air/Load.';
-  else if(mode==='not-present') text='⚠ No display fitted on this model — Air/Load readings are still taken, but there is nothing to compare them against.';
+  if(mode==='no-decimal') text='⚠ No Decimal Point — Display and Display cycle recorded as whole degrees; tolerance widened to ±1.0°C for Air/Load.';
+  else if(mode==='not-present') text='⚠ No Display Fitted on this model — Air/Load readings are still taken, but there is nothing to compare them against.';
   note.textContent=text;
   note.style.display = text ? '' : 'none';
 }
 function loadTolerance(){
-  if(isLoadNoDecimal()) return NO_DECIMAL_TOL;
   if(isNoDecimalDisplayMode()) return NO_DECIMAL_TOL;
   return TOL;
 }
@@ -1314,9 +1325,12 @@ function loadTolerance(){
 // offsets gate or the As Left adjustment-mode would otherwise decide.
 function isColumnAbsentField(id){
   if(/^a[fl]_load_(probe|max|max_corr|max_calc|min|min_corr|min_calc|avg|diff)$/.test(id)) return isLoadAbsent();
-  if(/^a[fl]_load_display$/.test(id)) return isLoadAbsent() || isDisplayAbsent();
-  if(/^a[fl]_cycle_load_(max|min|avg)$/.test(id)) return isLoadAbsent() || isDisplayAbsent();
-  if(/^a[fl]_chart_(probe|max|max_corr|max_calc|min|min_corr|min_calc)$/.test(id)) return isChartAbsent() || isChartFromAir();
+  // Load's own display/cycle fields are also excluded when Load is fitted
+  // but has no display of its own ("Load Fitted No Display") — independent
+  // of whether Air's own Display is fitted.
+  if(/^a[fl]_load_display$/.test(id)) return isLoadAbsent() || isDisplayAbsent() || isLoadNoDisplay();
+  if(/^a[fl]_cycle_load_(max|min|avg)$/.test(id)) return isLoadAbsent() || isDisplayAbsent() || isLoadNoDisplay();
+  if(/^a[fl]_chart_(probe|max|max_corr|max_calc|min|min_corr|min_calc)$/.test(id)) return isChartAbsent() || isChartFromAir() || isChartFromLoad();
   if(/^a[fl]_chart_(avg|diff|display)$/.test(id)) return isChartAbsent();
   if(id==='af_air_display' || id==='al_air_display') return isDisplayAbsent();
   if(/^a[fl]_cycle_air_(max|min|avg)$/.test(id)) return isDisplayAbsent();
@@ -1376,7 +1390,7 @@ function applyColumnAvailability(){
       });
       cls(`${prefix}_load_diff`, null);
     }
-    if(isChartAbsent() || isChartFromAir()){
+    if(isChartAbsent() || isChartFromAir() || isChartFromLoad()){
       [`${prefix}_chart_max_calc`,`${prefix}_chart_min_calc`].forEach(function(id){
         document.getElementById(id)?.classList.remove('selectedHigh','selectedLow');
       });
@@ -1385,27 +1399,28 @@ function applyColumnAvailability(){
       cls(`${prefix}_chart_diff`, null);
     }
   });
-  // A Chart Recorder based on Air has no probe/raw readings of its own —
-  // its Display is copied live from Air's Display (below) rather than
-  // typed independently, so it switches to the same read-only treatment
-  // Air's own Display field already has.
+  // A Chart Recorder based on Air or Load has no probe/raw readings of its
+  // own — its Display is copied live from Air's or Load's Display (below)
+  // rather than typed independently, so it switches to the same read-only
+  // treatment Air's own Display field already has.
   ['af_chart_display','al_chart_display'].forEach(function(id){
     const el=document.getElementById(id);
-    if(el) el.readOnly = isChartFromAir();
+    if(el) el.readOnly = isChartFromAir() || isChartFromLoad();
   });
   // AL header badges mirror whatever was chosen in the AF header selects,
   // so As Left reads correctly without a second control to keep in sync.
   const displayBadge=document.getElementById('displayModeBadgeAl');
   if(displayBadge) displayBadge.textContent = isDisplayAbsent() ? '(N/A)' : (isNoDecimalDisplayMode() ? '(±1.0°C)' : '');
   const loadBadge=document.getElementById('loadModeBadgeAl');
-  if(loadBadge) loadBadge.textContent = isLoadAbsent() ? '(N/A)' : (isLoadNoDecimal() || isNoDecimalDisplayMode() ? '(±1.0°C)' : '');
+  if(loadBadge) loadBadge.textContent = isLoadAbsent() ? '(N/A)' : (isLoadNoDisplay() ? '(No Display)' : (isNoDecimalDisplayMode() ? '(±1.0°C)' : ''));
   const chartBadge=document.getElementById('chartModeBadgeAl');
-  if(chartBadge) chartBadge.textContent = isChartAbsent() ? '(N/A)' : (isChartFromAir() ? '(from Air)' : '');
+  if(chartBadge) chartBadge.textContent = isChartAbsent() ? '(N/A)' : (isChartFromAir() ? '(from Air)' : (isChartFromLoad() ? '(from Load)' : ''));
 }
-// Chart Recorder set to "Based on Air readings": it has no probe or raw
-// Max/Min of its own, so its Average, Difference and Display simply copy
-// Air's own finished result for this prefix (AF or AL) — it can never
-// disagree with Air, by construction.
+// Chart Recorder set to "Based on Air readings"/"Digital Chart Recorder
+// Based on Air": it has no probe or raw Max/Min of its own, so its
+// Average, Difference and Display simply copy Air's own finished result
+// for this prefix (AF or AL) every time calculateAll() runs — it can
+// never disagree with Air, by construction, and is never "copied once".
 function copyChartFromAir(prefix){
   const airAvg=n(`${prefix}_air_avg`);
   set(`${prefix}_chart_avg`, airAvg);
@@ -1432,10 +1447,39 @@ function copyChartFromAir(prefix){
   cls(`${prefix}_chart_diff`, state);
   return {diff, state};
 }
+// Chart Recorder set to "Digital Chart Recorder Based on Load": the same
+// dynamic-linkage idea as copyChartFromAir above, but mirroring Load's own
+// finished result instead of Air's — recalculated every calculateAll()
+// pass, never "copied once".
+function copyChartFromLoad(prefix){
+  const loadAvg=n(`${prefix}_load_avg`);
+  set(`${prefix}_chart_avg`, loadAvg);
+  // Nothing to mirror if Load itself isn't fitted, or Load is fitted but
+  // has no display of its own to compare against — same "nothing to
+  // compare against, treated as satisfied" treatment used throughout this
+  // worksheet (see calcAir/calcNormal/copyChartFromAir).
+  if(isLoadAbsent() || isDisplayAbsent() || isLoadNoDisplay()){
+    const displayEl=document.getElementById(`${prefix}_chart_display`);
+    if(displayEl && !displayEl.disabled) displayEl.value = loadAvg!==null ? NA_TEXT : '';
+    const diffEl=document.getElementById(`${prefix}_chart_diff`);
+    if(diffEl) diffEl.value = loadAvg!==null ? NA_TEXT : '';
+    cls(`${prefix}_chart_diff`, loadAvg!==null ? 'ok' : null);
+    return {diff:null, state: loadAvg!==null ? 'ok' : null};
+  }
+  const dp=getLoadDecimals();
+  const loadDisplay=n(`${prefix}_load_display`);
+  set(`${prefix}_chart_display`, loadDisplay, dp);
+  const diff=roundedDiff(loadAvg, loadDisplay, 3, dp);
+  set(`${prefix}_chart_diff`, diff);
+  const state=diff===null?null:(Math.abs(diff)>loadTolerance()?'bad':'ok');
+  cls(`${prefix}_chart_diff`, state);
+  return {diff, state};
+}
 // Builds the AF or AL result list, including only the columns actually
-// fitted on this unit — Air always, Load unless "not present", and Chart
-// Recorder unless "not fitted" (either digital, tolerance-checked on its
-// own reading, or based on Air, which simply inherits Air's result).
+// fitted on this unit — Air always, Load unless "No Load Fitted", and
+// Chart Recorder unless "No Chart Recorder Fitted" (either Standard,
+// tolerance-checked on its own reading, or dynamically linked to Air's or
+// Load's result).
 function columnResults(prefix){
   const results=[calcAir(prefix)];
   // Load shares the unit's own onboard display with Air, so it uses the
@@ -1443,6 +1487,7 @@ function columnResults(prefix){
   // fitted independently) keeps its standard ±0.300°C/1dp regardless.
   if(!isLoadAbsent()) results.push(calcNormal(prefix, 'load', loadTolerance(), getLoadDecimals()));
   if(isChartFromAir()) results.push(copyChartFromAir(prefix));
+  else if(isChartFromLoad()) results.push(copyChartFromLoad(prefix));
   else if(!isChartAbsent()) results.push(calcNormal(prefix, 'chart', TOL, 1));
   return results;
 }
@@ -1461,8 +1506,8 @@ function activeColumnsText(){
 function toleranceSummaryText(){
   const displayTolText = getDisplayTolerance()===NO_DECIMAL_TOL ? '±1.0 °C' : '±0.300 °C';
   const cols=[['Air', displayTolText]];
-  if(!isLoadAbsent()) cols.push(['Load', (isLoadNoDecimal() || isNoDecimalDisplayMode()) ? '±1.0 °C' : '±0.300 °C']);
-  if(!isChartAbsent() && !isChartFromAir()) cols.push(['Chart Recorder','±0.300 °C']);
+  if(!isLoadAbsent()) cols.push(['Load', isNoDecimalDisplayMode() ? '±1.0 °C' : '±0.300 °C']);
+  if(chartHasOwnReadings()) cols.push(['Chart Recorder','±0.300 °C']);
   const byTol={}, order=[];
   cols.forEach(function(c){ if(!byTol[c[1]]){ byTol[c[1]]=[]; order.push(c[1]); } byTol[c[1]].push(c[0]); });
   return order.map(function(t){ return byTol[t].join('/')+' '+t; }).join(', ');
@@ -1723,12 +1768,22 @@ function status(id,items,label,tolText){const bad=items.some(x=>x.state==='bad')
 function preparePdf(){ calculateAll(); setTimeout(()=>window.print(), 120); }
 window.addEventListener('beforeprint', calculateAll);
 function loadLocal(){const data=localStorage.getItem('calibration_autosave'); if(!data){alert('No local save found.'); return} restoreData(data); calculateAll()}
+// loadMode/chartMode's option lists have changed shape more than once as
+// this worksheet's Non-standard Variations were refined. A local save made
+// under an earlier version can hold a value no longer in the dropdown
+// (e.g. old 'two-point'/'single-point'/'no-decimal' for Load, or
+// 'calibrate-button' for Chart) — restoring it straight would otherwise
+// silently leave the select blank while looking untouched. Instead, any
+// unrecognised value is deliberately reset to blank so the mode-selection
+// gate (see applyOffsetsGate) makes the engineer consciously re-pick from
+// the current options, rather than the sheet guessing what the old value
+// was meant to mean under the new scheme.
+const LOAD_MODE_VALUES=['','standard','not-present','no-display'];
+const CHART_MODE_VALUES=['','digital','not-fitted','based-on-air','based-on-load','digital-based-on-air'];
 function restoreData(data){try{Object.entries(JSON.parse(data)).forEach(([id,v])=>{
   const e=document.getElementById(id); if(!e) return;
-  // A local save made before Load Mode was relabelled (two-point/single-point
-  // -> Standard/No decimal point on load) would otherwise restore to a value
-  // no longer in the dropdown, leaving it silently blank.
-  if(id==='loadMode' && (v==='two-point'||v==='single-point')) v = v==='two-point' ? 'standard' : 'no-decimal';
+  if(id==='loadMode' && !LOAD_MODE_VALUES.includes(v)) v='';
+  if(id==='chartMode' && !CHART_MODE_VALUES.includes(v)) v='';
   e.value=v;
 });}catch(err){console.warn('Could not load local data',err)}}
 function startNewCalibration(){
@@ -1845,7 +1900,7 @@ function collectRequiredIds(){
   }
   if(!isLoadAbsent()){
     ids.push('af_load_probe','af_load_max','af_load_min');
-    if(!isDisplayAbsent()) ids.push('af_cycle_load_max','af_cycle_load_min','af_load_display');
+    if(!isDisplayAbsent() && !isLoadNoDisplay()) ids.push('af_cycle_load_max','af_cycle_load_min','af_load_display');
   }
   if(chartHasOwnReadings()){
     ids.push('af_chart_probe','af_chart_max','af_chart_min','af_chart_display');
@@ -1856,7 +1911,7 @@ function collectRequiredIds(){
     if(!isDisplayAbsent()) ids.push('al_cycle_air_max','al_cycle_air_min','al_air_display');
     if(!isLoadAbsent()){
       ids.push('al_load_max','al_load_min');
-      if(!isDisplayAbsent()) ids.push('al_cycle_load_max','al_cycle_load_min','al_load_display');
+      if(!isDisplayAbsent() && !isLoadNoDisplay()) ids.push('al_cycle_load_max','al_cycle_load_min','al_load_display');
     }
     if(chartHasOwnReadings()) ids.push('al_chart_max','al_chart_min','al_chart_display');
   }
@@ -2453,14 +2508,15 @@ function applyImportedFields(fieldMap){
     setValById('deviceType', fieldMap['Non-Standard Medical Device']);
     setValById('load', fieldMap['Load']);
     setValById('calSystem', fieldMap['Calibration System']);
-    // Older exports used 'two-point'/'single-point' for Load Mode, before it
-    // was relabelled to match Display's Standard/No-decimal wording — map
-    // them across so a file exported from an earlier version still imports
-    // its Load setting correctly rather than landing on a blank dropdown.
-    setValById('loadMode', fieldMap['Load Mode']==='two-point' ? 'standard'
-      : fieldMap['Load Mode']==='single-point' ? 'no-decimal'
-      : fieldMap['Load Mode']);
-    setValById('chartMode', fieldMap['Chart Recorder Mode']);
+    // Load Mode's and Chart Recorder Mode's option lists have changed shape
+    // more than once — an Excel file exported from an earlier version can
+    // hold a value no longer offered (old 'two-point'/'single-point'/
+    // 'no-decimal' for Load, or 'calibrate-button' for Chart). Rather than
+    // guess what an old value should become under the current scheme,
+    // reset it to blank so the mode-selection gate (see applyOffsetsGate)
+    // prompts the engineer to consciously re-pick from today's options.
+    setValById('loadMode', LOAD_MODE_VALUES.includes(fieldMap['Load Mode']) ? fieldMap['Load Mode'] : '');
+    setValById('chartMode', CHART_MODE_VALUES.includes(fieldMap['Chart Recorder Mode']) ? fieldMap['Chart Recorder Mode'] : '');
     // 'fitted' was this option's value before the "No decimal point on the
     // display" variation existed — map it forward so an Excel file already
     // exported from this worksheet doesn't come back in as an unselected
