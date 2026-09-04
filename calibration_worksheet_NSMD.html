@@ -42,6 +42,10 @@
   .page{width:210mm;min-height:297mm;margin:14px auto;background:white;padding:12mm;box-shadow:0 4px 22px #0002;box-sizing:border-box}
   .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}.title{font-size:22px;font-weight:800;letter-spacing:1px}.title .subtitle{font-size:12px;font-weight:600;letter-spacing:.3px;color:#555;margin-top:2px}.brand{text-align:right}.brand .logo{font-size:30px;font-weight:900}.brand .no{font-size:16px;margin-top:4px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 25px;margin:14px 0}.field{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:end}.field label{font-size:13px}.field input,.field select{border:0;border-bottom:1px dotted #333;padding:3px 4px;font-size:13px;width:100%;box-sizing:border-box;background:transparent}
+  .notApplicableCol{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.03) 0,rgba(0,0,0,.03) 7px,transparent 7px,transparent 14px)!important}
+  .notApplicableCol input,.notApplicableCol select{text-decoration:line-through;background:#f0f0f0!important;color:#888!important;cursor:not-allowed}
+  .naBadge{display:inline-block;font-size:8.5px;font-weight:900;letter-spacing:.3px;color:#900;border:1.3px solid #900;border-radius:2px;padding:1px 4px;margin-left:5px;background:#ffffffcc;white-space:nowrap;vertical-align:middle}
+  .colModeSel{display:block;width:100%;font-size:9.5px;font-weight:600;margin-top:2px;border:1px solid #333;background:#fff;padding:1px}
   table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}td,th{border:1px solid var(--line);padding:4px;vertical-align:middle}th{background:#ddd;font-weight:700}.section{background:#cfcfcf;font-weight:700}.subhead{background:#e3e3e3;text-align:center}.label{font-weight:700}.muted{font-weight:400;color:#333}.small{font-size:11px}.input{width:100%;border:0;background:transparent;font-size:12px;box-sizing:border-box;text-align:center}.input:focus{outline:2px solid #9ec5fe;background:#eef6ff}.input:disabled{background:#f0f0f0!important;color:#aaa;cursor:not-allowed} select.probe{display:block;width:100%;min-width:96px;height:28px;border:1px solid #333!important;background:#fff!important;color:#111!important;font-size:10.5px;text-align:left;appearance:auto;-webkit-appearance:menulist;padding:2px}.probeHint{font-size:11px;color:#333;background:#eef6ff;border:1px solid #9ec5fe;padding:6px;margin:6px 0}.autoCorr{background:#fff3cd!important}.calc{background:#f8f8f8;font-weight:700}.bad{background:var(--bad)!important}.ok{background:var(--ok)!important}.warn{background:var(--warn)!important}.selectedHigh{background:var(--hi)!important;border-bottom:3px solid #2563eb!important;font-weight:900!important}.selectedLow{background:var(--lo)!important;border-bottom:3px solid #16a34a!important;font-weight:900!important}.note{font-size:11px;margin:7px 0 0}.sign{height:26px}.comments{height:64px}.statusbar{padding:8px;margin:8px 0;border:1px solid #999;background:#fafafa;font-size:13px}.statusbar.bad{border-color:#b00020}.statusbar.ok{border-color:#207a20}.notNeeded{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.035) 0,rgba(0,0,0,.035) 8px,transparent 8px,transparent 16px)}.notNeeded input,.notNeeded select,.notNeeded textarea{text-decoration:line-through;background:#dcdcdc!important;color:#777!important}.notNeeded input:disabled,.notNeeded select:disabled,.notNeeded textarea:disabled{cursor:not-allowed}.adjustNote{background:#e7f7e7!important;border-color:#207a20!important;font-weight:700}#alCycleAirRow.notNeeded,#alCycleLoadRow.notNeeded{background:repeating-linear-gradient(135deg,rgba(0,0,0,.025) 0,rgba(0,0,0,.025) 7px,transparent 7px,transparent 14px)}input.na,select.na{text-decoration:line-through;background:#dcdcdc!important;color:#777;cursor:not-allowed}
   /* Real DOM stamp (not a ::after pseudo-element) — html2canvas / html2canvas-pro render
      absolutely-positioned pseudo-content on <table> elements unreliably across browsers,
@@ -144,6 +148,13 @@
         <option value="Calibrated on System 2">Calibrated on System 2</option>
       </select>
     </div>
+    <div class="field"><label>Display <span class="req">*</span>:</label>
+      <select id="displayMode">
+        <option value="">-- select --</option>
+        <option value="fitted">Fitted</option>
+        <option value="not-present">Not present</option>
+      </select>
+    </div>
   </div>
 
   <table>
@@ -163,7 +174,7 @@
   <div class="probeHint"><b>Probe dropdown:</b> choose the probe/port in each column. The app will use the closest correction to the Initial Set Point for AF and to the Final Set Point for AL. The selected correction is copied into Max Correction and Min Correction automatically.<br><b>Air calculation markers:</b> blue underline = highest corrected maximum used; green underline = lowest corrected minimum used.</div>
   <div id="afStatus" class="statusbar">As Found status will appear here after calculation.</div>
   <table id="afTable">
-    <tr><th class="section">As Found (AF)</th><th colspan="2">Air</th><th>Load</th><th>Chart Recorder</th></tr>
+    <tr><th class="section">As Found (AF)</th><th colspan="2">Air</th><th id="loadColHeadAf">Load<select id="loadMode" class="colModeSel"><option value="">-- select --</option><option value="two-point">Two-point (±0.300°C)</option><option value="single-point">Single point (±1.0°C)</option><option value="not-present">Not present</option></select></th><th id="chartColHeadAf">Chart Recorder<select id="chartMode" class="colModeSel"><option value="">-- select --</option><option value="digital">Digital recorder</option><option value="based-on-air">Based on Air readings</option><option value="not-fitted">Not fitted</option></select></th></tr>
     <tr class="lrRow"><td></td><td><span class="lrBadge"><span class="dot left">L</span><span class="txt">Left</span></span></td><td><span class="lrBadge"><span class="dot right">R</span><span class="txt">Right</span></span></td><td></td><td></td></tr>
     <tr><td>Probe Serial No <span class="req">*</span>:</td><td><select class="input probe" id="af_air1_probe"></select></td><td><select class="input probe" id="af_air2_probe"></select></td><td><select class="input probe" id="af_load_probe"></select></td><td><select class="input probe" id="af_chart_probe"></select></td></tr>
     <tr><td></td><td colspan="2" id="afAirProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Select one "A" probe and one "B" probe for Air</td><td colspan="2" id="afLoadChartProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Load/Chart must differ from Air probes</td></tr>
@@ -181,7 +192,7 @@
   <div id="alStatus" class="statusbar">As Left status will appear here after calculation.</div>
   <div id="alTableHost" class="stampHost">
   <table id="alTable">
-    <tr><th class="section">As Left (AL)</th><th colspan="2">Air</th><th>Load</th><th>Chart Recorder</th></tr>
+    <tr><th class="section">As Left (AL)</th><th colspan="2">Air</th><th id="loadColHeadAl">Load <span id="loadModeBadgeAl"></span></th><th id="chartColHeadAl">Chart Recorder <span id="chartModeBadgeAl"></span></th></tr>
     <tr class="lrRow"><td></td><td><span class="lrBadge"><span class="dot left">L</span><span class="txt">Left</span></span></td><td><span class="lrBadge"><span class="dot right">R</span><span class="txt">Right</span></span></td><td></td><td></td></tr>
     <tr><td>Probe Serial No: <span class="small" style="font-weight:400">(same as As Found)</span></td><td><select class="input probe" id="al_air1_probe" disabled></select></td><td><select class="input probe" id="al_air2_probe" disabled></select></td><td><select class="input probe" id="al_load_probe" disabled></select></td><td><select class="input probe" id="al_chart_probe" disabled></select></td></tr>
     <tr><td></td><td colspan="2" id="alAirProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Select one "A" probe and one "B" probe for Air</td><td colspan="2" id="alLoadChartProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Load/Chart must differ from Air probes</td></tr>
@@ -211,7 +222,7 @@
     <div class="label" style="padding:4px 6px;background:#e3e3e3">Comments <span class="muted">(calculations, deviations, customer requests)</span></div>
     <textarea id="comments" style="width:100%;height:60px;border:0;box-sizing:border-box;font-size:12px;padding:6px;resize:vertical;display:block"></textarea>
   </div>
-  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when all three As Found results — Air, Load and Chart Recorder — are present and within ±0.300 °C. If any one result is missing or outside tolerance, As Left remains active and must be completed.</div>
+  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when every column actually fitted on this unit is present and within its own tolerance — Air and a digital Chart Recorder ±0.300 °C, Load ±1.0 °C when set to single point instead of two-point. A Chart Recorder set to "Based on Air readings" has no probe of its own and always matches Air's result. Load, Chart Recorder and Display can each be marked not present/not fitted per unit above the As Found table; an absent column is greyed out and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
 </div>
 <script>
 const TOL=0.3;
@@ -236,7 +247,9 @@ function applyOffsetsGate(){
   OFFSET_GATED_AF_IDS.forEach(id=>{
     const el=document.getElementById(id);
     if(!el) return;
-    el.disabled=!loaded;
+    // A column that isn't fitted on this unit stays disabled regardless of
+    // whether offsets are loaded — isColumnAbsentField has the final say.
+    el.disabled = !loaded || isColumnAbsentField(id);
     el.title = loaded ? '' : OFFSET_GATE_MSG;
   });
   // AL fields' final disabled state is decided by setAdjustmentMode (it also
@@ -1105,7 +1118,7 @@ function roundedDiff(avg, display, avgDp=3, displayDp=1){
   const displayRounded = roundTo(display, displayDp);
   return avgRounded - displayRounded;
 }
-function calcNormal(prefix, col){
+function calcNormal(prefix, col, tol=TOL){
   const rawMax=n(`${prefix}_${col}_max`), rawMin=n(`${prefix}_${col}_min`);
   const mismatch = rawMax!==null && rawMin!==null && rawMax<rawMin;
   const max=add(n(`${prefix}_${col}_max`),n(`${prefix}_${col}_max_corr`));
@@ -1116,16 +1129,28 @@ function calcNormal(prefix, col){
   maxCalcEl?.classList.toggle('selectedHigh', max!==null && !mismatch);
   minCalcEl?.classList.toggle('selectedLow', min!==null && !mismatch);
   const avg=avg2(max,min); set(`${prefix}_${col}_avg`,avg);
-  const display=n(`${prefix}_${col}_display`);
   if(mismatch){
     const diffEl=document.getElementById(`${prefix}_${col}_diff`);
     if(diffEl){ diffEl.value='Max<Min!'; diffEl.title='Reference Max is lower than Reference Min for this column.'; }
     cls(`${prefix}_${col}_diff`,'bad');
     return {diff:null, state:'bad'};
   }
+  // This column has real probe readings, but its own Display cell is N/A —
+  // currently only Load's Display, when the unit's Display is "Not present"
+  // (Chart's own Display, when fitted, is its own separate digital readout
+  // and is not affected by this). Nothing exists to compare the readings
+  // against, so — the same as Air's own comparison in calcAir — that is
+  // treated as satisfied rather than left stuck incomplete forever.
+  if(isColumnAbsentField(`${prefix}_${col}_display`)){
+    const diffEl=document.getElementById(`${prefix}_${col}_diff`);
+    if(diffEl){ diffEl.value = avg!==null ? NA_TEXT : ''; diffEl.title=''; }
+    cls(`${prefix}_${col}_diff`, avg!==null ? 'ok' : null);
+    return {diff:null, state: avg!==null ? 'ok' : null};
+  }
+  const display=n(`${prefix}_${col}_display`);
   const diff=roundedDiff(avg, display, 3, 1);
   set(`${prefix}_${col}_diff`,diff);
-  const state=diff===null?null:(Math.abs(diff)>TOL?'bad':'ok'); cls(`${prefix}_${col}_diff`,state); return {diff,state};
+  const state=diff===null?null:(Math.abs(diff)>tol?'bad':'ok'); cls(`${prefix}_${col}_diff`,state); return {diff,state};
 }
 function calcAir(prefix){
   clearAirMarkers(prefix);
@@ -1146,10 +1171,198 @@ function calcAir(prefix){
   maxItems.filter(x=>x.v===high).forEach(x=>document.getElementById(x.id)?.classList.add('selectedHigh'));
   minItems.filter(x=>x.v===low).forEach(x=>document.getElementById(x.id)?.classList.add('selectedLow'));
   const avg=avg2(high,low); set(`${prefix}_air_avg`,avg);
+  // Display "Not present" on this model means there is no reading to compare
+  // Air's probe average against at all — not a failure, just nothing to
+  // judge. Air's own Difference cell is never disabled by applyColumnAvailability
+  // (Air itself is always fitted), so it is stamped N/A here instead, and — as
+  // long as the probe average itself is known — treated as satisfied, the same
+  // way Standard Non-Medical treats its own "No display fitted" variation.
+  if(isDisplayAbsent()){
+    const diffEl=document.getElementById(`${prefix}_air_diff`);
+    if(diffEl){ diffEl.value = avg!==null ? NA_TEXT : ''; diffEl.title='No display fitted on the unit — no Display comparison available.'; }
+    cls(`${prefix}_air_diff`, avg!==null ? 'ok' : null);
+    return {diff:null, state: avg!==null ? 'ok' : null};
+  }
   const display=n(`${prefix}_air_display`);
   const diff=roundedDiff(avg, display, 3, 1);
   set(`${prefix}_air_diff`,diff);
   const state=diff===null?null:(Math.abs(diff)>TOL?'bad':'ok'); cls(`${prefix}_air_diff`,state); return {diff,state};
+}
+
+// ---------------------------------------------------------------------
+// Non-standard variations. This is the only worksheet where Load, Chart
+// Recorder and Display can each be amended per unit:
+//   Load          — two-point (normal, ±0.300 °C), single point (a spot
+//                   reading rather than a full cycle, ±1.0 °C), or not
+//                   present on this model.
+//   Chart Recorder— a fitted independent digital recorder (its own probe
+//                   and readings, ±0.300 °C), based on Air readings (no
+//                   probe of its own — its Average/Difference/Display are
+//                   copied live from Air, so it always agrees with Air),
+//                   or not fitted at all.
+//   Display       — fitted, or not present on this model at all (no
+//                   onboard digital display for Air or Load to read from).
+// A column that is absent is stamped -N/A-, disabled, greyed out with the
+// same styling as Standard Non-Medical's permanently-N/A columns, and left
+// out of every calculation and out of "adjustment needed" below.
+// ---------------------------------------------------------------------
+const SINGLE_POINT_TOL=1.0;
+function loadModeVal(){ return document.getElementById('loadMode')?.value || 'two-point'; }
+function chartModeVal(){ return document.getElementById('chartMode')?.value || 'digital'; }
+function displayModeVal(){ return document.getElementById('displayMode')?.value || 'fitted'; }
+function isLoadAbsent(){ return loadModeVal()==='not-present'; }
+function isChartAbsent(){ return chartModeVal()==='not-fitted'; }
+function isChartFromAir(){ return chartModeVal()==='based-on-air'; }
+function isDisplayAbsent(){ return displayModeVal()==='not-present'; }
+function loadTolerance(){ return loadModeVal()==='single-point' ? SINGLE_POINT_TOL : TOL; }
+
+// A field id is "column-absent" if the reading it holds does not exist on
+// this unit at all — always disabled and stamped -N/A-, whatever the
+// offsets gate or the As Left adjustment-mode would otherwise decide.
+function isColumnAbsentField(id){
+  if(/^a[fl]_load_(probe|max|max_corr|max_calc|min|min_corr|min_calc|avg|diff)$/.test(id)) return isLoadAbsent();
+  if(/^a[fl]_load_display$/.test(id)) return isLoadAbsent() || isDisplayAbsent();
+  if(/^a[fl]_cycle_load_(max|min|avg)$/.test(id)) return isLoadAbsent() || isDisplayAbsent();
+  if(/^a[fl]_chart_(probe|max|max_corr|max_calc|min|min_corr|min_calc)$/.test(id)) return isChartAbsent() || isChartFromAir();
+  if(/^a[fl]_chart_(avg|diff|display)$/.test(id)) return isChartAbsent();
+  if(id==='af_air_display' || id==='al_air_display') return isDisplayAbsent();
+  if(/^a[fl]_cycle_air_(max|min|avg)$/.test(id)) return isDisplayAbsent();
+  return false;
+}
+const COLUMN_MODE_FIELD_IDS=(function(){
+  const cols=['load','chart'], suffixes=['probe','max','max_corr','max_calc','min','min_corr','min_calc','avg','diff','display'];
+  const out=[];
+  ['af','al'].forEach(function(p){
+    cols.forEach(function(c){ suffixes.forEach(function(s){ out.push(p+'_'+c+'_'+s); }); });
+    out.push(p+'_air_display', p+'_cycle_air_max', p+'_cycle_air_min', p+'_cycle_air_avg',
+              p+'_cycle_load_max', p+'_cycle_load_min', p+'_cycle_load_avg');
+  });
+  return out;
+})();
+// Disables and -N/A- stamps every field whose column/reading is absent on
+// this unit, independently of the offsets gate and the AL adjustment lock
+// (both of those also call isColumnAbsentField so whichever runs last still
+// agrees). Fields that ARE present are left alone here — their disabled
+// state is somebody else's call (offsets gate, adjustment lock).
+function applyColumnAvailability(){
+  COLUMN_MODE_FIELD_IDS.forEach(function(id){
+    const el=document.getElementById(id);
+    if(!el) return;
+    const absent=isColumnAbsentField(id);
+    const td=el.closest('td');
+    if(td) td.classList.toggle('notApplicableCol', absent);
+    if(el.tagName==='SELECT'){
+      const blank=el.querySelector('option[value=""]');
+      if(blank) blank.textContent = absent ? 'N/A' : '-- select --';
+      el.disabled=absent;
+      if(absent) el.value='';
+    } else {
+      el.disabled = absent || el.disabled;   // never re-enable here; see comment above
+      // Always overwrite on the switch to absent, not just when already
+      // blank — a reading typed in before the engineer changed a column to
+      // "not present"/"not fitted" must not linger, disabled but still
+      // showing its old number, in a cell now marked N/A. The certificate
+      // PDF reads these cells straight off the DOM, so a stale figure here
+      // would print as if it were a real reading on an N/A column.
+      if(absent){ el.value=NA_TEXT; }
+      else if(el.value===NA_TEXT){ el.value=''; }
+    }
+  });
+  // Stale-mark cleanup: if a column was active in an earlier calculation
+  // and has now been switched to absent, calcNormal()/calcAir() will not
+  // run for it this pass (columnResults() skips absent columns), so any
+  // selectedHigh/selectedLow/bad/ok/warn classes it left behind from
+  // before the switch must be cleared explicitly here. The certificate
+  // PDF reads these classes straight off the DOM (marks(), stateOf()),
+  // so a stale one would otherwise show a pass/fail tint or a selected
+  // max/min underline on a column that is actually N/A.
+  ['af','al'].forEach(function(prefix){
+    if(isLoadAbsent()){
+      [`${prefix}_load_max_calc`,`${prefix}_load_min_calc`].forEach(function(id){
+        document.getElementById(id)?.classList.remove('selectedHigh','selectedLow');
+      });
+      cls(`${prefix}_load_diff`, null);
+    }
+    if(isChartAbsent() || isChartFromAir()){
+      [`${prefix}_chart_max_calc`,`${prefix}_chart_min_calc`].forEach(function(id){
+        document.getElementById(id)?.classList.remove('selectedHigh','selectedLow');
+      });
+    }
+    if(isChartAbsent()){
+      cls(`${prefix}_chart_diff`, null);
+    }
+  });
+  // A Chart Recorder based on Air has no probe/raw readings of its own —
+  // its Display is copied live from Air's Display (below) rather than
+  // typed independently, so it switches to the same read-only treatment
+  // Air's own Display field already has.
+  ['af_chart_display','al_chart_display'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.readOnly = isChartFromAir();
+  });
+  // AL header badges mirror whatever was chosen in the AF header selects,
+  // so As Left reads correctly without a second control to keep in sync.
+  const loadBadge=document.getElementById('loadModeBadgeAl');
+  if(loadBadge) loadBadge.textContent = isLoadAbsent() ? '(N/A)' : (loadModeVal()==='single-point' ? '(±1.0°C)' : '');
+  const chartBadge=document.getElementById('chartModeBadgeAl');
+  if(chartBadge) chartBadge.textContent = isChartAbsent() ? '(N/A)' : (isChartFromAir() ? '(from Air)' : '');
+}
+// Chart Recorder set to "Based on Air readings": it has no probe or raw
+// Max/Min of its own, so its Average, Difference and Display simply copy
+// Air's own finished result for this prefix (AF or AL) — it can never
+// disagree with Air, by construction.
+function copyChartFromAir(prefix){
+  const airAvg=n(`${prefix}_air_avg`);
+  set(`${prefix}_chart_avg`, airAvg);
+  // Display "Not present" means there is no Air Display reading to copy
+  // either — Chart's result mirrors Air's own "nothing to judge" outcome
+  // (see calcAir) rather than showing a blank comparison as a failure.
+  if(isDisplayAbsent()){
+    const displayEl=document.getElementById(`${prefix}_chart_display`);
+    if(displayEl && !displayEl.disabled) displayEl.value = airAvg!==null ? NA_TEXT : '';
+    const diffEl=document.getElementById(`${prefix}_chart_diff`);
+    if(diffEl) diffEl.value = airAvg!==null ? NA_TEXT : '';
+    cls(`${prefix}_chart_diff`, airAvg!==null ? 'ok' : null);
+    return {diff:null, state: airAvg!==null ? 'ok' : null};
+  }
+  const airDisplay=n(`${prefix}_air_display`);
+  set(`${prefix}_chart_display`, airDisplay, 1);
+  const diff=roundedDiff(airAvg, airDisplay, 3, 1);
+  set(`${prefix}_chart_diff`, diff);
+  const state=diff===null?null:(Math.abs(diff)>TOL?'bad':'ok');
+  cls(`${prefix}_chart_diff`, state);
+  return {diff, state};
+}
+// Builds the AF or AL result list, including only the columns actually
+// fitted on this unit — Air always, Load unless "not present", and Chart
+// Recorder unless "not fitted" (either digital, tolerance-checked on its
+// own reading, or based on Air, which simply inherits Air's result).
+function columnResults(prefix){
+  const results=[calcAir(prefix)];
+  if(!isLoadAbsent()) results.push(calcNormal(prefix, 'load', loadTolerance()));
+  if(isChartFromAir()) results.push(copyChartFromAir(prefix));
+  else if(!isChartAbsent()) results.push(calcNormal(prefix, 'chart', TOL));
+  return results;
+}
+// Plain-English list of which columns are active, for status messages —
+// "Air", "Air and Load", or "Air, Load and Chart Recorder".
+function activeColumnsText(){
+  const parts=['Air'];
+  if(!isLoadAbsent()) parts.push('Load');
+  if(!isChartAbsent()) parts.push('Chart Recorder');
+  if(parts.length===1) return parts[0];
+  if(parts.length===2) return parts.join(' and ');
+  return parts.slice(0,-1).join(', ')+' and '+parts[parts.length-1];
+}
+// Tolerance text for the status bar, grouping columns that share the same
+// figure so "Air and Load ±0.300 °C" reads as one clause rather than two.
+function toleranceSummaryText(){
+  const cols=[['Air','±0.300 °C']];
+  if(!isLoadAbsent()) cols.push(['Load', loadModeVal()==='single-point' ? '±1.0 °C' : '±0.300 °C']);
+  if(!isChartAbsent() && !isChartFromAir()) cols.push(['Chart Recorder','±0.300 °C']);
+  const byTol={}, order=[];
+  cols.forEach(function(c){ if(!byTol[c[1]]){ byTol[c[1]]=[]; order.push(c[1]); } byTol[c[1]].push(c[0]); });
+  return order.map(function(t){ return byTol[t].join('/')+' '+t; }).join(', ');
 }
 
 function calcDisplayCycle(){
@@ -1300,6 +1513,7 @@ function checkProbesInGap(){
 }
 function calculateAll(){
   applyOffsetsGate();
+  applyColumnAvailability();
   syncDates();
   syncLeftProbes();
   applyDigitalThermometer();
@@ -1311,35 +1525,36 @@ function calculateAll(){
   checkAllAirProbeGroups();
   checkAllLoadChartVsAirProbes();
   checkProbesInGap();
-  const af=[calcAir('af'),calcNormal('af','load'),calcNormal('af','chart')];
+  const af=columnResults('af');
 
   // As Left only unlocks once As Found is fully calculated AND confirms
   // adjustment is actually needed (one or more results outside tolerance).
   // While As Found is incomplete, As Left stays locked — no premature entry.
-  // If As Found is complete and all three are within tolerance, As Left is
-  // locked with the "adjustment not needed" stamp instead.
-  const afComplete = af.length===3 && af.every(x=>x.state!==null);
-  const afAllThreeWithinTolerance = afComplete && af.every(x=>x.state==='ok');
+  // If As Found is complete and every active column is within tolerance,
+  // As Left is locked with the "adjustment not needed" stamp instead.
+  const afComplete = af.length>0 && af.every(x=>x.state!==null);
+  const afAllWithinTolerance = afComplete && af.every(x=>x.state==='ok');
   const afNeedsAdjustment = afComplete && af.some(x=>x.state==='bad');
-  setAdjustmentMode(afAllThreeWithinTolerance, afNeedsAdjustment);
+  setAdjustmentMode(afAllWithinTolerance, afNeedsAdjustment);
 
-  const al=[calcAir('al'),calcNormal('al','load'),calcNormal('al','chart')];
-  status('afStatus',af,'As Found');
+  const al=columnResults('al');
+  const cols=activeColumnsText(), tolText=toleranceSummaryText();
+  status('afStatus',af,'As Found',tolText);
   const alStatusEl=document.getElementById('alStatus');
-  if(afAllThreeWithinTolerance){
+  if(afAllWithinTolerance){
     if(alStatusEl){
       alStatusEl.className='statusbar ok adjustNote';
-      alStatusEl.textContent='Adjustment not needed — Air, Load and Chart Recorder are all within ±0.300 °C, so As Left and AL Display cycle can be left crossed out.';
+      alStatusEl.textContent=`Adjustment not needed — ${cols} ${af.length===1?'is':'are all'} within tolerance (${tolText}), so As Left and AL Display cycle can be left crossed out.`;
     }
     const adj=document.getElementById('al_adj_made'); if(adj){ adj.value='Adjustment not needed'; adj.scrollLeft=0; fitInputText(adj); }
   } else if(!afComplete){
     if(alStatusEl){
       alStatusEl.className='statusbar';
-      alStatusEl.textContent='As Left: complete As Found first (Air, Load and Chart Recorder) — As Left unlocks once As Found shows whether adjustment is needed.';
+      alStatusEl.textContent=`As Left: complete As Found first (${cols}) — As Left unlocks once As Found shows whether adjustment is needed.`;
     }
     const adj=document.getElementById('al_adj_made'); if(adj && adj.value==='Adjustment not needed'){ adj.value=''; adj.style.fontSize=''; }
   } else {
-    status('alStatus',al,'As Left');
+    status('alStatus',al,'As Left',tolText);
     const adj=document.getElementById('al_adj_made'); if(adj && adj.value==='Adjustment not needed'){ adj.value=''; adj.style.fontSize=''; }
   }
   localStorage.setItem('calibration_autosave', JSON.stringify(Object.fromEntries(ids().map(id=>[id,document.getElementById(id).value]))));
@@ -1357,8 +1572,12 @@ function setAdjustmentMode(stamped, unlocked){
     e.querySelectorAll('input,select,textarea').forEach(el=>{
       const alwaysDisabledProbe=el.classList.contains('probe'); // AL probe selects always stay disabled — they're auto-synced from As Found
       const offsetsGate = OFFSET_GATED_IDS.includes(el.id) && !offsetsLoaded();
-      el.disabled = !unlocked || alwaysDisabledProbe || offsetsGate;
+      // A column absent on this unit stays disabled even once As Left
+      // unlocks — isColumnAbsentField has the final say, same as the
+      // offsets gate above.
+      el.disabled = !unlocked || alwaysDisabledProbe || offsetsGate || isColumnAbsentField(el.id);
       if(alwaysDisabledProbe || el.classList.contains('timeSel')) return; // handled separately below
+      if(isColumnAbsentField(el.id)) return; // -N/A- stamping for these is applyColumnAvailability's job
       if(stamped && el.value.trim()===''){ el.value=NA_TEXT; }
       else if(!stamped && el.value===NA_TEXT){ el.value=''; }
     });
@@ -1394,7 +1613,7 @@ function setAdjustmentMode(stamped, unlocked){
   });
   ['al_adj_made','al_cycle_start_h','al_cycle_start_m'].forEach(id=>{const e=document.getElementById(id); if(e) e.classList.toggle('ok', !!stamped);});
 }
-function status(id,items,label){const bad=items.some(x=>x.state==='bad'), any=items.some(x=>x.state); const e=document.getElementById(id); e.className='statusbar '+(bad?'bad':any?'ok':''); e.textContent=!any?`${label}: enter readings and press Calculate.`:bad?`${label}: adjustment required — one or more differences are greater than ±0.300 °C.`:`${label}: within tolerance ±0.300 °C.`}
+function status(id,items,label,tolText){const bad=items.some(x=>x.state==='bad'), any=items.some(x=>x.state); const e=document.getElementById(id); e.className='statusbar '+(bad?'bad':any?'ok':''); e.textContent=!any?`${label}: enter readings and press Calculate.`:bad?`${label}: adjustment required — one or more differences are greater than tolerance (${tolText}).`:`${label}: within tolerance (${tolText}).`}
 function preparePdf(){ calculateAll(); setTimeout(()=>window.print(), 120); }
 window.addEventListener('beforeprint', calculateAll);
 function loadLocal(){const data=localStorage.getItem('calibration_autosave'); if(!data){alert('No local save found.'); return} restoreData(data); calculateAll()}
@@ -1489,12 +1708,33 @@ function autoAdvance(el){
 }
 
 // --- Required-field validation before generating a certificate ---
-const requiredFieldIds=['certNo','jobRef','dateNative','site','department','manufacturer','deviceType','model','serial','load','calSystem','drtSerial','rtRef','rtMax','rtMin','initialOffsetsCal1','initialOffsetsCal2','initialSetpoint','af_air1_probe','af_air2_probe','af_load_probe','af_chart_probe','af_air1_max','af_air2_max','af_load_max','af_chart_max','af_air1_min','af_air2_min','af_load_min','af_chart_min','af_cycle_air_max','af_cycle_air_min','af_cycle_load_max','af_cycle_load_min','af_air_display','af_load_display','af_chart_display','af_probes_in_h','af_probes_in_m','af_cycle_start_h','af_cycle_start_m','engineer'];
+const requiredFieldIds=['certNo','jobRef','dateNative','site','department','manufacturer','deviceType','model','serial','load','calSystem','loadMode','chartMode','displayMode','drtSerial','rtRef','rtMax','rtMin','initialOffsetsCal1','initialOffsetsCal2','initialSetpoint','af_air1_probe','af_air2_probe','af_air1_max','af_air2_max','af_air1_min','af_air2_min','af_probes_in_h','af_probes_in_m','af_cycle_start_h','af_cycle_start_m','engineer'];
+// Load, Chart Recorder and Display are only required when actually fitted
+// on this unit — see the Non-standard variations block above. A column
+// that's "not present"/"not fitted" is disabled and -N/A- stamped instead,
+// so it must not appear here or validateRequiredFields would demand a
+// value nothing can ever fill in.
 function collectRequiredIds(){
   const ids=[...requiredFieldIds];
-  const adjustmentNeeded = !document.getElementById('al_cycle_air_max')?.disabled;
+  if(!isDisplayAbsent()){
+    ids.push('af_cycle_air_max','af_cycle_air_min','af_air_display');
+  }
+  if(!isLoadAbsent()){
+    ids.push('af_load_probe','af_load_max','af_load_min');
+    if(!isDisplayAbsent()) ids.push('af_cycle_load_max','af_cycle_load_min','af_load_display');
+  }
+  if(chartModeVal()==='digital'){
+    ids.push('af_chart_probe','af_chart_max','af_chart_min','af_chart_display');
+  }
+  const adjustmentNeeded = !document.getElementById('al_cycle_start_h')?.disabled;
   if(adjustmentNeeded){
-    ids.push('finalOffsetsCal1','finalOffsetsCal2','finalSetpoint','al_air1_max','al_air2_max','al_load_max','al_chart_max','al_air1_min','al_air2_min','al_load_min','al_chart_min','al_cycle_air_max','al_cycle_air_min','al_cycle_load_max','al_cycle_load_min','al_air_display','al_load_display','al_chart_display');
+    ids.push('finalOffsetsCal1','finalOffsetsCal2','finalSetpoint','al_air1_max','al_air2_max','al_air1_min','al_air2_min','al_cycle_start_h','al_cycle_start_m');
+    if(!isDisplayAbsent()) ids.push('al_cycle_air_max','al_cycle_air_min','al_air_display');
+    if(!isLoadAbsent()){
+      ids.push('al_load_max','al_load_min');
+      if(!isDisplayAbsent()) ids.push('al_cycle_load_max','al_cycle_load_min','al_load_display');
+    }
+    if(chartModeVal()==='digital') ids.push('al_chart_max','al_chart_min','al_chart_display');
   }
   if(document.getElementById('manufacturer')?.value==='Other'){
     ids.push('manufacturerOther');
@@ -1534,12 +1774,12 @@ function runPreGenerationChecks(){
     return false;
   }
   if(!checkAllColumnRanges()){
-    alert('Max must be greater than or equal to Min in every column — Air, Load, Chart Recorder, and Display cycle — for both As Found and As Left. Please correct the highlighted values.');
+    alert('Max must be greater than or equal to Min in every fitted column and Display cycle, for both As Found and As Left. Please correct the highlighted values.');
     return false;
   }
   const alStatusEl=document.getElementById('alStatus');
   if(alStatusEl && alStatusEl.classList.contains('bad')){
-    alert('As Left: adjustment required — one or more differences are still greater than ±0.300 °C. Please adjust the unit and re-enter the As Left readings until they are within tolerance before generating the certificate.');
+    alert('As Left: adjustment required — one or more differences are still greater than tolerance. Please adjust the unit and re-enter the As Left readings until they are within tolerance before generating the certificate.');
     return false;
   }
   if(!checkAllAirProbeGroups()){
@@ -1547,7 +1787,7 @@ function runPreGenerationChecks(){
     return false;
   }
   if(!checkAllLoadChartVsAirProbes()){
-    alert('Load and Chart Recorder probes must be different from the probes used for Air (Load and Chart Recorder may share the same probe as each other).');
+    alert('Load and Chart Recorder each need a probe different from the ones used for Air.');
     return false;
   }
   if(!checkProbesInGap()){
@@ -1945,6 +2185,9 @@ function buildExcelWorkbook(){
   push('Non-Standard Medical Device', val('deviceType'));
   push('Load', val('load'));
   push('Calibration System', val('calSystem'));
+  push('Load Mode', val('loadMode'));
+  push('Chart Recorder Mode', val('chartMode'));
+  push('Display Mode', val('displayMode'));
   push('','');
   push('Digital Reference Thermometer S/N', val('drtSerial'));
   push('Digital Reference Thermometer Cal Due', val('drtDue'));
@@ -2086,6 +2329,9 @@ function applyImportedFields(fieldMap){
     setValById('deviceType', fieldMap['Non-Standard Medical Device']);
     setValById('load', fieldMap['Load']);
     setValById('calSystem', fieldMap['Calibration System']);
+    setValById('loadMode', fieldMap['Load Mode']);
+    setValById('chartMode', fieldMap['Chart Recorder Mode']);
+    setValById('displayMode', fieldMap['Display Mode']);
     setValById('drtSerial', fieldMap['Digital Reference Thermometer S/N']);
     setSelectByText('rtRef', fieldMap['RT Thermometer Ref']);
     setValById('rtMax', fieldMap['Room Temperature Max']);
@@ -2200,32 +2446,13 @@ function setManufacturerFromImport(value){
     if(other){ other.style.display=''; other.value=trimmed; }
   }
 }
-function wireLoadChartSync(){
-  // Load and Chart Recorder must always use the same probe, and their
-  // Reference Max / Reference Min readings must always match each other —
-  // editing either field copies the value into its partner.
-  ['af','al'].forEach(prefix=>{
-    const loadProbe=document.getElementById(`${prefix}_load_probe`);
-    const chartProbe=document.getElementById(`${prefix}_chart_probe`);
-    loadProbe?.addEventListener('change',()=>{
-      if(chartProbe && chartProbe.value!==loadProbe.value){ chartProbe.value=loadProbe.value; calculateAll(); }
-    });
-    chartProbe?.addEventListener('change',()=>{
-      if(loadProbe && loadProbe.value!==chartProbe.value){ loadProbe.value=chartProbe.value; calculateAll(); }
-    });
-    ['max','min'].forEach(kind=>{
-      const loadEl=document.getElementById(`${prefix}_load_${kind}`);
-      const chartEl=document.getElementById(`${prefix}_chart_${kind}`);
-      loadEl?.addEventListener('input',()=>{
-        if(chartEl && chartEl.value!==loadEl.value){ chartEl.value=loadEl.value; decimalOK(chartEl); calculateAll(); }
-      });
-      chartEl?.addEventListener('input',()=>{
-        if(loadEl && loadEl.value!==chartEl.value){ loadEl.value=chartEl.value; decimalOK(loadEl); calculateAll(); }
-      });
-    });
-  });
-}
-wireLoadChartSync();
+// Load and Chart Recorder used to be forced to share one probe and one
+// Reference Max/Min between them. That's gone now that Chart Recorder can
+// be its own independent digital recorder, not fitted, or based on Air —
+// each column keeps its own readings; see applyColumnAvailability and
+// copyChartFromAir above. The generic "every input/select recalculates"
+// wiring below already covers loadMode/chartMode/displayMode, so changing
+// any of them re-runs calculateAll() same as any other field.
 document.getElementById('certNo')?.addEventListener('input',()=>{ sanitizeCertNo(); checkCertNoFormat(); });
 document.getElementById('certNo')?.addEventListener('blur', checkCertNoFormat);
 document.getElementById('certNo')?.addEventListener('focus',function(){ if(this.selectionStart<2) this.setSelectionRange(this.value.length,this.value.length); });

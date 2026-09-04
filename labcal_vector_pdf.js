@@ -1070,9 +1070,25 @@
     banner(txtOf('afStatus') || 'As Found: readings recorded.', 6, 7.8, stateOf('afStatus') === 'bad');
 
     // ---------------- measurement tables ----------------
+    // Non-Standard Medical carries per-unit Load/Chart Recorder tolerance —
+    // print it right on the column header. document.getElementById returns
+    // null on every other sheet, so this leaves Standard Medical/Non-Medical
+    // untouched.
+    var loadModeEl = document.getElementById('loadMode');
+    var chartModeEl = document.getElementById('chartMode');
+    var loadTitle = 'Load';
+    if (loadModeEl) {
+      var lm = loadModeEl.value;
+      loadTitle = 'Load (' + (lm === 'not-present' ? 'N/A' : lm === 'single-point' ? '±1.0°C' : '±0.300°C') + ')';
+    }
+    var chartTitle = 'Chart Recorder';
+    if (chartModeEl) {
+      var cm = chartModeEl.value;
+      chartTitle = 'Chart Recorder (' + (cm === 'not-fitted' ? 'N/A' : cm === 'based-on-air' ? 'from Air' : '±0.300°C') + ')';
+    }
     var T = makeTable(e, doc, [{ title: 'Air', span: 2 },
-                               { title: 'Load', span: 1 },
-                               { title: 'Chart Recorder', span: 1 }], 44);
+                               { title: loadTitle, span: 1 },
+                               { title: chartTitle, span: 1 }], 44);
 
     function cells(prefix, key) {
       return [prefix + '_air1_' + key, prefix + '_air2_' + key,

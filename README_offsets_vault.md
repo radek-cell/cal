@@ -1,7 +1,49 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.523)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.524)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.524 — Non-Standard Medical Device worksheet: Load/Chart Recorder/Display now amendable per unit
+
+The Non-Standard Medical Device worksheet (WS-07) is no longer just a copy of
+Standard Medical — this is the first pass at what actually makes it
+"non-standard": every unit on this sheet can differ in which columns are
+fitted, so each of Load, Chart Recorder and Display now has its own
+selector at the top of the AF table, and the worksheet adapts around
+whatever is chosen. This is currently the only worksheet in the suite with
+this flexibility.
+
+**Load** — "Two-point (±0.300°C)" (the previous fixed behaviour), "Single
+point (±1.0°C)" for units only calibrated at one load reading, or "Not
+present" for units with no load position on this model at all. As Left
+mirrors whichever tolerance was chosen for As Found.
+
+**Chart Recorder** — "Digital recorder" (independent probe and readings, as
+before), "Based on Air readings" for chart recorders with no probe of their
+own, which copies Air's finished average/display/result rather than taking
+separate readings, or "Not fitted" for units with no chart recorder at all.
+
+**Display** — "Fitted" or "Not present", for units with no digital readout
+on the unit itself. Air's (and, when applicable, Load's) own reading is
+still taken and averaged as normal; simply nothing exists to compare it
+against, so that comparison is treated as satisfied rather than leaving As
+Found stuck incomplete. Chart Recorder's own digital readout (when fitted)
+is a separate instrument and is unaffected by this.
+
+Whichever columns are marked absent are disabled, greyed out and stamped
+`-N/A-`, matching the treatment Standard Non-Medical already uses for its
+own permanently-absent columns — the difference here is that on this sheet
+it can be set per unit rather than being fixed for the whole worksheet. The
+certificate's table headers show the tolerance actually used for each
+active column (e.g. "Load (±1.0°C)"), and the status bar and As
+Left "adjustment needed" wording adjust to name only the columns actually
+fitted on that unit.
+
+If a column already has readings typed in and the engineer changes their
+mind about what's fitted, those readings are cleared and replaced with the
+N/A stamp immediately — a switched-off column never carries old numbers
+underneath the disabled state, and no stale pass/fail underline or tint
+from before the switch can carry through to the certificate.
 
 ## v1.523 — Non-Standard Medical worksheet and certificate-number ordering, carried forward from v1.515
 
