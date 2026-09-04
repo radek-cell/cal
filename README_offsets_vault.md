@@ -1,7 +1,50 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.529)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.530)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.530 — Non-Standard Medical Device: certificate output and mode logic corrections
+
+**Chart Recorder underlining on the certificate.** A recorder mirroring both
+Air channels prints them in the one Chart Recorder column as
+`-35.936 / -35.924`, and the underline was being drawn across the whole
+cell, so both channels appeared marked. Only the channel that actually won
+is underlined now — the highest corrected maximum in blue, the lowest
+corrected minimum in green — using Air's own selection, so the Chart
+Recorder marks exactly what the Air column marks.
+
+**Every column heading now shows its active tolerance**, on the worksheet
+and on the certificate: `Air (±0.300 °C)`, `Air (±1.000 °C)`,
+`Load (±0.300 °C)`, `Chart Recorder (±0.300 °C)`. A linked Chart Recorder
+inherits the tolerance of the column it is based on, so Air on "No Decimal
+Point" with the recorder based on Air prints `Chart Recorder (±1.000 °C)`.
+There is now one function per column deciding the tolerance, and both the
+calculation and the printed heading read it — the certificate reads the
+heading straight off the worksheet, so the figure shown can never drift
+from the figure applied. A column with no product display shows
+`No Display` rather than a tolerance, so the certificate never implies a
+comparison that did not happen.
+
+**The selected configuration is recorded automatically.** The Air, Load and
+Chart Recorder modes are written as, for example, *Configuration: Air –
+Standard; Load – Load Fitted No Display; Chart Recorder – Based on Air
+Readings.* It appears above the comments box on the worksheet and above the
+engineer's comments on the certificate, and updates whenever a dropdown
+changes. It is held in its own field, never inside the comments box, so it
+cannot overwrite anything the engineer typed — or be overwritten by it.
+
+**Columns with no display are now excluded from the adjustment decision**
+rather than counted as a pass. Their Difference is N/A, is never treated as
+zero, and never counts as a failure; the status bar says how many columns
+were excluded and why. The reference chain — corrected maximum, corrected
+minimum and reference average — is unaffected and continues to calculate,
+which is what "Load Fitted No Display" has always needed.
+
+**A Chart Recorder linked to a Load that is not fitted** now reads N/A
+across the whole column instead of sitting blank, since it has no source to
+derive from.
+
+Verified against every one of the 45 combinations of the three dropdowns.
 
 ## v1.529 — Non-Standard Medical Device: mode logic corrected
 

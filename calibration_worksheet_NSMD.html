@@ -59,6 +59,13 @@
   .mirrored input,.mirrored select{background:#eef4ff!important;color:#1a3a6b!important;cursor:not-allowed}
   .chartLRHead{display:flex;gap:3px;font-size:9px;font-weight:700;color:#333;margin-top:1px}
   .chartLRHead span{flex:1 1 0;text-align:center;border-top:2px solid #1a3a6b}
+  /* The tolerance actually in force for each column, shown in its heading and
+     kept in step with the calculation engine (see refreshToleranceHeadings). */
+  .tolTag{font-size:10px;font-weight:700;color:#1a3a6b;white-space:nowrap}
+  /* The Air/Load/Chart Recorder configuration, written automatically. It is
+     kept out of the comments box entirely so it can never overwrite, or be
+     overwritten by, anything the engineer types. */
+  .configLine{font-size:11.5px;font-weight:700;padding:5px 6px;background:#eef4ff;border-bottom:1px solid var(--line);color:#1a3a6b}
   .chartLRHead span:last-child{border-top-color:#b45309}
   table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}td,th{border:1px solid var(--line);padding:4px;vertical-align:middle}th{background:#ddd;font-weight:700}.section{background:#cfcfcf;font-weight:700}.subhead{background:#e3e3e3;text-align:center}.label{font-weight:700}.muted{font-weight:400;color:#333}.small{font-size:11px}.input{width:100%;border:0;background:transparent;font-size:12px;box-sizing:border-box;text-align:center}.input:focus{outline:2px solid #9ec5fe;background:#eef6ff}.input:disabled{background:#f0f0f0!important;color:#aaa;cursor:not-allowed} select.probe{display:block;width:100%;min-width:96px;height:28px;border:1px solid #333!important;background:#fff!important;color:#111!important;font-size:10.5px;text-align:left;appearance:auto;-webkit-appearance:menulist;padding:2px}.probeHint{font-size:11px;color:#333;background:#eef6ff;border:1px solid #9ec5fe;padding:6px;margin:6px 0}.autoCorr{background:#fff3cd!important}.calc{background:#f8f8f8;font-weight:700}.bad{background:var(--bad)!important}.ok{background:var(--ok)!important}.warn{background:var(--warn)!important}.selectedHigh{background:var(--hi)!important;border-bottom:3px solid #2563eb!important;font-weight:900!important}.selectedLow{background:var(--lo)!important;border-bottom:3px solid #16a34a!important;font-weight:900!important}.note{font-size:11px;margin:7px 0 0}.sign{height:26px}.comments{height:64px}.statusbar{padding:8px;margin:8px 0;border:1px solid #999;background:#fafafa;font-size:13px}.statusbar.bad{border-color:#b00020}.statusbar.ok{border-color:#207a20}.notNeeded{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.035) 0,rgba(0,0,0,.035) 8px,transparent 8px,transparent 16px)}.notNeeded input,.notNeeded select,.notNeeded textarea{text-decoration:line-through;background:#dcdcdc!important;color:#777!important}.notNeeded input:disabled,.notNeeded select:disabled,.notNeeded textarea:disabled{cursor:not-allowed}.adjustNote{background:#e7f7e7!important;border-color:#207a20!important;font-weight:700}#alCycleAirRow.notNeeded,#alCycleLoadRow.notNeeded{background:repeating-linear-gradient(135deg,rgba(0,0,0,.025) 0,rgba(0,0,0,.025) 7px,transparent 7px,transparent 14px)}input.na,select.na{text-decoration:line-through;background:#dcdcdc!important;color:#777;cursor:not-allowed}
   /* Real DOM stamp (not a ::after pseudo-element) — html2canvas / html2canvas-pro render
@@ -182,7 +189,7 @@
   <div id="displayVariationNote" class="hintText" style="display:none;margin:-4px 0 8px"></div>
   <div id="afStatus" class="statusbar">As Found status will appear here after calculation.</div>
   <table id="afTable">
-    <tr><th class="section">As Found (AF)</th><th id="airColHeadAf" colspan="2">Air<select id="displayMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard</option><option value="no-decimal">No Decimal Point</option><option value="not-present">No Display Fitted</option></select></th><th id="loadColHeadAf">Load<select id="loadMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard</option><option value="not-present">No Load Fitted</option><option value="no-display">Load Fitted No Display</option></select></th><th id="chartColHeadAf">Chart Recorder<select id="chartMode" class="colModeSel"><option value="">-- select --</option><option value="digital">Standard</option><option value="not-fitted">No Chart Recorder Fitted</option><option value="based-on-air">Chart Recorder Based on Air Readings</option><option value="based-on-load">Digital Chart Recorder Based on Load</option><option value="digital-based-on-air">Digital Chart Recorder Based on Air</option></select></th></tr>
+    <tr><th class="section">As Found (AF)</th><th id="airColHeadAf" colspan="2">Air <span id="airTolAf" class="tolTag"></span><select id="displayMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard</option><option value="no-decimal">No Decimal Point</option><option value="not-present">No Display Fitted</option></select></th><th id="loadColHeadAf">Load <span id="loadTolAf" class="tolTag"></span><select id="loadMode" class="colModeSel"><option value="">-- select --</option><option value="standard">Standard</option><option value="not-present">No Load Fitted</option><option value="no-display">Load Fitted No Display</option></select></th><th id="chartColHeadAf">Chart Recorder <span id="chartTolAf" class="tolTag"></span><select id="chartMode" class="colModeSel"><option value="">-- select --</option><option value="digital">Standard</option><option value="not-fitted">No Chart Recorder Fitted</option><option value="based-on-air">Chart Recorder Based on Air Readings</option><option value="based-on-load">Digital Chart Recorder Based on Load</option><option value="digital-based-on-air">Digital Chart Recorder Based on Air</option></select></th></tr>
     <tr class="lrRow"><td></td><td><span class="lrBadge"><span class="dot left">L</span><span class="txt">Left</span></span></td><td><span class="lrBadge"><span class="dot right">R</span><span class="txt">Right</span></span></td><td></td><td></td></tr>
     <tr><td>Probe Serial No <span class="req">*</span>:</td><td><select class="input probe" id="af_air1_probe"></select></td><td><select class="input probe" id="af_air2_probe"></select></td><td><select class="input probe" id="af_load_probe"></select></td><td><select class="input probe" id="af_chart_probe"></select></td></tr>
     <tr><td></td><td colspan="2" id="afAirProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Select one "A" probe and one "B" probe for Air</td><td colspan="2" id="afLoadChartProbeWarn" class="hintText warn" style="display:none;text-align:center;padding:2px">Load/Chart must differ from Air probes</td></tr>
@@ -228,9 +235,12 @@
   </table>
   <div style="margin-top:8px;border:1px solid var(--line)">
     <div class="label" style="padding:4px 6px;background:#e3e3e3">Comments <span class="muted">(calculations, deviations, customer requests)</span></div>
+    <div id="configLine" class="configLine">Configuration: —</div>
+    <input type="hidden" id="configSummary">
+    <div class="label" style="padding:4px 6px 0;font-size:11px">Engineer comments:</div>
     <textarea id="comments" style="width:100%;height:60px;border:0;box-sizing:border-box;font-size:12px;padding:6px;resize:vertical;display:block"></textarea>
   </div>
-  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place (0 when the unit's Display is set to "No decimal point") using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when every column actually fitted on this unit is present and within its own tolerance. Air is ±0.300 °C in Standard, widening to ±1.0 °C only for Air itself under "No Decimal Point"; Load and a Standard Chart Recorder are always ±0.300 °C and always entered to one decimal place, exactly as on the Standard Medical Device form — each mode keeps its own tolerance rules and none is inherited from another column. "Load Fitted No Display" keeps Load's probe, Reference Max/Min, corrections and Average fully live and required, and marks N/A only the Load Display, the Load Display cycle and the Difference vs Display, since there is no product display on Load to compare against. A Chart Recorder "Based on Air Readings" or "Digital Chart Recorder Based on Air" has no probe of its own: it shares the Air measurement system, so its column shows the same two channels — Air Left → Chart Left, Air Right → Chart Right — with every reference figure mirrored across read-only. "Digital Chart Recorder Based on Load" mirrors Load's figures the same way, as a single channel. All mirrored values are re-linked on every change, never copied once. Air, Load and Chart Recorder each have their own settings in the As Found table header, and none can be left on "-- select --" once you start entering readings; an absent column is greyed out, not required for validation or PDF generation, and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
+  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place (0 when the unit's Display is set to "No decimal point") using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Every column heading shows the tolerance actually in force for it, taken from the same functions the calculation uses, so the figure shown and the figure applied can never differ. Air is ±0.300 °C in Standard, widening to ±1.000 °C only for Air itself under "No Decimal Point"; Load and a Standard Chart Recorder are always ±0.300 °C and always entered to one decimal place, exactly as on the Standard Medical Device form; a linked Chart Recorder inherits the tolerance of whichever column it is based on. A column with no product display shows "No Display" rather than a tolerance, because there is no comparison to judge. Adjustment not needed is applied only when every column that actually has a display comparison is within its own tolerance — a column with no display is excluded from that decision entirely, never counted as a pass, a fail, or a zero difference. "Load Fitted No Display" keeps Load's probe, Reference Max/Min, corrections and Average fully live and required, and marks N/A only the Load Display, the Load Display cycle and the Difference vs Display, since there is no product display on Load to compare against. A Chart Recorder "Based on Air Readings" or "Digital Chart Recorder Based on Air" has no probe of its own: it shares the Air measurement system, so its column shows the same two channels — Air Left → Chart Left, Air Right → Chart Right — with every reference figure mirrored across read-only. "Digital Chart Recorder Based on Load" mirrors Load's figures the same way, as a single channel. All mirrored values are re-linked on every change, never copied once. Air, Load and Chart Recorder each have their own settings in the As Found table header, and none can be left on "-- select --" once you start entering readings; an absent column is greyed out, not required for validation or PDF generation, and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
 </div>
 <script>
 const TOL=0.3;
@@ -1178,8 +1188,8 @@ function calcNormal(prefix, col, tol=TOL, displayDp=1){
   if(isColumnAbsentField(`${prefix}_${col}_display`)){
     const diffEl=document.getElementById(`${prefix}_${col}_diff`);
     if(diffEl){ diffEl.value = avg!==null ? NA_TEXT : ''; diffEl.title=''; }
-    cls(`${prefix}_${col}_diff`, avg!==null ? 'ok' : null);
-    return {diff:null, state: avg!==null ? 'ok' : null};
+    cls(`${prefix}_${col}_diff`, avg!==null ? 'na' : null);
+    return {diff:null, state: avg!==null ? NA_STATE : null};
   }
   const display=n(`${prefix}_${col}_display`);
   const diff=roundedDiff(avg, display, 3, displayDp);
@@ -1214,8 +1224,8 @@ function calcAir(prefix){
   if(isDisplayAbsent()){
     const diffEl=document.getElementById(`${prefix}_air_diff`);
     if(diffEl){ diffEl.value = avg!==null ? NA_TEXT : ''; diffEl.title='No display fitted on the unit — no Display comparison available.'; }
-    cls(`${prefix}_air_diff`, avg!==null ? 'ok' : null);
-    return {diff:null, state: avg!==null ? 'ok' : null};
+    cls(`${prefix}_air_diff`, avg!==null ? 'na' : null);
+    return {diff:null, state: avg!==null ? NA_STATE : null};
   }
   const display=n(`${prefix}_air_display`);
   const diff=roundedDiff(avg, display, 3, getDisplayDecimals());
@@ -1284,6 +1294,11 @@ function isChartFromLoad(){ return chartModeVal()==='based-on-load'; }
 // this unit — only "Standard" does; every "Based on ..." mode and "Not
 // fitted" are handled separately.
 function chartHasOwnReadings(){ return !isChartAbsent() && !isChartFromAir() && !isChartFromLoad(); }
+// A recorder linked to a measurement that isn't fitted on this unit has
+// nothing to derive from at all, so the whole Chart Recorder column is N/A —
+// the same treatment as "No Chart Recorder Fitted" — rather than sitting
+// blank. (Air is always fitted, so this can only arise via Load.)
+function chartSourceMissing(){ return isChartFromLoad() && isLoadAbsent(); }
 function isDisplayAbsent(){ return displayModeVal()==='not-present'; }
 function isNoDecimalDisplayMode(){ return displayModeVal()==='no-decimal'; }
 // The tolerance for whatever is judged against Air's own display — widened
@@ -1321,6 +1336,70 @@ function refreshDisplayDecimalsUI(){
     if(el) el.placeholder = loadDp===0 ? 'xx' : 'xx.x';
   });
 }
+// ---------------------------------------------------------------------
+// Active tolerance per column.
+//
+// These are the ONLY place a column's tolerance is decided: the calculation
+// engine and the tolerance printed in the column heading (worksheet and
+// certificate alike) both read them, so the figure shown can never drift
+// away from the figure actually applied.
+// ---------------------------------------------------------------------
+function chartTolerance(){
+  // A linked recorder is judged by whatever its source is judged by.
+  if(isChartFromAir()) return getDisplayTolerance();
+  if(isChartFromLoad()) return loadTolerance();
+  return TOL;   // its own digital readout — a separate instrument
+}
+function tolText(t){ return '±'+t.toFixed(3)+' °C'; }
+// What each heading shows. A column with no display to compare against must
+// not advertise a display-comparison tolerance, so it says so instead.
+function airHeadingTol(){ return isDisplayAbsent() ? 'No Display' : tolText(getDisplayTolerance()); }
+function loadHeadingTol(){
+  if(isLoadAbsent()) return 'N/A';
+  if(isLoadNoDisplay() || isDisplayAbsent()) return 'No Display';
+  return tolText(loadTolerance());
+}
+function chartHeadingTol(){
+  if(isChartAbsent() || chartSourceMissing()) return 'N/A';
+  if(isChartFromAir()) return isDisplayAbsent() ? 'No Display' : tolText(chartTolerance());
+  if(isChartFromLoad()) return (isLoadAbsent()||isLoadNoDisplay()||isDisplayAbsent()) ? 'No Display' : tolText(chartTolerance());
+  return tolText(chartTolerance());
+}
+function refreshToleranceHeadings(){
+  const map={ airTolAf:airHeadingTol(), loadTolAf:loadHeadingTol(), chartTolAf:chartHeadingTol(),
+              displayModeBadgeAl:airHeadingTol(), loadModeBadgeAl:loadHeadingTol(), chartModeBadgeAl:chartHeadingTol() };
+  Object.keys(map).forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.textContent='('+map[id]+')';
+  });
+}
+// The chosen Air/Load/Chart Recorder configuration, written automatically so
+// the certificate always records how the unit was set up. Deliberately kept
+// in its own field rather than inside the comments box: the engineer's own
+// comments are never touched, and can never overwrite this either.
+function modeLabel(id){
+  const sel=document.getElementById(id);
+  if(!sel || !sel.value) return 'not selected';
+  let label=(sel.options[sel.selectedIndex]?.textContent||'').trim();
+  // "Chart Recorder – Chart Recorder Based on Air Readings" reads badly; the
+  // column name is already there, so drop it from the front of that one label.
+  if(id==='chartMode' && label.indexOf('Chart Recorder Based on')===0) label=label.slice('Chart Recorder '.length);
+  return label;
+}
+function configSummaryText(){
+  return 'Configuration: Air – '+modeLabel('displayMode')
+       + '; Load – '+modeLabel('loadMode')
+       + '; Chart Recorder – '+modeLabel('chartMode')+'.';
+}
+function updateConfigLine(){
+  const text=configSummaryText();
+  const line=document.getElementById('configLine');
+  if(line) line.textContent=text;
+  // Hidden mirror the certificate reads, so the PDF prints the configuration
+  // above the engineer's comments.
+  const hidden=document.getElementById('configSummary');
+  if(hidden) hidden.value=text;
+}
 function updateDisplayVariationNote(){
   const note=document.getElementById('displayVariationNote');
   if(!note) return;
@@ -1350,8 +1429,8 @@ function isColumnAbsentField(id){
   // of its own, but those fields are not N/A either — they are filled, read
   // only, by mirroring the source column (see applyChartMirror), so they must
   // not be stamped -N/A- here.
-  if(/^a[fl]_chart_(probe|max|max_corr|max_calc|min|min_corr|min_calc)$/.test(id)) return isChartAbsent();
-  if(/^a[fl]_chart_(avg|diff|display)$/.test(id)) return isChartAbsent();
+  if(/^a[fl]_chart_(probe|max|max_corr|max_calc|min|min_corr|min_calc)$/.test(id)) return isChartAbsent() || chartSourceMissing();
+  if(/^a[fl]_chart_(avg|diff|display)$/.test(id)) return isChartAbsent() || chartSourceMissing();
   if(id==='af_air_display' || id==='al_air_display') return isDisplayAbsent();
   if(/^a[fl]_cycle_air_(max|min|avg)$/.test(id)) return isDisplayAbsent();
   return false;
@@ -1431,14 +1510,10 @@ function applyColumnAvailability(){
     if(el) el.readOnly = isChartFromAir() || isChartFromLoad();
   });
   applyChartMirror();
-  // AL header badges mirror whatever was chosen in the AF header selects,
-  // so As Left reads correctly without a second control to keep in sync.
-  const displayBadge=document.getElementById('displayModeBadgeAl');
-  if(displayBadge) displayBadge.textContent = isDisplayAbsent() ? '(N/A)' : (isNoDecimalDisplayMode() ? '(±1.0°C)' : '');
-  const loadBadge=document.getElementById('loadModeBadgeAl');
-  if(loadBadge) loadBadge.textContent = isLoadAbsent() ? '(N/A)' : (isLoadNoDisplay() ? '(No Display)' : '');
-  const chartBadge=document.getElementById('chartModeBadgeAl');
-  if(chartBadge) chartBadge.textContent = isChartAbsent() ? '(N/A)' : (isChartFromAir() ? '(from Air L/R)' : (isChartFromLoad() ? '(from Load)' : ''));
+  // Every column heading — As Found and As Left alike — carries the tolerance
+  // actually in force for it, straight from the same functions the
+  // calculation engine uses.
+  refreshToleranceHeadings();
 }
 
 // ---------------------------------------------------------------------
@@ -1535,13 +1610,13 @@ function applyChartMirror(){
       // The mirrored cells replace the column's own input whenever the
       // recorder is mirroring something; the Right-hand cell only appears for
       // the two Air channels.
-      if(wrap) wrap.style.display = (mirrored && !isChartAbsent()) ? 'flex' : 'none';
+      if(wrap) wrap.style.display = (mirrored && !isChartAbsent() && !chartSourceMissing()) ? 'flex' : 'none';
       if(rCell) rCell.style.display = twoChannel ? '' : 'none';
       if(!el) return;
       const cell=el.closest('td');
-      if(cell) cell.classList.toggle('mirrored', mirrored && !isChartAbsent());
+      if(cell) cell.classList.toggle('mirrored', mirrored && !isChartAbsent() && !chartSourceMissing());
       // Absent columns are left entirely to applyColumnAvailability.
-      if(isChartAbsent()){ el.style.display=''; return; }
+      if(isChartAbsent() || chartSourceMissing()){ el.style.display=''; return; }
       // The column's own input is kept in the DOM, hidden and disabled, still
       // carrying the mirrored value (a combined "L / R" string for Air) so the
       // certificate keeps printing one Chart Recorder column, unchanged.
@@ -1615,8 +1690,8 @@ function copyChartFromAir(prefix){
     if(displayEl && !displayEl.disabled) displayEl.value = airAvg!==null ? NA_TEXT : '';
     const diffEl=document.getElementById(`${prefix}_chart_diff`);
     if(diffEl) diffEl.value = airAvg!==null ? NA_TEXT : '';
-    cls(`${prefix}_chart_diff`, airAvg!==null ? 'ok' : null);
-    return {diff:null, state: airAvg!==null ? 'ok' : null};
+    cls(`${prefix}_chart_diff`, airAvg!==null ? 'na' : null);
+    return {diff:null, state: airAvg!==null ? NA_STATE : null};
   }
   // Chart-from-Air is literally reading the same onboard display Air reads,
   // so it inherits Air's own decimal precision and tolerance, not the fixed
@@ -1626,7 +1701,7 @@ function copyChartFromAir(prefix){
   set(`${prefix}_chart_display`, airDisplay, dp);
   const diff=roundedDiff(airAvg, airDisplay, 3, dp);
   set(`${prefix}_chart_diff`, diff);
-  const state=diff===null?null:(Math.abs(diff)>getDisplayTolerance()?'bad':'ok');
+  const state=diff===null?null:(Math.abs(diff)>chartTolerance()?'bad':'ok');
   cls(`${prefix}_chart_diff`, state);
   return {diff, state};
 }
@@ -1635,6 +1710,10 @@ function copyChartFromAir(prefix){
 // finished result instead of Air's — recalculated every calculateAll()
 // pass, never "copied once".
 function copyChartFromLoad(prefix){
+  // A recorder linked to a Load that isn't fitted has no source at all. The
+  // whole column is stamped N/A by applyColumnAvailability (see
+  // chartSourceMissing) — nothing to mirror, and no comparison to make.
+  if(isLoadAbsent()) return {diff:null, state:NA_STATE};
   // Single channel — the recorder displays the Load measurement, so Load's own
   // reference figures are mirrored across rather than measured again.
   CHART_MIRROR_KEYS.concat(['probe']).forEach(function(key){
@@ -1642,24 +1721,23 @@ function copyChartFromLoad(prefix){
   });
   const loadAvg=n(`${prefix}_load_avg`);
   set(`${prefix}_chart_avg`, loadAvg);
-  // Nothing to mirror if Load itself isn't fitted, or Load is fitted but
-  // has no display of its own to compare against — same "nothing to
-  // compare against, treated as satisfied" treatment used throughout this
-  // worksheet (see calcAir/calcNormal/copyChartFromAir).
-  if(isLoadAbsent() || isDisplayAbsent() || isLoadNoDisplay()){
+  // Load is fitted but has no display of its own to compare against — same
+  // "reference readings still count, comparison excluded" treatment used
+  // throughout this worksheet (see calcAir/calcNormal/copyChartFromAir).
+  if(isDisplayAbsent() || isLoadNoDisplay()){
     const displayEl=document.getElementById(`${prefix}_chart_display`);
     if(displayEl && !displayEl.disabled) displayEl.value = loadAvg!==null ? NA_TEXT : '';
     const diffEl=document.getElementById(`${prefix}_chart_diff`);
     if(diffEl) diffEl.value = loadAvg!==null ? NA_TEXT : '';
-    cls(`${prefix}_chart_diff`, loadAvg!==null ? 'ok' : null);
-    return {diff:null, state: loadAvg!==null ? 'ok' : null};
+    cls(`${prefix}_chart_diff`, loadAvg!==null ? 'na' : null);
+    return {diff:null, state: loadAvg!==null ? NA_STATE : null};
   }
   const dp=getLoadDecimals();
   const loadDisplay=n(`${prefix}_load_display`);
   set(`${prefix}_chart_display`, loadDisplay, dp);
   const diff=roundedDiff(loadAvg, loadDisplay, 3, dp);
   set(`${prefix}_chart_diff`, diff);
-  const state=diff===null?null:(Math.abs(diff)>loadTolerance()?'bad':'ok');
+  const state=diff===null?null:(Math.abs(diff)>chartTolerance()?'bad':'ok');
   cls(`${prefix}_chart_diff`, state);
   return {diff, state};
 }
@@ -1668,6 +1746,13 @@ function copyChartFromLoad(prefix){
 // Chart Recorder unless "No Chart Recorder Fitted" (either Standard,
 // tolerance-checked on its own reading, or dynamically linked to Air's or
 // Load's result).
+// A column whose reference readings are taken and calculated, but which has no
+// product display to compare them against, returns this instead of a pass or a
+// fail. It is a KNOWN outcome (so As Found still counts as complete and As Left
+// can unlock) but it is excluded from the tolerance decision rather than
+// counted as a pass — there was no comparison to pass.
+const NA_STATE='na';
+function isComparisonResult(r){ return r && r.state!==NA_STATE; }
 function columnResults(prefix){
   const results=[calcAir(prefix)];
   // Load shares the unit's own onboard display with Air, so it uses the
@@ -1676,7 +1761,7 @@ function columnResults(prefix){
   if(!isLoadAbsent()) results.push(calcNormal(prefix, 'load', loadTolerance(), getLoadDecimals()));
   if(isChartFromAir()) results.push(copyChartFromAir(prefix));
   else if(isChartFromLoad()) results.push(copyChartFromLoad(prefix));
-  else if(!isChartAbsent()) results.push(calcNormal(prefix, 'chart', TOL, 1));
+  else if(!isChartAbsent()) results.push(calcNormal(prefix, 'chart', chartTolerance(), 1));
   return results;
 }
 // Plain-English list of which columns are active, for status messages —
@@ -1691,11 +1776,15 @@ function activeColumnsText(){
 }
 // Tolerance text for the status bar, grouping columns that share the same
 // figure so "Air and Load ±0.300 °C" reads as one clause rather than two.
+// Reads the same per-column tolerance functions the calculation engine and the
+// column headings use, and lists only the columns that actually have a display
+// comparison to be judged against.
 function toleranceSummaryText(){
-  const displayTolText = getDisplayTolerance()===NO_DECIMAL_TOL ? '±1.0 °C' : '±0.300 °C';
-  const cols=[['Air', displayTolText]];
-  if(!isLoadAbsent()) cols.push(['Load','±0.300 °C']);
-  if(chartHasOwnReadings()) cols.push(['Chart Recorder','±0.300 °C']);
+  const cols=[];
+  if(!isDisplayAbsent()) cols.push(['Air', tolText(getDisplayTolerance())]);
+  if(!isLoadAbsent() && !isLoadNoDisplay() && !isDisplayAbsent()) cols.push(['Load', tolText(loadTolerance())]);
+  if(!isChartAbsent() && chartHeadingTol().indexOf('±')===0) cols.push(['Chart Recorder', tolText(chartTolerance())]);
+  if(!cols.length) return 'no display comparison on this unit';
   const byTol={}, order=[];
   cols.forEach(function(c){ if(!byTol[c[1]]){ byTol[c[1]]=[]; order.push(c[1]); } byTol[c[1]].push(c[0]); });
   return order.map(function(t){ return byTol[t].join('/')+' '+t; }).join(', ');
@@ -1853,6 +1942,7 @@ function calculateAll(){
   applyColumnAvailability();
   refreshDisplayDecimalsUI();
   updateDisplayVariationNote();
+  updateConfigLine();
   syncDates();
   syncLeftProbes();
   applyDigitalThermometer();
@@ -1871,9 +1961,14 @@ function calculateAll(){
   // While As Found is incomplete, As Left stays locked — no premature entry.
   // If As Found is complete and every active column is within tolerance,
   // As Left is locked with the "adjustment not needed" stamp instead.
+  // A column with no display to compare against (state 'na') is a known
+  // outcome, so it still counts towards "As Found is complete" — but it is
+  // excluded from the tolerance decision entirely rather than being counted
+  // as a pass or a fail. Its Difference is never treated as zero.
   const afComplete = af.length>0 && af.every(x=>x.state!==null);
-  const afAllWithinTolerance = afComplete && af.every(x=>x.state==='ok');
-  const afNeedsAdjustment = afComplete && af.some(x=>x.state==='bad');
+  const afComparisons = af.filter(isComparisonResult);
+  const afAllWithinTolerance = afComplete && afComparisons.every(x=>x.state==='ok');
+  const afNeedsAdjustment = afComplete && afComparisons.some(x=>x.state==='bad');
   setAdjustmentMode(afAllWithinTolerance, afNeedsAdjustment);
 
   const al=columnResults('al');
@@ -1883,7 +1978,9 @@ function calculateAll(){
   if(afAllWithinTolerance){
     if(alStatusEl){
       alStatusEl.className='statusbar ok adjustNote';
-      alStatusEl.textContent=`Adjustment not needed — ${cols} ${af.length===1?'is':'are all'} within tolerance (${tolText}), so As Left and AL Display cycle can be left crossed out.`;
+      alStatusEl.textContent = afComparisons.length
+        ? `Adjustment not needed — ${cols} ${afComparisons.length===1?'is':'are all'} within tolerance (${tolText}), so As Left and AL Display cycle can be left crossed out.`
+        : `Adjustment not needed — this unit has no product display to compare its reference readings against, so there is nothing to adjust. As Left and AL Display cycle can be left crossed out.`;
     }
     const adj=document.getElementById('al_adj_made'); if(adj){ adj.value='Adjustment not needed'; adj.scrollLeft=0; fitInputText(adj); }
   } else if(!afComplete){
@@ -1952,7 +2049,23 @@ function setAdjustmentMode(stamped, unlocked){
   });
   ['al_adj_made','al_cycle_start_h','al_cycle_start_m'].forEach(id=>{const e=document.getElementById(id); if(e) e.classList.toggle('ok', !!stamped);});
 }
-function status(id,items,label,tolText){const bad=items.some(x=>x.state==='bad'), any=items.some(x=>x.state); const e=document.getElementById(id); e.className='statusbar '+(bad?'bad':any?'ok':''); e.textContent=!any?`${label}: enter readings and press Calculate.`:bad?`${label}: adjustment required — one or more differences are greater than tolerance (${tolText}).`:`${label}: within tolerance (${tolText}).`}
+// Columns with no display to compare against are excluded from the verdict
+// rather than counted as a pass, and the status bar says so, so "within
+// tolerance" is never claimed for a comparison that never happened.
+function status(id,items,label,tolText){
+  const e=document.getElementById(id);
+  if(!e) return;
+  const comparisons=items.filter(isComparisonResult);
+  const excluded=items.length-comparisons.length;
+  const bad=comparisons.some(x=>x.state==='bad');
+  const any=items.some(x=>x.state);
+  const note = excluded ? ` ${excluded} column${excluded>1?'s':''} excluded — no display to compare against.` : '';
+  e.className='statusbar '+(bad?'bad':any?'ok':'');
+  if(!any){ e.textContent=`${label}: enter readings and press Calculate.`; return; }
+  if(bad){ e.textContent=`${label}: adjustment required — one or more differences are greater than tolerance (${tolText}).`+note; return; }
+  if(!comparisons.length){ e.textContent=`${label}: reference readings recorded. No display comparison is available on this unit, so no tolerance verdict applies.`; return; }
+  e.textContent=`${label}: within tolerance (${tolText}).`+note;
+}
 function preparePdf(){ calculateAll(); setTimeout(()=>window.print(), 120); }
 window.addEventListener('beforeprint', calculateAll);
 function loadLocal(){const data=localStorage.getItem('calibration_autosave'); if(!data){alert('No local save found.'); return} restoreData(data); calculateAll()}

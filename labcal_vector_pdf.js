@@ -322,7 +322,18 @@
   function drawCommentsAndSignatures(e, doc, y, haveScript, ctx) {
     var comments = val('comments');
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-    var comLines = comments ? doc.splitTextToSize(comments, IN - 6) : [];
+    // Worksheets that record an automatic configuration statement (currently
+    // Non-Standard Medical Device) expose it in a hidden field. It is printed
+    // above the engineer's own comments, kept visibly separate, and is never
+    // mixed into the text the engineer typed. Sheets without the field are
+    // unaffected.
+    var config = val('configSummary');
+    var configLines = config ? doc.splitTextToSize(config, IN - 6) : [];
+    var boldCount = configLines.length;
+    var bodyText = comments ? (configLines.length ? 'Engineer comments:\n' : '') + comments : '';
+    var comLines = configLines
+      .concat(configLines.length && bodyText ? [''] : [])
+      .concat(bodyText ? doc.splitTextToSize(bodyText, IN - 6) : []);
     var HEAD_H = 5.0, LINE_H = 3.3, PAD_TOP = 2.6, PAD_BOT = 1.8, SIG_H = 9.1;
     var availH = (PH - 8 - SIG_H * 2 - 2.5) - y;
     var maxLines = Math.max(0, Math.floor((availH - HEAD_H - PAD_TOP - PAD_BOT) / LINE_H));
@@ -335,7 +346,9 @@
     e.t('Comments', MX + 2, y + 4, 8.5, 'bold');
     if (overflow.length) e.t('\u2014 continued on page 2', MX + 22, y + 4, 7.3, 'italic', NOTE);
     else e.t('(calculations, deviations, customer requests)', MX + 20, y + 4, 7.3, 'normal', NOTE);
-    shown.forEach(function (ln, i) { e.t(ln, MX + 3, y + HEAD_H + PAD_TOP + i * LINE_H, 8); });
+    shown.forEach(function (ln, i) {
+      e.t(ln, MX + 3, y + HEAD_H + PAD_TOP + i * LINE_H, 8, i < boldCount ? 'bold' : 'normal');
+    });
     y += comH + 2.5;
 
     [["Engineer's Name", val('engineer'), val('engineerSignature') || val('engineer'), val('engDate') || val('date'), true],
@@ -526,8 +539,25 @@
                 opt.bold ? 'bold' : 'normal', greyThis ? GREY_TXT : INK, 'center');
           }
           if (opt.marks && opt.marks[i]) {
-            e.line(cx + 3, top + h - 1, cx + COL - 3, top + h - 1,
-                   opt.marks[i] === 'blue' ? BLUE_MK : GREEN_MK, 0.45);
+            var mk = opt.marks[i];
+            var mkColour = (typeof mk === 'string' ? mk : mk.c) === 'blue' ? BLUE_MK : GREEN_MK;
+            var mx1 = cx + 3, mx2 = cx + COL - 3;
+            // A Chart Recorder mirroring both Air channels prints them in one
+            // cell as "Left / Right". Underline only the channel that actually
+            // won the highest-max / lowest-min selection, exactly as the Air
+            // column does — underlining the whole cell would mark both.
+            if (mk && typeof mk === 'object' && mk.part != null) {
+              var full = String(dash(v)), sep = ' / ', at = full.indexOf(sep);
+              if (at > -1) {
+                var st = opt.bold ? 'bold' : 'normal';
+                var fw = e.w(full, 8.5, st);
+                var left = cx + COL / 2 - fw / 2;
+                if (mk.part === 0) { mx1 = left; mx2 = left + e.w(full.slice(0, at), 8.5, st); }
+                else { mx1 = left + e.w(full.slice(0, at + sep.length), 8.5, st); mx2 = left + fw; }
+                mx1 -= 0.5; mx2 += 0.5;
+              }
+            }
+            e.line(mx1, top + h - 1, mx2, top + h - 1, mkColour, 0.45);
           }
         });
       }
@@ -1077,26 +1107,32 @@
     var loadModeEl = document.getElementById('loadMode');
     var chartModeEl = document.getElementById('chartMode');
     var displayModeEl = document.getElementById('displayMode');
-    // "No decimal point on the display" widens whatever is judged against
-    // that display (Air, and Load since it shares the same onboard
-    // display) to ±1.0°C — Chart Recorder's own digital readout, when
-    // fitted independently, is unaffected and keeps ±0.300°C regardless.
+    // The worksheet decides each column's active tolerance in one place, and
+    // prints it into the column heading. Read that heading back rather than
+    // recomputing it here, so the tolerance on the certificate can never
+    // disagree with the tolerance the calculation actually applied.
+    function headingTol(id, fallback) {
+      var el = document.getElementById(id);
+      var t = el ? String(el.textContent || '').trim() : '';
+      if (t.charAt(0) === '(' && t.charAt(t.length - 1) === ')') t = t.slice(1, -1).trim();
+      return t || fallback;
+    }
     var noDecimalDisplay = !!displayModeEl && displayModeEl.value === 'no-decimal';
     var airTitle = 'Air';
     if (displayModeEl) {
-      airTitle = 'Air (' + (noDecimalDisplay ? '±1.0°C' : '±0.300°C') + ')';
+      airTitle = 'Air (' + headingTol('airTolAf', noDecimalDisplay ? '±1.000 °C' : '±0.300 °C') + ')';
     }
     var loadTitle = 'Load';
     if (loadModeEl) {
       var lm = loadModeEl.value;
-      var loadTol = noDecimalDisplay ? '±1.0°C' : '±0.300°C';
-      loadTitle = 'Load (' + (lm === 'not-present' ? 'N/A' : lm === 'no-display' ? 'No Display' : loadTol) + ')';
+      loadTitle = 'Load (' + headingTol('loadTolAf',
+        lm === 'not-present' ? 'N/A' : lm === 'no-display' ? 'No Display' : '±0.300 °C') + ')';
     }
     var chartTitle = 'Chart Recorder';
     if (chartModeEl) {
       var cm = chartModeEl.value;
-      var chartFromAir = (cm === 'based-on-air' || cm === 'digital-based-on-air');
-      chartTitle = 'Chart Recorder (' + (cm === 'not-fitted' ? 'N/A' : chartFromAir ? 'from Air' : cm === 'based-on-load' ? 'from Load' : '±0.300°C') + ')';
+      chartTitle = 'Chart Recorder (' + headingTol('chartTolAf',
+        cm === 'not-fitted' ? 'N/A' : '±0.300 °C') + ')';
     }
     var T = makeTable(e, doc, [{ title: airTitle, span: 2 },
                                { title: loadTitle, span: 1 },
@@ -1116,6 +1152,18 @@
         if (el.classList.contains('selectedHigh')) out[i] = 'blue';
         if (el.classList.contains('selectedLow')) out[i] = 'green';
       });
+      // A Chart Recorder mirroring both Air channels prints them in the one
+      // Chart column as "Left / Right". The worksheet already marks whichever
+      // mirrored channel won — using Air's own highest-max / lowest-min
+      // selection — so pass that through as the half to underline instead of
+      // marking the whole cell, which would underline both channels.
+      var L = document.getElementById(prefix + '_chartL_' + key + '_calc');
+      var R = document.getElementById(prefix + '_chartR_' + key + '_calc');
+      if (out[3] && L && R && R.style.display !== 'none') {
+        var mark = key === 'max' ? 'selectedHigh' : 'selectedLow';
+        var onL = L.classList.contains(mark), onR = R.classList.contains(mark);
+        if (onL !== onR) out[3] = { c: out[3], part: onL ? 0 : 1 };
+      }
       return Object.keys(out).length ? out : null;
     }
 
