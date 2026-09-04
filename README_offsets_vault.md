@@ -1,7 +1,47 @@
-# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.528)
+# LabCal — offsets vault, jobsheet worklist, iPad saving, day panel (v1.529)
 
 Load each offsets file **once, on the home page**. Every worksheet then picks it
 up automatically until the reference thermometer's certificate expires.
+
+## v1.529 — Non-Standard Medical Device: mode logic corrected
+
+Corrections to the Air/Load/Chart Recorder modes. No change to the shared
+calculation functions — the modes only control which fields are available,
+which are required, and where linked values come from.
+
+**Tolerances are per-mode again.** Air's "No Decimal Point" widens **Air
+only** to ±1.0 °C. Load and a Standard Chart Recorder are always ±0.300 °C
+and always entered to one decimal place, exactly as on the Standard
+Medical Device form. Previously Air's no-decimal setting also widened Load
+to ±1.0 °C and switched it to whole degrees; that inheritance is removed.
+
+**Chart Recorder "Based on Air Readings" and "Digital Chart Recorder Based
+on Air"** now genuinely mirror the Air measurement system. The Chart
+Recorder column splits into the same two channels Air uses — Air Left →
+Chart Left, Air Right → Chart Right — and mirrors Reference Max, Probe
+Correction, Max + Correction, Reference Min, Probe Correction and Min +
+Correction across for both channels, read-only, along with the high/low
+marks on whichever channel the average actually used. Average, Display and
+Difference follow Air's. Everything re-links on every change. Previously
+these fields were simply greyed out as N/A and only the finished average
+was copied.
+
+**"Digital Chart Recorder Based on Load"** mirrors Load the same way as a
+single channel, with its Display taken from the Load Display cycle.
+
+The certificate is unaffected: the Chart Recorder column's own field is
+kept behind the mirrored cells carrying the combined value (e.g.
+`5.000 / 5.100`), so the PDF still prints one Chart Recorder column with
+exactly the layout it had before.
+
+Switching a Chart Recorder out of a linked mode now clears the mirrored
+figures, so a linked reading can never be left behind in a field the
+engineer can type into — or printed on a certificate as if it had been
+measured.
+
+Verified against the worked example in the specification: Reference Max
+5.000 + 0.038 = 5.038, Reference Min 4.000 + 0.038 = 4.038, Average 4.538 —
+for Load Standard, Load Fitted No Display, and Chart Recorder Standard.
 
 ## v1.528 — Non-Standard Medical Device: Air/Load/Chart Recorder dropdowns redesigned per written spec
 

@@ -46,6 +46,20 @@
   .notApplicableCol input,.notApplicableCol select{text-decoration:line-through;background:#f0f0f0!important;color:#888!important;cursor:not-allowed}
   .naBadge{display:inline-block;font-size:8.5px;font-weight:900;letter-spacing:.3px;color:#900;border:1.3px solid #900;border-radius:2px;padding:1px 4px;margin-left:5px;background:#ffffffcc;white-space:nowrap;vertical-align:middle}
   .colModeSel{display:block;width:100%;font-size:9.5px;font-weight:600;margin-top:2px;border:1px solid #333;background:#fff;padding:1px}
+  /* Chart Recorder "Based on Air readings": the recorder IS the Air measurement
+     system, so its column splits into the same Left/Right channels Air uses and
+     every reference figure is mirrored across read-only. The single-value input
+     the column normally holds is kept (hidden, disabled) and given a combined
+     "L / R" value, so the certificate PDF — which reads these fields straight
+     off the DOM — still prints one Chart Recorder column without any change to
+     the certificate layout. */
+  .chartLR{display:flex;gap:3px;align-items:center}
+  .chartLR input{flex:1 1 0;min-width:0;font-size:11px}
+  .chartLR .mirrorTag{flex:0 0 auto;font-size:8.5px;font-weight:900;color:#555}
+  .mirrored input,.mirrored select{background:#eef4ff!important;color:#1a3a6b!important;cursor:not-allowed}
+  .chartLRHead{display:flex;gap:3px;font-size:9px;font-weight:700;color:#333;margin-top:1px}
+  .chartLRHead span{flex:1 1 0;text-align:center;border-top:2px solid #1a3a6b}
+  .chartLRHead span:last-child{border-top-color:#b45309}
   table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}td,th{border:1px solid var(--line);padding:4px;vertical-align:middle}th{background:#ddd;font-weight:700}.section{background:#cfcfcf;font-weight:700}.subhead{background:#e3e3e3;text-align:center}.label{font-weight:700}.muted{font-weight:400;color:#333}.small{font-size:11px}.input{width:100%;border:0;background:transparent;font-size:12px;box-sizing:border-box;text-align:center}.input:focus{outline:2px solid #9ec5fe;background:#eef6ff}.input:disabled{background:#f0f0f0!important;color:#aaa;cursor:not-allowed} select.probe{display:block;width:100%;min-width:96px;height:28px;border:1px solid #333!important;background:#fff!important;color:#111!important;font-size:10.5px;text-align:left;appearance:auto;-webkit-appearance:menulist;padding:2px}.probeHint{font-size:11px;color:#333;background:#eef6ff;border:1px solid #9ec5fe;padding:6px;margin:6px 0}.autoCorr{background:#fff3cd!important}.calc{background:#f8f8f8;font-weight:700}.bad{background:var(--bad)!important}.ok{background:var(--ok)!important}.warn{background:var(--warn)!important}.selectedHigh{background:var(--hi)!important;border-bottom:3px solid #2563eb!important;font-weight:900!important}.selectedLow{background:var(--lo)!important;border-bottom:3px solid #16a34a!important;font-weight:900!important}.note{font-size:11px;margin:7px 0 0}.sign{height:26px}.comments{height:64px}.statusbar{padding:8px;margin:8px 0;border:1px solid #999;background:#fafafa;font-size:13px}.statusbar.bad{border-color:#b00020}.statusbar.ok{border-color:#207a20}.notNeeded{position:relative;background:repeating-linear-gradient(135deg,rgba(0,0,0,.035) 0,rgba(0,0,0,.035) 8px,transparent 8px,transparent 16px)}.notNeeded input,.notNeeded select,.notNeeded textarea{text-decoration:line-through;background:#dcdcdc!important;color:#777!important}.notNeeded input:disabled,.notNeeded select:disabled,.notNeeded textarea:disabled{cursor:not-allowed}.adjustNote{background:#e7f7e7!important;border-color:#207a20!important;font-weight:700}#alCycleAirRow.notNeeded,#alCycleLoadRow.notNeeded{background:repeating-linear-gradient(135deg,rgba(0,0,0,.025) 0,rgba(0,0,0,.025) 7px,transparent 7px,transparent 14px)}input.na,select.na{text-decoration:line-through;background:#dcdcdc!important;color:#777;cursor:not-allowed}
   /* Real DOM stamp (not a ::after pseudo-element) — html2canvas / html2canvas-pro render
      absolutely-positioned pseudo-content on <table> elements unreliably across browsers,
@@ -216,7 +230,7 @@
     <div class="label" style="padding:4px 6px;background:#e3e3e3">Comments <span class="muted">(calculations, deviations, customer requests)</span></div>
     <textarea id="comments" style="width:100%;height:60px;border:0;box-sizing:border-box;font-size:12px;padding:6px;resize:vertical;display:block"></textarea>
   </div>
-  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place (0 when the unit's Display is set to "No decimal point") using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when every column actually fitted on this unit is present and within its own tolerance — Air and Load ±0.300 °C normally, widening to ±1.0 °C for both when Air's own display has "No Decimal Point"; a Chart Recorder with its own readings (Standard) is always ±0.300 °C regardless, since it is a separate instrument. "Load Fitted No Display" keeps Load's own Max/Min readings active but excludes Load's Display comparison, since there is nothing on Load to compare against. A Chart Recorder "Based on Air Readings"/"Digital Chart Recorder Based on Air" or "Digital Chart Recorder Based on Load" has no probe of its own and is dynamically linked to Air's or Load's result respectively (tolerance included) — it updates live, never just copied once. Air, Load and Chart Recorder each have their own settings in the As Found table header, and none can be left on "-- select --" once you start entering readings; an absent/no-display column is greyed out, not required for validation or PDF generation, and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
+  <div class="note">Prototype calculation rules: digital reference thermometer dropdown fills the cal due date automatically; correction and reference maths rounded to 3 decimal places; Display cycle, Display from product and Room Temperature average rounded to 1 decimal place (0 when the unit's Display is set to "No decimal point") using improved robust mathematical rounding across all fields. Select the probe from the dropdown; the nearest correction to the Initial Set Point is used for As Found, and the nearest correction to the Final Set Point is used for As Left. Display from product is calculated from Display cycle Max and Min. Air reference average uses the highest corrected maximum and the lowest corrected minimum; those two values are visibly marked in the table. Adjustment not needed is applied only when every column actually fitted on this unit is present and within its own tolerance. Air is ±0.300 °C in Standard, widening to ±1.0 °C only for Air itself under "No Decimal Point"; Load and a Standard Chart Recorder are always ±0.300 °C and always entered to one decimal place, exactly as on the Standard Medical Device form — each mode keeps its own tolerance rules and none is inherited from another column. "Load Fitted No Display" keeps Load's probe, Reference Max/Min, corrections and Average fully live and required, and marks N/A only the Load Display, the Load Display cycle and the Difference vs Display, since there is no product display on Load to compare against. A Chart Recorder "Based on Air Readings" or "Digital Chart Recorder Based on Air" has no probe of its own: it shares the Air measurement system, so its column shows the same two channels — Air Left → Chart Left, Air Right → Chart Right — with every reference figure mirrored across read-only. "Digital Chart Recorder Based on Load" mirrors Load's figures the same way, as a single channel. All mirrored values are re-linked on every change, never copied once. Air, Load and Chart Recorder each have their own settings in the As Found table header, and none can be left on "-- select --" once you start entering readings; an absent column is greyed out, not required for validation or PDF generation, and left out of every calculation. If any active result is missing or outside tolerance, As Left remains active and must be completed.</div>
 </div>
 <script>
 const TOL=0.3;
@@ -1283,10 +1297,12 @@ function getDisplayTolerance(){ return isNoDecimalDisplayMode() ? NO_DECIMAL_TOL
 // display on models with only one); Chart Recorder's own Display field,
 // when fitted independently, is not affected and keeps its standard 1 dp.
 function getDisplayDecimals(){ return isNoDecimalDisplayMode() ? 0 : 1; }
-// Load no longer has a decimal-precision setting of its own (see Load
-// Mode above) — kept as a distinct name from getDisplayDecimals() only so
-// call sites read clearly; both currently follow Air's own setting.
-function getLoadDecimals(){ return getDisplayDecimals(); }
+// Load has no decimal-precision or tolerance variation of its own: "Standard"
+// behaves exactly like the Load column on the Standard Medical Device form —
+// 1 dp and ±0.300°C — whatever Air's own Air Mode is set to. Air's "No Decimal
+// Point" setting deliberately does NOT widen Load any more; each mode uses its
+// own tolerance rules.
+function getLoadDecimals(){ return 1; }
 const AIR_DECIMAL_IDS=['af_cycle_air_max','af_cycle_air_min','al_cycle_air_max','al_cycle_air_min',
                         'af_air_display','al_air_display'];
 const LOAD_DECIMAL_IDS=['af_cycle_load_max','af_cycle_load_min','al_cycle_load_max','al_cycle_load_min',
@@ -1310,14 +1326,13 @@ function updateDisplayVariationNote(){
   if(!note) return;
   const mode=displayModeVal();
   let text='';
-  if(mode==='no-decimal') text='⚠ No Decimal Point — Display and Display cycle recorded as whole degrees; tolerance widened to ±1.0°C for Air/Load.';
-  else if(mode==='not-present') text='⚠ No Display Fitted on this model — Air/Load readings are still taken, but there is nothing to compare them against.';
+  if(mode==='no-decimal') text='⚠ No Decimal Point — Air\'s Display and Display cycle are recorded as whole degrees and Air\'s tolerance widens to ±1.0°C. Reference readings and corrections keep their normal precision, and Load keeps its own ±0.300°C.';
+  else if(mode==='not-present') text='⚠ No Display Fitted on this model — Air reference readings and corrections are still taken as normal, but there is no product display to compare them against.';
   note.textContent=text;
   note.style.display = text ? '' : 'none';
 }
 function loadTolerance(){
-  if(isNoDecimalDisplayMode()) return NO_DECIMAL_TOL;
-  return TOL;
+  return TOL;   // see getLoadDecimals — Load Standard is always ±0.300°C
 }
 
 // A field id is "column-absent" if the reading it holds does not exist on
@@ -1330,7 +1345,12 @@ function isColumnAbsentField(id){
   // of whether Air's own Display is fitted.
   if(/^a[fl]_load_display$/.test(id)) return isLoadAbsent() || isDisplayAbsent() || isLoadNoDisplay();
   if(/^a[fl]_cycle_load_(max|min|avg)$/.test(id)) return isLoadAbsent() || isDisplayAbsent() || isLoadNoDisplay();
-  if(/^a[fl]_chart_(probe|max|max_corr|max_calc|min|min_corr|min_calc)$/.test(id)) return isChartAbsent() || isChartFromAir() || isChartFromLoad();
+  // Chart Recorder's own reference fields are only genuinely absent when no
+  // recorder is fitted. In the "based on ..." modes the recorder has no probe
+  // of its own, but those fields are not N/A either — they are filled, read
+  // only, by mirroring the source column (see applyChartMirror), so they must
+  // not be stamped -N/A- here.
+  if(/^a[fl]_chart_(probe|max|max_corr|max_calc|min|min_corr|min_calc)$/.test(id)) return isChartAbsent();
   if(/^a[fl]_chart_(avg|diff|display)$/.test(id)) return isChartAbsent();
   if(id==='af_air_display' || id==='al_air_display') return isDisplayAbsent();
   if(/^a[fl]_cycle_air_(max|min|avg)$/.test(id)) return isDisplayAbsent();
@@ -1390,7 +1410,10 @@ function applyColumnAvailability(){
       });
       cls(`${prefix}_load_diff`, null);
     }
-    if(isChartAbsent() || isChartFromAir() || isChartFromLoad()){
+    // Only a Chart Recorder that isn't fitted needs its marks stripped. In the
+    // mirrored modes the marks are deliberately re-applied by mirrorChartRow to
+    // match whichever source channel the average actually used.
+    if(isChartAbsent()){
       [`${prefix}_chart_max_calc`,`${prefix}_chart_min_calc`].forEach(function(id){
         document.getElementById(id)?.classList.remove('selectedHigh','selectedLow');
       });
@@ -1407,21 +1430,181 @@ function applyColumnAvailability(){
     const el=document.getElementById(id);
     if(el) el.readOnly = isChartFromAir() || isChartFromLoad();
   });
+  applyChartMirror();
   // AL header badges mirror whatever was chosen in the AF header selects,
   // so As Left reads correctly without a second control to keep in sync.
   const displayBadge=document.getElementById('displayModeBadgeAl');
   if(displayBadge) displayBadge.textContent = isDisplayAbsent() ? '(N/A)' : (isNoDecimalDisplayMode() ? '(±1.0°C)' : '');
   const loadBadge=document.getElementById('loadModeBadgeAl');
-  if(loadBadge) loadBadge.textContent = isLoadAbsent() ? '(N/A)' : (isLoadNoDisplay() ? '(No Display)' : (isNoDecimalDisplayMode() ? '(±1.0°C)' : ''));
+  if(loadBadge) loadBadge.textContent = isLoadAbsent() ? '(N/A)' : (isLoadNoDisplay() ? '(No Display)' : '');
   const chartBadge=document.getElementById('chartModeBadgeAl');
-  if(chartBadge) chartBadge.textContent = isChartAbsent() ? '(N/A)' : (isChartFromAir() ? '(from Air)' : (isChartFromLoad() ? '(from Load)' : ''));
+  if(chartBadge) chartBadge.textContent = isChartAbsent() ? '(N/A)' : (isChartFromAir() ? '(from Air L/R)' : (isChartFromLoad() ? '(from Load)' : ''));
+}
+
+// ---------------------------------------------------------------------
+// Chart Recorder mirroring.
+//
+// "Chart Recorder Based on Air Readings" / "Digital Chart Recorder Based on
+// Air": the recorder IS the Air measurement system, so the Chart Recorder
+// column shows the same two channels Air uses — Air Left -> Chart Left, Air
+// Right -> Chart Right — with every reference figure mirrored across and
+// read-only. "Digital Chart Recorder Based on Load": a single channel
+// mirroring Load's own figures the same way.
+//
+// The single-value input each Chart cell normally holds is not removed; it is
+// hidden and disabled, and given the mirrored value (a combined "L / R" string
+// in the two-channel modes). The certificate PDF reads these fields straight
+// off the DOM, so it keeps printing one Chart Recorder column exactly as
+// before with no change to the certificate layout.
+// ---------------------------------------------------------------------
+const CHART_MIRROR_KEYS=['max','max_corr','max_calc','min','min_corr','min_calc'];
+// Built once at load: a Left/Right pair of read-only cells inside each Chart
+// Recorder cell, hidden until an Air-based mode is selected.
+function buildChartMirrorCells(){
+  ['af','al'].forEach(function(p){
+    CHART_MIRROR_KEYS.concat(['probe']).forEach(function(key){
+      const el=document.getElementById(`${p}_chart_${key}`);
+      if(!el) return;
+      const cell=el.closest('td');
+      if(!cell || cell.querySelector('.chartLR')) return;
+      const wrap=document.createElement('div');
+      wrap.className='chartLR';
+      wrap.style.display='none';
+      wrap.id=`${p}_chartLR_${key}`;
+      ['L','R'].forEach(function(side){
+        const inp=document.createElement('input');
+        inp.className='input calc';
+        inp.id=`${p}_chart${side}_${key}`;
+        inp.readOnly=true;
+        inp.tabIndex=-1;
+        wrap.appendChild(inp);
+      });
+      cell.appendChild(wrap);
+    });
+    // Small Left|Right key under the two-channel cells, so the column reads
+    // unambiguously as two Air channels rather than one recorder.
+    const probeCell=document.getElementById(`${p}_chart_probe`)?.closest('td');
+    if(probeCell && !probeCell.querySelector('.chartLRHead')){
+      const head=document.createElement('div');
+      head.className='chartLRHead';
+      head.id=`${p}_chartLRHead`;
+      head.style.display='none';
+      head.innerHTML='<span>Left</span><span>Right</span>';
+      probeCell.appendChild(head);
+    }
+  });
+}
+// Shows/hides the mirrored cells and locks or releases the Chart Recorder's
+// own inputs for the current mode. Values are filled by copyChartFromAir /
+// copyChartFromLoad during the normal calculation pass.
+let lastChartMirrorMode=null;
+function applyChartMirror(){
+  const twoChannel=isChartFromAir();
+  const mirrored=twoChannel || isChartFromLoad();
+  const mode=chartModeVal();
+  // Switching out of a mirrored mode must not leave yesterday's mirrored
+  // figures sitting in fields the engineer can now type into — the
+  // certificate reads these cells straight off the DOM, so a stale mirrored
+  // number would print as if it were a real Chart Recorder reading.
+  const wasMirrored = lastChartMirrorMode!==null && lastChartMirrorMode!==mode
+    && ['based-on-air','digital-based-on-air','based-on-load'].includes(lastChartMirrorMode);
+  if(wasMirrored && !mirrored){
+    ['af','al'].forEach(function(p){
+      CHART_MIRROR_KEYS.forEach(function(key){
+        const el=document.getElementById(`${p}_chart_${key}`);
+        if(el && el.value!==NA_TEXT){ el.value=''; el.classList.remove('selectedHigh','selectedLow'); }
+        ['L','R'].forEach(function(side){
+          const c=document.getElementById(`${p}_chart${side}_${key}`);
+          if(c){ c.value=''; c.classList.remove('selectedHigh','selectedLow'); }
+        });
+      });
+      ['probe'].forEach(function(key){
+        ['L','R'].forEach(function(side){
+          const c=document.getElementById(`${p}_chart${side}_${key}`);
+          if(c) c.value='';
+        });
+      });
+    });
+  }
+  lastChartMirrorMode=mode;
+  ['af','al'].forEach(function(p){
+    CHART_MIRROR_KEYS.concat(['probe']).forEach(function(key){
+      const el=document.getElementById(`${p}_chart_${key}`);
+      const wrap=document.getElementById(`${p}_chartLR_${key}`);
+      const rCell=document.getElementById(`${p}_chartR_${key}`);
+      // The mirrored cells replace the column's own input whenever the
+      // recorder is mirroring something; the Right-hand cell only appears for
+      // the two Air channels.
+      if(wrap) wrap.style.display = (mirrored && !isChartAbsent()) ? 'flex' : 'none';
+      if(rCell) rCell.style.display = twoChannel ? '' : 'none';
+      if(!el) return;
+      const cell=el.closest('td');
+      if(cell) cell.classList.toggle('mirrored', mirrored && !isChartAbsent());
+      // Absent columns are left entirely to applyColumnAvailability.
+      if(isChartAbsent()){ el.style.display=''; return; }
+      // The column's own input is kept in the DOM, hidden and disabled, still
+      // carrying the mirrored value (a combined "L / R" string for Air) so the
+      // certificate keeps printing one Chart Recorder column, unchanged.
+      el.style.display = mirrored ? 'none' : '';
+      el.disabled = mirrored;
+      if(!mirrored) el.title='';
+      else el.title = twoChannel ? 'Mirrored from Air Left / Right — the recorder shares the Air measurement system'
+                                 : 'Mirrored from Load — the recorder displays the Load measurement';
+    });
+    const head=document.getElementById(`${p}_chartLRHead`);
+    if(head) head.style.display = twoChannel ? 'flex' : 'none';
+  });
 }
 // Chart Recorder set to "Based on Air readings"/"Digital Chart Recorder
 // Based on Air": it has no probe or raw Max/Min of its own, so its
 // Average, Difference and Display simply copy Air's own finished result
 // for this prefix (AF or AL) every time calculateAll() runs — it can
 // never disagree with Air, by construction, and is never "copied once".
+// Copies one reference row across from a source column into the Chart
+// Recorder's mirrored cells. `sources` is one id (single-channel Load mirror)
+// or two (the Air Left/Right mirror). The visible single input keeps the
+// combined text so the certificate, which reads it straight off the DOM,
+// prints the Chart Recorder column unchanged.
+function mirrorChartRow(prefix, key, sources){
+  const parts=sources.map(function(id){
+    const el=document.getElementById(id);
+    if(!el) return '';
+    // An unselected dropdown mirrors as blank, not as its "-- select --"
+    // placeholder text.
+    if(el.tagName==='SELECT') return el.value ? (el.options[el.selectedIndex]?.textContent||'') : '';
+    return el.value===NA_TEXT ? '' : (el.value||'');
+  });
+  ['L','R'].forEach(function(side, i){
+    const cell=document.getElementById(`${prefix}_chart${side}_${key}`);
+    if(cell) cell.value = parts[i]!==undefined ? parts[i] : '';
+  });
+  const single=document.getElementById(`${prefix}_chart_${key}`);
+  if(single && single.tagName!=='SELECT'){
+    const shown=parts.filter(function(p){ return p!==''; });
+    single.value = shown.length>1 ? shown.join(' / ') : (shown[0]||'');
+  }
+  // Marks on the mirrored corrected values follow whichever Air channel was
+  // actually used for the average, exactly as the Air column shows it, so the
+  // certificate's blue/green high-low marks stay truthful.
+  if(key==='max_calc' || key==='min_calc'){
+    const mark = key==='max_calc' ? 'selectedHigh' : 'selectedLow';
+    sources.forEach(function(id, i){
+      const src=document.getElementById(id);
+      const cell=document.getElementById(`${prefix}_chart${['L','R'][i]}_${key}`);
+      if(src && cell) cell.classList.toggle(mark, src.classList.contains(mark));
+    });
+    const single2=document.getElementById(`${prefix}_chart_${key}`);
+    if(single2) single2.classList.toggle(mark, sources.some(function(id){
+      return document.getElementById(id)?.classList.contains(mark);
+    }));
+  }
+}
 function copyChartFromAir(prefix){
+  // The recorder shares the Air measurement system, so every reference figure
+  // is mirrored from Air's own two channels rather than measured again.
+  CHART_MIRROR_KEYS.concat(['probe']).forEach(function(key){
+    mirrorChartRow(prefix, key, [`${prefix}_air1_${key}`, `${prefix}_air2_${key}`]);
+  });
   const airAvg=n(`${prefix}_air_avg`);
   set(`${prefix}_chart_avg`, airAvg);
   // Display "Not present" means there is no Air Display reading to copy
@@ -1452,6 +1635,11 @@ function copyChartFromAir(prefix){
 // finished result instead of Air's — recalculated every calculateAll()
 // pass, never "copied once".
 function copyChartFromLoad(prefix){
+  // Single channel — the recorder displays the Load measurement, so Load's own
+  // reference figures are mirrored across rather than measured again.
+  CHART_MIRROR_KEYS.concat(['probe']).forEach(function(key){
+    mirrorChartRow(prefix, key, [`${prefix}_load_${key}`]);
+  });
   const loadAvg=n(`${prefix}_load_avg`);
   set(`${prefix}_chart_avg`, loadAvg);
   // Nothing to mirror if Load itself isn't fitted, or Load is fitted but
@@ -1506,7 +1694,7 @@ function activeColumnsText(){
 function toleranceSummaryText(){
   const displayTolText = getDisplayTolerance()===NO_DECIMAL_TOL ? '±1.0 °C' : '±0.300 °C';
   const cols=[['Air', displayTolText]];
-  if(!isLoadAbsent()) cols.push(['Load', isNoDecimalDisplayMode() ? '±1.0 °C' : '±0.300 °C']);
+  if(!isLoadAbsent()) cols.push(['Load','±0.300 °C']);
   if(chartHasOwnReadings()) cols.push(['Chart Recorder','±0.300 °C']);
   const byTol={}, order=[];
   cols.forEach(function(c){ if(!byTol[c[1]]){ byTol[c[1]]=[]; order.push(c[1]); } byTol[c[1]].push(c[0]); });
@@ -2649,6 +2837,7 @@ document.getElementById('certNo')?.addEventListener('focus',function(){ if(this.
 document.getElementById('dateNative')?.addEventListener('click',function(){ if(this.showPicker){ try{ this.showPicker(); }catch(e){} } });
 document.getElementById('dateNative')?.addEventListener('focus',function(){ if(this.showPicker){ try{ this.showPicker(); }catch(e){} } });
 initCert();
+buildChartMirrorCells();
 restoreVaultOffsets();
 applyJobsheetHandoff();
 if(window.LabCalOffsets){ LabCalOffsets.onChange(()=>{ restoreVaultOffsets(); }); }
